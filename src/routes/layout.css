@@ -1,6 +1,48 @@
 @import 'tailwindcss';
-@import '@skeletonlabs/skeleton'; 
-@import '@skeletonlabs/skeleton-svelte'; 
-@import '@skeletonlabs/skeleton/themes/cerberus'; 
+@import '@skeletonlabs/skeleton';
+@import '@skeletonlabs/skeleton-svelte';
+@import '@skeletonlabs/skeleton/themes/cerberus';
 @plugin '@tailwindcss/forms';
 @plugin '@tailwindcss/typography';
+
+html,
+body {
+	margin: 0;
+	font-family:
+		'Inter',
+		system-ui,
+		-apple-system,
+		'Segoe UI',
+		Roboto,
+		sans-serif;
+	-webkit-font-smoothing: antialiased;
+}
+
+a {
+	color: inherit;
+}
+
+/* champs sur fond clair (le thème Skeleton est sombre) */
+input:not([type='search']),
+select,
+textarea {
+	color: #0f172a;
+}
+
+/* neutralise @tailwindcss/forms sur la recherche du header */
+:global(.global-search) {
+	margin: 0;
+}
+
+:global(.global-search) input[type='search'] {
+	margin: 0;
+	padding: 0;
+	min-height: unset;
+	line-height: 1.25;
+	box-shadow: none;
+}
+
+:global(.global-search) input[type='search']::-webkit-search-decoration,
+:global(.global-search) input[type='search']::-webkit-search-cancel-button {
+	display: none;
+}

@@ -1,4 +1,4 @@
-import type { ApiResponse } from "$lib/models/response.model";
+import type { ApiResponse } from "$lib/Models/response.model";
 import { error } from "@sveltejs/kit";
 
 type ApiError = { error: { error: string }, status: number };
