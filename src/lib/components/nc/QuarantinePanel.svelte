@@ -39,7 +39,7 @@
 		margin: 0 0 0.75rem;
 		font-size: 0.9375rem;
 		font-weight: 600;
-		color: #0f172a;
+		color: var(--nc-text);
 	}
 
 	ul {
@@ -52,11 +52,11 @@
 	li {
 		font-size: 0.875rem;
 		line-height: 1.5;
-		color: #334155;
+		color: var(--nc-text-muted);
 	}
 
 	a {
-		color: #0d9488;
+		color: var(--nc-brand);
 		font-weight: 500;
 		text-decoration: none;
 	}
@@ -73,7 +73,7 @@
 		border-radius: 0.375rem;
 		background: #fff;
 		font-size: 0.875rem;
-		color: #334155;
+		color: var(--nc-text-muted);
 		cursor: pointer;
 	}
 

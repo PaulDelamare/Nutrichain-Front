@@ -68,7 +68,7 @@
 
 	.empty {
 		background: #f8fafc;
-		color: #64748b;
+		color: var(--nc-text-muted);
 		border: 1px solid #e2e8f0;
 	}
 
@@ -90,7 +90,7 @@
 		text-align: left;
 		font-size: 0.75rem;
 		font-weight: 600;
-		color: #64748b;
+		color: var(--nc-text-muted);
 		background: #f8fafc;
 		border-bottom: 1px solid #e2e8f0;
 	}
@@ -98,7 +98,7 @@
 	td {
 		padding: 0.75rem 1rem;
 		border-bottom: 1px solid #f1f5f9;
-		color: #334155;
+		color: var(--nc-text-muted);
 	}
 
 	.mono {

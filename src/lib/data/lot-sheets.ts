@@ -1,5 +1,6 @@
 import type { LotSheet } from '$lib/types/lot-sheet';
 import { lots } from '$lib/data/lot-search';
+import { resolveLotMapLocation } from '$lib/utils/lots/resolveLotMapLocation';
 
 const sheets: Record<string, LotSheet> = {
 	'L-2025-08912': {
@@ -27,7 +28,8 @@ const sheets: Record<string, LotSheet> = {
 		],
 		site: 'Bretagne Nord',
 		zone: 'Zone F — Allée 12 — Niveau 2',
-		wmsSync: 'il y a 4 min'
+		wmsSync: 'il y a 4 min',
+		mapPin: resolveLotMapLocation('Bretagne Nord', 'Zone F — Allée 12 — Niveau 2')
 	}
 };
 
@@ -53,7 +55,8 @@ for (const lot of lots) {
 		],
 		site: lot.site,
 		zone: '—',
-		wmsSync: '—'
+		wmsSync: '—',
+		mapPin: resolveLotMapLocation(lot.site)
 	};
 }
 

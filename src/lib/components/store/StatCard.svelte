@@ -31,7 +31,7 @@
 		font-weight: 600;
 		letter-spacing: 0.04em;
 		text-transform: uppercase;
-		color: #64748b;
+		color: var(--nc-text-muted);
 	}
 
 	.value {
@@ -39,6 +39,6 @@
 		font-size: 1.75rem;
 		font-weight: 600;
 		line-height: 1.2;
-		color: #0f172a;
+		color: var(--nc-text);
 	}
 </style>

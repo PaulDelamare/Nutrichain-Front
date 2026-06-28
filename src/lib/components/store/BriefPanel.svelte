@@ -24,13 +24,13 @@
 		margin: 0 0 0.75rem;
 		font-size: 0.9375rem;
 		font-weight: 600;
-		color: #0f172a;
+		color: var(--nc-text);
 	}
 
 	.brief p {
 		margin: 0;
 		font-size: 0.875rem;
 		line-height: 1.55;
-		color: #334155;
+		color: var(--nc-text-muted);
 	}
 </style>

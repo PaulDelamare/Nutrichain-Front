@@ -1,48 +1,70 @@
 <script lang="ts">
 	import { APP_NAME, APP_TAGLINE } from '$lib/config/app';
-	import type { ActionData } from './$types';
+	import type { ActionData, PageData } from './$types';
 
-	let { form }: { form: ActionData } = $props();
+	let { data, form }: { data: PageData; form: ActionData } = $props();
 </script>
 
-<main class="login-page">
+<main class="register-page">
 	<section class="card">
 		<div class="brand">
 			<div class="logo" aria-hidden="true">N</div>
 			<h1>{APP_NAME}</h1>
-			<p>Plateforme de traçabilité — ferme au rayon</p>
+			<p>{APP_TAGLINE}</p>
 		</div>
+
+		{#if data.invitation}
+			<div class="invite-banner">
+				<p>Invitation pour <strong>{data.invitation.email}</strong></p>
+				<p class="meta">Rôle : {data.invitation.role} · Valide jusqu'au {data.invitation.expiresAt}</p>
+			</div>
+		{:else}
+			<p class="intro">Création de compte réservée aux utilisateurs invités.</p>
+		{/if}
 
 		<form class="form" method="POST">
 			{#if form?.error}
 				<p class="error">{form.error}</p>
 			{/if}
 
+			{#if data.token}
+				<input type="hidden" name="token" value={data.token} />
+			{/if}
+
+			<label>
+				<span>Nom complet</span>
+				<input type="text" name="name" value={form?.name ?? ''} autocomplete="name" required />
+			</label>
+
 			<label>
 				<span>Adresse e-mail</span>
 				<input
 					type="email"
 					name="email"
-					value={form?.email ?? 'nutrichain@test.fr'}
+					value={form?.email ?? data.invitation?.email ?? ''}
 					autocomplete="username"
 					required
+					readonly={Boolean(data.invitation?.email)}
 				/>
 			</label>
 
 			<label>
 				<span>Mot de passe</span>
-				<input type="password" name="password" autocomplete="current-password" required />
+				<input type="password" name="password" autocomplete="new-password" required minlength="8" />
 			</label>
 
-			<button type="submit">Se connecter</button>
+			<button type="submit">Créer mon compte</button>
 		</form>
 
-		<p class="hint">Connexion via l'API NutriChain — session cookie</p>
+		<p class="hint">
+			Déjà un compte ?
+			<a href="/connexion">Se connecter</a>
+		</p>
 	</section>
 </main>
 
 <style>
-	.login-page {
+	.register-page {
 		display: grid;
 		place-items: center;
 		min-height: 100vh;
@@ -91,6 +113,31 @@
 		text-align: center;
 	}
 
+	.invite-banner {
+		margin-bottom: 1rem;
+		padding: 0.75rem;
+		border-radius: 0.375rem;
+		background: rgba(27, 107, 92, 0.08);
+	}
+
+	.invite-banner p {
+		margin: 0;
+		font-size: 0.8125rem;
+		color: var(--nc-text);
+	}
+
+	.meta {
+		margin-top: 0.25rem !important;
+		color: var(--nc-text-muted) !important;
+	}
+
+	.intro {
+		margin: 0 0 1rem;
+		font-size: 0.8125rem;
+		color: var(--nc-text-muted);
+		text-align: center;
+	}
+
 	.form {
 		display: flex;
 		flex-direction: column;
@@ -115,19 +162,11 @@
 		border-radius: 0.5rem;
 		background: #fff;
 		color: var(--nc-text);
-		caret-color: var(--nc-text);
 		font-size: 0.875rem;
 	}
 
-	input::placeholder {
-		color: var(--nc-text-subtle);
-	}
-
-	input:-webkit-autofill,
-	input:-webkit-autofill:hover,
-	input:-webkit-autofill:focus {
-		-webkit-text-fill-color: var(--nc-text);
-		box-shadow: 0 0 0 1000px #fff inset;
+	input[readonly] {
+		background: #f8fafc;
 	}
 
 	button {
@@ -157,8 +196,14 @@
 
 	.hint {
 		margin: 0.9rem 0 0;
-		font-size: 0.6875rem;
+		font-size: 0.75rem;
 		color: var(--nc-text-subtle);
 		text-align: center;
+	}
+
+	.hint a {
+		color: var(--nc-brand);
+		font-weight: 600;
+		text-decoration: none;
 	}
 </style>

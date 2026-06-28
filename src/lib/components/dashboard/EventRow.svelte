@@ -35,26 +35,26 @@
 		height: 0.5rem;
 		margin-top: 0.35rem;
 		border-radius: 50%;
-		background: #22c55e;
+		background: var(--nc-brand);
 		flex-shrink: 0;
 	}
 
 	.when {
 		margin: 0 0 0.15rem;
 		font-size: 0.75rem;
-		color: #64748b;
+		color: var(--nc-text-muted);
 	}
 
 	.title {
 		margin: 0 0 0.15rem;
 		font-size: 0.875rem;
 		font-weight: 600;
-		color: #0f172a;
+		color: var(--nc-text);
 	}
 
 	.meta {
 		margin: 0;
 		font-size: 0.8125rem;
-		color: #64748b;
+		color: var(--nc-text-muted);
 	}
 </style>

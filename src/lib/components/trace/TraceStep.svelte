@@ -79,12 +79,12 @@
 
 	.amont {
 		background: #dcfce7;
-		color: #166534;
+		color: var(--nc-brand-dark);
 	}
 
 	.transform {
 		background: #f1f5f9;
-		color: #475569;
+		color: var(--nc-text-muted);
 	}
 
 	.aval {
@@ -102,19 +102,19 @@
 		font-weight: 600;
 		letter-spacing: 0.06em;
 		text-transform: uppercase;
-		color: #64748b;
+		color: var(--nc-text-muted);
 	}
 
 	.title {
 		margin: 0;
 		font-size: 1rem;
 		font-weight: 600;
-		color: #0f172a;
+		color: var(--nc-text);
 	}
 
 	.detail {
 		margin: 0.25rem 0 0;
 		font-size: 0.8125rem;
-		color: #64748b;
+		color: var(--nc-text-muted);
 	}
 </style>

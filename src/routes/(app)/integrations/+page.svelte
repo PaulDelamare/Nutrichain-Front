@@ -44,7 +44,7 @@
 		padding: 0.5rem 0.75rem;
 		border-radius: 0.375rem;
 		background: #f8fafc;
-		color: #64748b;
+		color: var(--nc-text-muted);
 		font-size: 0.8125rem;
 		border: 1px solid #e2e8f0;
 	}

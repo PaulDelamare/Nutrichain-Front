@@ -1,4 +1,5 @@
 <script lang="ts">
+	import LotLocationMap from '$lib/components/lot-sheet/LotLocationMap.svelte';
 	import type { LotSheet } from '$lib/types/lot-sheet';
 
 	type Props = {
@@ -13,7 +14,9 @@
 	<p class="site">{sheet.site}</p>
 	<p class="zone">{sheet.zone}</p>
 
-	<div class="map">Carte site (schéma)</div>
+	{#key sheet.id}
+		<LotLocationMap pin={sheet.mapPin} lotId={sheet.id} />
+	{/key}
 
 	<p class="sync">Dernière synchro WMS : {sheet.wmsSync}</p>
 </section>
@@ -33,38 +36,25 @@
 		margin: 0 0 0.75rem;
 		font-size: 0.9375rem;
 		font-weight: 600;
-		color: #0f172a;
+		color: var(--nc-text);
 	}
 
 	.site {
 		margin: 0 0 0.25rem;
 		font-size: 0.9375rem;
 		font-weight: 600;
-		color: #0f172a;
+		color: var(--nc-text);
 	}
 
 	.zone {
-		margin: 0 0 1rem;
+		margin: 0 0 0.75rem;
 		font-size: 0.8125rem;
-		color: #64748b;
-	}
-
-	.map {
-		flex: 1;
-		display: grid;
-		place-items: center;
-		min-height: 8rem;
-		margin-bottom: 1rem;
-		border: 1px dashed #cbd5e1;
-		border-radius: 0.375rem;
-		background: #f0f9ff;
-		font-size: 0.8125rem;
-		color: #64748b;
+		color: var(--nc-text-muted);
 	}
 
 	.sync {
-		margin: 0;
+		margin: 0.75rem 0 0;
 		font-size: 0.75rem;
-		color: #94a3b8;
+		color: var(--nc-text-subtle);
 	}
 </style>

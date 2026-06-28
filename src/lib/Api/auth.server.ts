@@ -11,6 +11,11 @@ export type MePayload = {
 	activeOrgId?: string;
 };
 
+/** Évite un appel /api/me inutile quand aucun cookie de session n'est présent. */
+export function hasAuthSessionCookie(cookies: Cookies): boolean {
+	return cookies.getAll().some((c) => c.name.includes('better-auth') || c.name.includes('session'));
+}
+
 export async function signIn(
 	fetch: typeof globalThis.fetch,
 	cookies: Cookies,
@@ -19,6 +24,23 @@ export async function signIn(
 ): Promise<ApiResult<unknown>> {
 	const client = api(fetch, cookies);
 	const res = await client.post('/api/auth/sign-in/email', { email, password });
+
+	if (res.ok) {
+		applySetCookies(res.response, cookies);
+	}
+
+	return res;
+}
+
+export async function signUp(
+	fetch: typeof globalThis.fetch,
+	cookies: Cookies,
+	name: string,
+	email: string,
+	password: string
+): Promise<ApiResult<unknown> & { response?: Response }> {
+	const client = api(fetch, cookies);
+	const res = await client.post('/api/auth/sign-up/email', { name, email, password });
 
 	if (res.ok) {
 		applySetCookies(res.response, cookies);

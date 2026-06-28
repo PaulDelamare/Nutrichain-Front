@@ -23,12 +23,12 @@
 		margin: 0;
 		font-size: 1.375rem;
 		font-weight: 600;
-		color: #0f172a;
+		color: var(--nc-text);
 	}
 
 	.page-head p {
 		margin: 0.35rem 0 0;
 		font-size: 0.875rem;
-		color: #64748b;
+		color: var(--nc-text-muted);
 	}
 </style>

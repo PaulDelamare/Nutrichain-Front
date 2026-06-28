@@ -24,7 +24,7 @@
 
 	.conforme {
 		background: #dcfce7;
-		color: #166534;
+		color: var(--nc-brand-dark);
 	}
 
 	.surveillance {

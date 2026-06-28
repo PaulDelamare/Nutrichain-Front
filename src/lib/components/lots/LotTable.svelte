@@ -64,7 +64,7 @@
 		text-align: left;
 		font-size: 0.75rem;
 		font-weight: 600;
-		color: #64748b;
+		color: var(--nc-text-muted);
 		background: #f8fafc;
 		white-space: nowrap;
 	}
@@ -72,7 +72,7 @@
 	td {
 		padding: 0.875rem 1rem;
 		border-bottom: 1px solid #f1f5f9;
-		color: #334155;
+		color: var(--nc-text-muted);
 		vertical-align: middle;
 	}
 
@@ -81,7 +81,7 @@
 	}
 
 	a {
-		color: #0d9488;
+		color: var(--nc-brand);
 		font-weight: 500;
 		text-decoration: none;
 	}
@@ -97,6 +97,6 @@
 	.empty {
 		padding: 2rem 1rem;
 		text-align: center;
-		color: #94a3b8;
+		color: var(--nc-text-subtle);
 	}
 </style>

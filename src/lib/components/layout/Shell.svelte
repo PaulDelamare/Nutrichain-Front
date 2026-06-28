@@ -19,10 +19,10 @@
 </script>
 
 <div class="shell">
-	<SideNav {collapsed} ontoggle={() => (collapsed = !collapsed)} />
+	<SideNav {collapsed} onMenuToggle={() => (collapsed = !collapsed)} />
 
 	<div class="shell-main">
-		<TopBar {title} />
+		<TopBar {title} sidebarCollapsed={collapsed} onMenuToggle={() => (collapsed = !collapsed)} />
 		<main class="shell-content">
 			{@render children()}
 		</main>
@@ -32,8 +32,12 @@
 <style>
 	.shell {
 		display: flex;
-		min-height: 100vh;
+		height: 100vh;
+		height: 100dvh;
+		overflow: hidden;
 		background: #f1f5f9;
+		--shell-duration: 0.28s;
+		--shell-ease: cubic-bezier(0.4, 0, 0.2, 1);
 	}
 
 	.shell-main {
@@ -41,10 +45,16 @@
 		flex: 1;
 		flex-direction: column;
 		min-width: 0;
+		min-height: 0;
+		overflow: hidden;
+		transition: flex var(--shell-duration, 0.28s) cubic-bezier(0.4, 0, 0.2, 1);
 	}
 
 	.shell-content {
 		flex: 1;
+		min-height: 0;
+		overflow-y: auto;
+		overscroll-behavior: contain;
 		padding: 1.5rem;
 	}
 </style>

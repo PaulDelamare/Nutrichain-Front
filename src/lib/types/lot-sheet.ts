@@ -1,4 +1,5 @@
 import type { LotStatus } from '$lib/types/lot';
+import type { LotMapPin } from '$lib/types/lot-map';
 
 export type LotEvent = {
 	time: string;
@@ -21,4 +22,6 @@ export type LotSheet = {
 	site: string;
 	zone: string;
 	wmsSync: string;
+	/** Position carte — alimentée par site ou GPS futur */
+	mapPin: LotMapPin | null;
 };

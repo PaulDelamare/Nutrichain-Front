@@ -9,6 +9,7 @@ import {
 	mockKpis,
 	mockTasks
 } from '$lib/utils/org/mappers';
+import { buildDashboardCharts } from '$lib/utils/org/dashboardCharts';
 
 export const load: PageServerLoad = async ({ fetch, cookies }) => {
 	const [batches, alerts, quality, quarantine, movements] = await Promise.all([
@@ -16,7 +17,7 @@ export const load: PageServerLoad = async ({ fetch, cookies }) => {
 		getAlerts(fetch, cookies),
 		getQualityControls(fetch, cookies),
 		getQuarantineBatches(fetch, cookies),
-		getMovements(fetch, cookies, { limit: 5 })
+		getMovements(fetch, cookies, { limit: 100 })
 	]);
 
 	const batchList = batches.ok ? batches.data : [];
@@ -34,7 +35,14 @@ export const load: PageServerLoad = async ({ fetch, cookies }) => {
 			batches.ok && alerts.ok
 				? buildDashboardKpis(batchList.length, alertList, qualityList.length, quarantineList.length)
 				: mockKpis,
-		recentEvents: movementList.length > 0 ? movementsToEvents(movementList) : mockEvents,
+		charts: buildDashboardCharts(
+			batchList,
+			alertList,
+			movementList,
+			qualityList,
+			!(batches.ok && alerts.ok)
+		),
+		recentEvents: movementList.length > 0 ? movementsToEvents(movementList.slice(0, 5)) : mockEvents,
 		tasks: alerts.ok ? buildDashboardTasks(alertList, qualityList.length) : mockTasks
 	};
 };

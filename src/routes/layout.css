@@ -5,9 +5,23 @@
 @plugin '@tailwindcss/forms';
 @plugin '@tailwindcss/typography';
 
+:root {
+	--nc-brand: #1b6b5c;
+	--nc-brand-hover: #165548;
+	--nc-brand-dark: #134539;
+	--nc-brand-soft: rgba(27, 107, 92, 0.15);
+	--nc-brand-light: #8fd4c5;
+	--nc-brand-ring: rgba(27, 107, 92, 0.35);
+	--nc-brand-border-focus: #5aafa0;
+	--nc-text: #0f172a;
+	--nc-text-muted: #475569;
+	--nc-text-subtle: #94a3b8;
+}
+
 html,
 body {
 	margin: 0;
+	height: 100%;
 	font-family:
 		'Inter',
 		system-ui,
@@ -15,6 +29,7 @@ body {
 		'Segoe UI',
 		Roboto,
 		sans-serif;
+	color: var(--nc-text);
 	-webkit-font-smoothing: antialiased;
 }
 
@@ -26,7 +41,7 @@ a {
 input:not([type='search']),
 select,
 textarea {
-	color: #0f172a;
+	color: var(--nc-text);
 }
 
 /* neutralise @tailwindcss/forms sur la recherche du header */

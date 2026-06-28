@@ -22,7 +22,11 @@ export const actions = {
 		const res = await signIn(fetch, cookies, email, password);
 
 		if (!res.ok) {
-			return fail(res.status, { error: res.message, email });
+			const message =
+				res.status === 429
+					? 'Trop de requêtes vers l’API. Attendez une minute puis réessayez.'
+					: res.message;
+			return fail(res.status === 429 ? 429 : res.status, { error: message, email });
 		}
 
 		const target = url.searchParams.get('redirect') || '/tableau-de-bord';

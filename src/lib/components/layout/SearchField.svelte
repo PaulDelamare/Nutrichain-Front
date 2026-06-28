@@ -43,7 +43,7 @@
 		border: 1px solid #e2e8f0;
 		border-radius: 9999px;
 		background: #f8fafc;
-		color: #64748b;
+		color: var(--nc-text-muted);
 	}
 
 	.search-input {
@@ -57,7 +57,7 @@
 		background: transparent;
 		font-size: 0.875rem;
 		line-height: 1.25;
-		color: #0f172a;
+		color: var(--nc-text);
 		outline: none;
 		box-shadow: none;
 		appearance: none;
@@ -65,7 +65,7 @@
 	}
 
 	.search-input::placeholder {
-		color: #94a3b8;
+		color: var(--nc-text-subtle);
 	}
 
 	.search.disabled {

@@ -1,27 +1,11 @@
 import { redirect } from '@sveltejs/kit';
 import type { PageServerLoad } from './$types';
-import { getBatches } from '$lib/Api/traceability.server';
-import { batchToRow } from '$lib/utils/lots/mapBatch';
-import { lots as mockLots } from '$lib/data/lot-search';
 
-export const load: PageServerLoad = async ({ fetch, cookies, url }) => {
-	const legacyLot = url.searchParams.get('lot');
-	if (legacyLot) {
-		redirect(301, `/fiche-lot/${encodeURIComponent(legacyLot)}`);
+/** Pas de page liste — accès uniquement via /fiche-lot/[lotId] depuis la recherche. */
+export const load: PageServerLoad = ({ url }) => {
+	const lot = url.searchParams.get('lot');
+	if (lot) {
+		redirect(301, `/fiche-lot/${encodeURIComponent(lot)}`);
 	}
-
-	const res = await getBatches(fetch, cookies);
-
-	if (res.ok) {
-		return {
-			lots: res.data.map(batchToRow),
-			source: 'api' as const
-		};
-	}
-
-	return {
-		lots: mockLots,
-		source: 'mock' as const,
-		error: res.message
-	};
+	redirect(302, '/recherche-lots');
 };

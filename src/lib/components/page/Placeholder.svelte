@@ -22,6 +22,6 @@
 	.placeholder p {
 		margin: 0;
 		font-size: 0.875rem;
-		color: #94a3b8;
+		color: var(--nc-text-subtle);
 	}
 </style>

@@ -62,17 +62,17 @@
 		margin: 0;
 		font-size: 1rem;
 		font-weight: 600;
-		color: #0f172a;
+		color: var(--nc-text);
 	}
 
 	.meta {
 		margin: 0 0 0.35rem;
 		font-size: 0.875rem;
-		color: #334155;
+		color: var(--nc-text-muted);
 	}
 
 	.meta span {
-		color: #64748b;
+		color: var(--nc-text-muted);
 	}
 
 	.progress-block {
@@ -84,12 +84,12 @@
 		justify-content: space-between;
 		margin-bottom: 0.35rem;
 		font-size: 0.8125rem;
-		color: #64748b;
+		color: var(--nc-text-muted);
 	}
 
 	.pct {
 		font-weight: 600;
-		color: #0f172a;
+		color: var(--nc-text);
 	}
 
 	.track {
@@ -102,7 +102,7 @@
 	.fill {
 		height: 100%;
 		border-radius: 9999px;
-		background: #1a4d3e;
+		background: var(--nc-brand-dark);
 	}
 
 	.step {
@@ -116,34 +116,34 @@
 		height: 0.5rem;
 		margin-top: 0.35rem;
 		border-radius: 50%;
-		background: #22c55e;
+		background: var(--nc-brand);
 		flex-shrink: 0;
 	}
 
 	.step-label {
 		margin: 0 0 0.15rem;
 		font-size: 0.75rem;
-		color: #64748b;
+		color: var(--nc-text-muted);
 	}
 
 	.step-title {
 		margin: 0 0 0.15rem;
 		font-size: 0.875rem;
 		font-weight: 600;
-		color: #0f172a;
+		color: var(--nc-text);
 	}
 
 	.step-detail {
 		margin: 0;
 		font-size: 0.8125rem;
-		color: #64748b;
+		color: var(--nc-text-muted);
 	}
 
 	.notify {
 		padding: 0.5rem 1rem;
 		border: none;
 		border-radius: 0.375rem;
-		background: #1a4d3e;
+		background: var(--nc-brand-dark);
 		color: #fff;
 		font-size: 0.875rem;
 		font-weight: 500;
@@ -151,6 +151,6 @@
 	}
 
 	.notify:hover {
-		background: #163f33;
+		background: var(--nc-brand-hover);
 	}
 </style>

@@ -1,5 +1,6 @@
 import type { ApiBatch } from '$lib/Api/traceability.server';
 import { movementsToLotEvents } from '$lib/utils/org/mappers';
+import { resolveLotMapLocation } from '$lib/utils/lots/resolveLotMapLocation';
 import type { LotSheet } from '$lib/types/lot-sheet';
 import type { LotRow, LotStatus } from '$lib/types/lot';
 
@@ -56,6 +57,7 @@ export function batchToSheet(batch: ApiBatch): LotSheet {
 		events,
 		site: batch.materiel?.lieu?.nom ?? '—',
 		zone: batch.materiel?.nom ?? '—',
-		wmsSync: batch.date_creation ? `Créé le ${fmtDate(batch.date_creation)}` : '—'
+		wmsSync: batch.date_creation ? `Créé le ${fmtDate(batch.date_creation)}` : '—',
+		mapPin: resolveLotMapLocation(batch.materiel?.lieu?.nom, batch.materiel?.nom)
 	};
 }

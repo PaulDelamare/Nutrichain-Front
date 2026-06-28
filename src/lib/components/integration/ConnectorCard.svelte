@@ -41,7 +41,7 @@
 		margin: 0;
 		font-size: 0.9375rem;
 		font-weight: 600;
-		color: #0f172a;
+		color: var(--nc-text);
 	}
 
 	ul {
@@ -53,7 +53,7 @@
 	li {
 		font-size: 0.8125rem;
 		line-height: 1.5;
-		color: #64748b;
+		color: var(--nc-text-muted);
 	}
 
 	li + li {

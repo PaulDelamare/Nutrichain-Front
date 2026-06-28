@@ -52,7 +52,7 @@
 		text-align: left;
 		font-size: 0.75rem;
 		font-weight: 600;
-		color: #64748b;
+		color: var(--nc-text-muted);
 		background: #f8fafc;
 		white-space: nowrap;
 	}
@@ -60,7 +60,7 @@
 	td {
 		padding: 0.875rem 1rem;
 		border-bottom: 1px solid #f1f5f9;
-		color: #334155;
+		color: var(--nc-text-muted);
 		vertical-align: middle;
 	}
 
@@ -69,6 +69,6 @@
 	}
 
 	.email {
-		color: #0f172a;
+		color: var(--nc-text);
 	}
 </style>

@@ -69,7 +69,7 @@
 	.field span {
 		font-size: 0.75rem;
 		font-weight: 500;
-		color: #64748b;
+		color: var(--nc-text-muted);
 	}
 
 	.field input,
@@ -82,14 +82,14 @@
 		border-radius: 0.375rem;
 		background: #fff;
 		font-size: 0.875rem;
-		color: #0f172a;
+		color: var(--nc-text);
 	}
 
 	.field input:focus,
 	.field select:focus {
-		outline: 2px solid #bbf7d0;
+		outline: 2px solid var(--nc-brand-ring);
 		outline-offset: 0;
-		border-color: #86efac;
+		border-color: var(--nc-brand-border-focus);
 	}
 
 	.apply {
@@ -97,7 +97,7 @@
 		padding: 0 1.25rem;
 		border: none;
 		border-radius: 0.375rem;
-		background: #1a4d3e;
+		background: var(--nc-brand-dark);
 		color: #fff;
 		font-size: 0.875rem;
 		font-weight: 500;
@@ -106,7 +106,7 @@
 	}
 
 	.apply:hover {
-		background: #163f33;
+		background: var(--nc-brand-hover);
 	}
 
 	@media (max-width: 1100px) {

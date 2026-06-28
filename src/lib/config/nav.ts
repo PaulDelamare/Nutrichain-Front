@@ -33,14 +33,6 @@ export const navGroups: NavGroup[] = [
 					'Filtres avancés — GTIN, lot, SSCC, produit, site, dates, statut.'
 			},
 			{
-				href: '/fiche-lot',
-				label: 'Fiche lot',
-				title: 'Fiche lot',
-				heading: 'Fiche lot',
-				description:
-					'Produit, dates, statut, historique, température, évènements EPCIS, localisation.'
-			},
-			{
 				href: '/tracabilite',
 				label: 'Traçabilité',
 				title: 'Traçabilité',
@@ -123,6 +115,9 @@ export const navGroups: NavGroup[] = [
 const flatNav = navGroups.flatMap((g) => g.items);
 
 export function findNavItem(pathname: string): NavItem | undefined {
+	if (pathname.startsWith('/fiche-lot/')) {
+		return flatNav.find((item) => item.href === '/recherche-lots');
+	}
 	return flatNav.find(
 		(item) => pathname === item.href || pathname.startsWith(`${item.href}/`)
 	);
@@ -131,5 +126,8 @@ export function findNavItem(pathname: string): NavItem | undefined {
 const fallbackTitle = 'NutriChain';
 
 export function headerTitle(pathname: string): string {
+	if (pathname.startsWith('/fiche-lot/')) {
+		return findNavItem(pathname)?.title ?? 'Recherche de lots';
+	}
 	return findNavItem(pathname)?.title ?? fallbackTitle;
 }

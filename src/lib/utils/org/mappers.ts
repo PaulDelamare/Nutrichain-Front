@@ -21,6 +21,8 @@ import { storeStats as mockStoreStats, activeBrief as mockBrief } from '$lib/dat
 const ROLE_LABELS: Record<string, string> = {
 	owner: 'Propriétaire',
 	admin: 'Administrateur',
+	manager: 'Manager',
+	operator: 'Opérateur',
 	member: 'Membre'
 };
 

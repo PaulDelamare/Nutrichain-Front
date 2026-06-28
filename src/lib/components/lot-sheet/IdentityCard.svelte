@@ -67,7 +67,7 @@
 		margin: 0;
 		font-size: 0.9375rem;
 		font-weight: 600;
-		color: #0f172a;
+		color: var(--nc-text);
 	}
 
 	dl {
@@ -80,13 +80,13 @@
 	dt {
 		margin: 0 0 0.15rem;
 		font-size: 0.75rem;
-		color: #64748b;
+		color: var(--nc-text-muted);
 	}
 
 	dd {
 		margin: 0;
 		font-size: 0.875rem;
-		color: #0f172a;
+		color: var(--nc-text);
 	}
 
 	@media (max-width: 520px) {

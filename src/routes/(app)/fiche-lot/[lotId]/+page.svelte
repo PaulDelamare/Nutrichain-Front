@@ -26,10 +26,25 @@
 	);
 </script>
 
-<PageHead
-	heading="Fiche lot {data.sheet.id}"
-	description="Produit, dates, statut, historique, température, évènements EPCIS, localisation."
-/>
+<header class="page-top">
+	<a href="/recherche-lots" class="back-link">
+		<svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
+			<path
+				d="M15 6l-6 6 6 6"
+				stroke="currentColor"
+				stroke-width="2"
+				stroke-linecap="round"
+				stroke-linejoin="round"
+			/>
+		</svg>
+		Retour
+	</a>
+
+	<PageHead
+		heading="Fiche lot {data.sheet.id}"
+		description="Produit, dates, statut, historique, température, évènements EPCIS, localisation et carte."
+	/>
+</header>
 
 <p class="source">Données en direct depuis la base NutriChain.</p>
 
@@ -42,10 +57,35 @@
 </div>
 
 <style>
+	.page-top {
+		margin-bottom: 0.25rem;
+	}
+
+	.back-link {
+		display: inline-flex;
+		align-items: center;
+		gap: 0.35rem;
+		margin-bottom: 0.75rem;
+		font-size: 0.875rem;
+		font-weight: 600;
+		color: var(--nc-brand);
+		text-decoration: none;
+	}
+
+	.back-link:hover {
+		color: var(--nc-brand-hover);
+	}
+
+	.back-link svg {
+		width: 1rem;
+		height: 1rem;
+		flex-shrink: 0;
+	}
+
 	.source {
 		margin: 0 0 0.75rem;
 		font-size: 0.8125rem;
-		color: #64748b;
+		color: var(--nc-text-muted);
 	}
 
 	.layout {

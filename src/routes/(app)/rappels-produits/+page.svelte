@@ -48,7 +48,7 @@
 	.source {
 		margin: 0 0 0.75rem;
 		font-size: 0.8125rem;
-		color: #64748b;
+		color: var(--nc-text-muted);
 	}
 
 	.list {

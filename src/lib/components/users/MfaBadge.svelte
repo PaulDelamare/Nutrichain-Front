@@ -20,11 +20,11 @@
 		font-size: 0.75rem;
 		font-weight: 500;
 		background: #dcfce7;
-		color: #166534;
+		color: var(--nc-brand-dark);
 	}
 
 	.off {
 		background: #f1f5f9;
-		color: #64748b;
+		color: var(--nc-text-muted);
 	}
 </style>

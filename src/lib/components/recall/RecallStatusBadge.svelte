@@ -29,6 +29,6 @@
 
 	.cloture {
 		background: #e2e8f0;
-		color: #475569;
+		color: var(--nc-text-muted);
 	}
 </style>

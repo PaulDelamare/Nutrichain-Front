@@ -1,9 +1,14 @@
 // ! IMPORTS
 import { env } from '$env/dynamic/private';
-import { getMe } from '$lib/Api/auth.server';
+import { getMe, hasAuthSessionCookie } from '$lib/Api/auth.server';
 import type { Handle, HandleFetch } from '@sveltejs/kit';
 
 export const handle = (async ({ event, resolve }) => {
+	if (!hasAuthSessionCookie(event.cookies)) {
+		event.locals.user = undefined;
+		return resolve(event);
+	}
+
 	try {
 		const me = await getMe(event.fetch, event.cookies);
 
@@ -15,6 +20,14 @@ export const handle = (async ({ event, resolve }) => {
 			};
 		} else {
 			event.locals.user = undefined;
+
+			if (me.status === 401) {
+				for (const c of event.cookies.getAll()) {
+					if (c.name.includes('better-auth') || c.name.includes('session')) {
+						event.cookies.delete(c.name, { path: '/' });
+					}
+				}
+			}
 		}
 	} catch (err) {
 		console.error('Session API indisponible', err);
