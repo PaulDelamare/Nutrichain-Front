@@ -41,7 +41,7 @@ export const actions = {
 			return fail(400, { error: 'Nom, e-mail et mot de passe requis.', name, email, token });
 		}
 
-		const res = await signUp(fetch, cookies, name, email, password);
+		const res = await signUp(fetch, cookies, name, email, password, token);
 
 		if (!res.ok) {
 			return fail(res.status === 429 ? 429 : res.status, {

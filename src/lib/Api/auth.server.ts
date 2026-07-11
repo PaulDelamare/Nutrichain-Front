@@ -37,10 +37,12 @@ export async function signUp(
 	cookies: Cookies,
 	name: string,
 	email: string,
-	password: string
+	password: string,
+	token?: string
 ): Promise<ApiResult<unknown> & { response?: Response }> {
 	const client = api(fetch, cookies);
-	const res = await client.post('/api/auth/sign-up/email', { name, email, password });
+	// token = invitation.id, exigé par le guard API dès qu'un utilisateur existe.
+	const res = await client.post('/api/auth/sign-up/email', { name, email, password, token });
 
 	if (res.ok) {
 		applySetCookies(res.response, cookies);
