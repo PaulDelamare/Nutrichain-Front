@@ -1,11 +1,19 @@
 <script lang="ts">
 	import RecallCard from '$lib/components/recall/RecallCard.svelte';
 	import PageHead from '$lib/components/page/PageHead.svelte';
+	import SearchSelect from '$lib/components/ui/SearchSelect.svelte';
 	import { usePageSearch } from '$lib/context/pageSearch.svelte';
 	import { filterRowsByText } from '$lib/utils/pageSearch/filterByText';
 	import type { ActionData, PageData } from './$types';
 
 	let { data, form }: { data: PageData; form: ActionData } = $props();
+
+	const lotOptions = $derived(
+		data.batches.map((b) => ({
+			value: b.id,
+			label: `${b.produit?.nom ?? 'Produit'} — ${b.id.slice(0, 8)}… (${b.statut})`
+		}))
+	);
 
 	const pageSearch = usePageSearch();
 
@@ -44,14 +52,7 @@
 	<form method="POST" action="?/recall">
 		<label>
 			<span>Lot concerné</span>
-			<select name="lotId" required>
-				<option value="" disabled selected>— choisir un lot —</option>
-				{#each data.batches as batch (batch.id)}
-					<option value={batch.id}>
-						{batch.produit?.nom ?? 'Produit'} — {batch.id.slice(0, 8)}… ({batch.statut})
-					</option>
-				{/each}
-			</select>
+			<SearchSelect name="lotId" options={lotOptions} placeholder="— choisir un lot —" />
 		</label>
 
 		<label>
@@ -155,7 +156,6 @@
 		color: var(--nc-text);
 	}
 
-	select,
 	input {
 		padding: 0.5rem 0.625rem;
 		border: 1px solid #e2e8f0;
