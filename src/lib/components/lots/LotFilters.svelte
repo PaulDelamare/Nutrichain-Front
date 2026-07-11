@@ -6,14 +6,16 @@
 
 	type Props = {
 		filters: LotFilters;
-		// Options de produits dérivées des lots réellement chargés (dynamique).
+		// Options dérivées des lots réellement chargés (dynamique).
 		produitOptions?: Option[];
+		siteOptions?: Option[];
 		onapply?: () => void;
 	};
 
 	let {
 		filters = $bindable(),
 		produitOptions = [{ label: 'Tous les produits', value: 'tous' }],
+		siteOptions = [{ label: 'Tous les sites', value: 'tous' }],
 		onapply
 	}: Props = $props();
 </script>
@@ -39,6 +41,15 @@
 		<span>Produit</span>
 		<select bind:value={filters.produit}>
 			{#each produitOptions as opt (opt.value)}
+				<option value={opt.value}>{opt.label}</option>
+			{/each}
+		</select>
+	</label>
+
+	<label class="field">
+		<span>Site</span>
+		<select bind:value={filters.site}>
+			{#each siteOptions as opt (opt.value)}
 				<option value={opt.value}>{opt.label}</option>
 			{/each}
 		</select>
