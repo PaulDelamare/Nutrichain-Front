@@ -117,12 +117,15 @@
 	}
 
 	.trigger-card {
-		max-width: 40rem;
 		margin: 0 0 1.25rem;
 		padding: 1.25rem 1.5rem;
 		border: 1px solid #e2e8f0;
 		border-radius: 0.5rem;
 		background: #fff;
+	}
+
+	.trigger-card form {
+		max-width: 40rem;
 	}
 
 	.trigger-card h3 {
@@ -215,8 +218,9 @@
 	}
 
 	.list {
-		display: flex;
-		flex-direction: column;
+		display: grid;
+		grid-template-columns: repeat(auto-fill, minmax(24rem, 1fr));
 		gap: 1rem;
+		align-items: start;
 	}
 </style>

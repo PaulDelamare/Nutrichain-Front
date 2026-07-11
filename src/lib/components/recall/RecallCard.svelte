@@ -51,7 +51,6 @@
 
 <style>
 	.card {
-		max-width: 40rem;
 		padding: 1.25rem 1.5rem;
 		border: 1px solid #e2e8f0;
 		border-radius: 0.5rem;
