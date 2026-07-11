@@ -16,7 +16,7 @@
 		<p class="empty">Aucun mouvement enregistré pour ce lot.</p>
 	{:else}
 		<ul>
-			{#each events as event}
+			{#each events as event (event)}
 				<li>
 					<span class="dot" aria-hidden="true"></span>
 					<div>

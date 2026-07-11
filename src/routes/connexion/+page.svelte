@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { APP_NAME, APP_TAGLINE } from '$lib/config/app';
+	import { APP_NAME } from '$lib/config/app';
 	import type { ActionData } from './$types';
 
 	let { form }: { form: ActionData } = $props();

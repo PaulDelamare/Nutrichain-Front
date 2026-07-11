@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { resolve } from '$app/paths';
 	import IdentityCard from '$lib/components/lot-sheet/IdentityCard.svelte';
 	import HistoryPanel from '$lib/components/lot-sheet/HistoryPanel.svelte';
 	import LocationPanel from '$lib/components/lot-sheet/LocationPanel.svelte';
@@ -22,7 +23,7 @@
 </script>
 
 <header class="page-top">
-	<a href="/recherche-lots" class="back-link">
+	<a href={resolve('/recherche-lots')} class="back-link">
 		<svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
 			<path
 				d="M15 6l-6 6 6 6"

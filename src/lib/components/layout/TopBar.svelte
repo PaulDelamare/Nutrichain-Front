@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { resolve } from '$app/paths';
 	import SearchField from './SearchField.svelte';
 	import { usePageSearch } from '$lib/context/pageSearch.svelte';
 
@@ -51,7 +52,7 @@
 		{#if coldAlerts > 0}
 			<span class="badge-alert">{coldAlerts} alertes froid</span>
 		{/if}
-		<a href="/deconnexion" class="logout">Déconnexion</a>
+		<a href={resolve('/deconnexion')} class="logout">Déconnexion</a>
 	</div>
 </header>
 

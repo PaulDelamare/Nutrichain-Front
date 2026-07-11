@@ -31,7 +31,7 @@
 {/if}
 
 <div class="grid">
-	{#each connectors as connector}
+	{#each connectors as connector (connector.name)}
 		<ConnectorCard {connector} />
 	{/each}
 </div>

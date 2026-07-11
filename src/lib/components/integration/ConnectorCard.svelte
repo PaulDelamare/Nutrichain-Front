@@ -15,7 +15,7 @@
 		<SyncBadge statut={connector.statut} />
 	</div>
 	<ul>
-		{#each connector.lines as line}
+		{#each connector.lines as line (line)}
 			<li>{line}</li>
 		{/each}
 	</ul>

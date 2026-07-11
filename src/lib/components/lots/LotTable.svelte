@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { resolve } from '$app/paths';
 	import StatusBadge from './StatusBadge.svelte';
 	import type { LotRow } from '$lib/types/lot';
 
@@ -27,10 +28,12 @@
 					<td colspan="6" class="empty">Aucun lot ne correspond aux filtres.</td>
 				</tr>
 			{:else}
-				{#each rows as row}
+				{#each rows as row (row.id)}
 					<tr>
 						<td>
-							<a href="/fiche-lot/{encodeURIComponent(row.id)}">{row.id}</a>
+							<a href={resolve('/(app)/fiche-lot/[lotId]', { lotId: encodeURIComponent(row.id) })}>
+								{row.id}
+							</a>
 						</td>
 						<td>{row.produit}</td>
 						<td class="mono">{row.gtin}</td>

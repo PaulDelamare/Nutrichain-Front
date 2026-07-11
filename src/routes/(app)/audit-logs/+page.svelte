@@ -39,7 +39,7 @@
 				</tr>
 			</thead>
 			<tbody>
-				{#each rows as row}
+				{#each rows as row (row.id)}
 					<tr>
 						<td>{row.when}</td>
 						<td><code>{row.action}</code></td>

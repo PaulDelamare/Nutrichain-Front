@@ -7,10 +7,7 @@ import { sendInvitation } from '$lib/Api/identity.server';
 import { membersToUsers, mockUsers } from '$lib/utils/org/mappers';
 
 export const load: PageServerLoad = async ({ fetch, cookies, locals }) => {
-	const [membersRes, meRes] = await Promise.all([
-		getMembers(fetch, cookies),
-		getMe(fetch, cookies)
-	]);
+	const membersRes = await getMembers(fetch, cookies);
 
 	let canInvite = false;
 	let currentRole: string | undefined;

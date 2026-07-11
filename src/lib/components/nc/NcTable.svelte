@@ -19,7 +19,7 @@
 			</tr>
 		</thead>
 		<tbody>
-			{#each rows as row}
+			{#each rows as row (row.id)}
 				<tr>
 					<td class="id">{row.id}</td>
 					<td>{row.type}</td>

@@ -20,7 +20,7 @@
 			</tr>
 		</thead>
 		<tbody>
-			{#each rows as row}
+			{#each rows as row (row.email)}
 				<tr>
 					<td class="email">{row.email}</td>
 					<td>{row.role}</td>

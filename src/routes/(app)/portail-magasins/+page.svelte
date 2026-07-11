@@ -17,7 +17,7 @@
 {/if}
 
 <div class="stats">
-	{#each data.storeStats as stat}
+	{#each data.storeStats as stat (stat.label)}
 		<StatCard label={stat.label} value={stat.value} accent={stat.accent} />
 	{/each}
 </div>

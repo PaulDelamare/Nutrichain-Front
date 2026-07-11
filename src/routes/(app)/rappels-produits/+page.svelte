@@ -39,7 +39,7 @@
 {/if}
 
 <div class="list">
-	{#each rappels as recall}
+	{#each rappels as recall (recall.id)}
 		<RecallCard {recall} onnotify={notify} />
 	{/each}
 </div>

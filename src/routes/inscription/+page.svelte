@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { resolve } from '$app/paths';
 	import { APP_NAME, APP_TAGLINE } from '$lib/config/app';
 	import type { ActionData, PageData } from './$types';
 
@@ -60,7 +61,7 @@
 
 		<p class="hint">
 			Déjà un compte ?
-			<a href="/connexion">Se connecter</a>
+			<a href={resolve('/connexion')}>Se connecter</a>
 		</p>
 	</section>
 </main>

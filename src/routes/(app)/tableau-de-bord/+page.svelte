@@ -45,7 +45,7 @@
 		{/if}
 
 		<div class="kpis">
-			{#each data.kpis as kpi}
+			{#each data.kpis as kpi (kpi.label)}
 				<KpiCard label={kpi.label} value={kpi.value} detail={kpi.detail} />
 			{/each}
 		</div>
@@ -75,7 +75,7 @@
 			<section class="panel">
 				<h3>Activité récente (EPCIS)</h3>
 				<ul>
-					{#each recentEvents as event}
+					{#each recentEvents as event (event)}
 						<EventRow when={event.when} title={event.title} meta={event.meta} />
 					{/each}
 				</ul>
@@ -84,7 +84,7 @@
 			<section class="panel">
 				<h3>À traiter</h3>
 				<div class="tasks">
-					{#each tasks as task}
+					{#each tasks as task (task)}
 						<TaskAlert variant={task.variant} text={task.text} link={task.link} />
 					{/each}
 				</div>

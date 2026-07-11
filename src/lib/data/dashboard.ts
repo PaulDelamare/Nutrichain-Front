@@ -1,3 +1,5 @@
+import type { Pathname } from '$app/types';
+
 export type Kpi = {
 	label: string;
 	value: string;
@@ -13,7 +15,7 @@ export type EpcisEvent = {
 export type TaskItem = {
 	variant: 'info' | 'warn';
 	text: string;
-	link?: { href: string; label: string };
+	link?: { href: Pathname; label: string };
 };
 
 export const kpis: Kpi[] = [

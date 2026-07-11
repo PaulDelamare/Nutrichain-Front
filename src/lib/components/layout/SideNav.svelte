@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { resolve } from '$app/paths';
 	import { page } from '$app/stores';
 	import { APP_FOOTER, APP_NAME, APP_TAGLINE } from '$lib/config/app';
 	import { navGroups } from '$lib/config/nav';
@@ -9,6 +10,8 @@
 	};
 
 	let { collapsed = false, onMenuToggle }: Props = $props();
+
+	// resolve() n'accepte qu'un littéral de route : on rétrécit l'union Pathname via « as '/' »
 
 	function isActive(href: string, pathname: string): boolean {
 		if (href === '/recherche-lots' && pathname.startsWith('/fiche-lot/')) {
@@ -48,13 +51,13 @@
 		</div>
 
 		<nav class="sidenav-nav">
-			{#each navGroups as group}
+			{#each navGroups as group (group.label)}
 				<p class="group-label">{group.label}</p>
 				<ul class="group-list">
-					{#each group.items as item}
+					{#each group.items as item (item.href)}
 						<li>
 							<a
-								href={item.href}
+								href={resolve(item.href as '/')}
 								class="nav-link"
 								class:active={isActive(item.href, $page.url.pathname)}
 							>

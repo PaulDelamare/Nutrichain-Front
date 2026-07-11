@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { resolve } from '$app/paths';
 	import type { QuarantineLot } from '$lib/types/nc';
 
 	type Props = {
@@ -13,9 +14,11 @@
 	<h3>Lots en quarantaine</h3>
 
 	<ul>
-		{#each lots as item}
+		{#each lots as item (item.lot)}
 			<li>
-				<a href="/fiche-lot/{encodeURIComponent(item.lot)}">{item.lot}</a>
+				<a href={resolve('/(app)/fiche-lot/[lotId]', { lotId: encodeURIComponent(item.lot) })}>
+					{item.lot}
+				</a>
 				— {item.detail}
 			</li>
 		{/each}

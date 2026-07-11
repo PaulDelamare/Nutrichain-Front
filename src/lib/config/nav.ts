@@ -1,5 +1,7 @@
+import type { Pathname } from '$app/types';
+
 export type NavItem = {
-	href: string;
+	href: Pathname;
 	label: string;
 	/** Titre affiché dans le header fixe */
 	title: string;

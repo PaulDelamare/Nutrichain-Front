@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { resolve } from '$app/paths';
 	import { page } from '$app/stores';
 
 	const message = $derived($page.error?.message ?? 'Ce lot n’existe pas ou n’est pas accessible.');
@@ -6,7 +7,7 @@
 </script>
 
 <div class="wrap">
-	<a href="/recherche-lots" class="back-link">← Retour</a>
+	<a href={resolve('/recherche-lots')} class="back-link">← Retour</a>
 	<h1>{title}</h1>
 	<p>{message}</p>
 	<p class="id">Identifiant : <code>{$page.params.lotId}</code></p>

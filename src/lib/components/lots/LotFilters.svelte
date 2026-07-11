@@ -35,7 +35,7 @@
 	<label class="field">
 		<span>Site</span>
 		<select bind:value={filters.site}>
-			{#each lotSiteOptions as opt}
+			{#each lotSiteOptions as opt (opt.value)}
 				<option value={opt.value}>{opt.label}</option>
 			{/each}
 		</select>
@@ -44,7 +44,7 @@
 	<label class="field">
 		<span>Statut</span>
 		<select bind:value={filters.statut}>
-			{#each lotStatutOptions as opt}
+			{#each lotStatutOptions as opt (opt.value)}
 				<option value={opt.value}>{opt.label}</option>
 			{/each}
 		</select>
