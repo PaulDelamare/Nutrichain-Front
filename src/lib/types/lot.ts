@@ -2,6 +2,7 @@ export type LotStatus = 'conforme' | 'surveillance' | 'quarantaine';
 
 export type LotRow = {
 	id: string;
+	lotNumber?: string;
 	produit: string;
 	gtin: string;
 	sscc: string;

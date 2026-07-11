@@ -19,6 +19,8 @@ function fmtDate(iso: string | null): string {
 export function batchToRow(batch: ApiBatch): LotRow {
 	return {
 		id: batch.id,
+		// Numéro de lot GS1 lisible ; repli sur un id raccourci si absent (jamais l'UUID entier).
+		lotNumber: batch.lot_number ?? batch.id.slice(0, 8),
 		produit: batch.produit?.nom ?? '—',
 		gtin: batch.produit?.code_gtin ?? '—',
 		sscc: '—',
