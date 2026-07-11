@@ -15,6 +15,7 @@ export type LotFilters = {
 	gtin: string;
 	lot: string;
 	produit: string;
+	site: string;
 	statut: string;
 };
 
@@ -22,5 +23,6 @@ export const emptyLotFilters = (): LotFilters => ({
 	gtin: '',
 	lot: '',
 	produit: 'tous',
+	site: 'tous',
 	statut: 'tous'
 });

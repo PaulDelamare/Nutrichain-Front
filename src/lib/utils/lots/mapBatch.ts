@@ -24,7 +24,8 @@ export function batchToRow(batch: ApiBatch): LotRow {
 		produit: batch.produit?.nom ?? '—',
 		gtin: batch.produit?.code_gtin ?? '—',
 		sscc: '—',
-		site: batch.unite?.nom ?? batch.unite_code ?? '—',
+		// Emplacement réel du lot (matériel → lieu), renseigné à la réception.
+		site: batch.materiel?.lieu?.nom ?? '—',
 		statut: mapStatut(batch.statut),
 		temperature: '—'
 	};

@@ -20,12 +20,18 @@
 	let draft = $state(emptyLotFilters());
 	let applied = $state(emptyLotFilters());
 
-	// Options de produits dérivées des lots réellement chargés (pas de valeurs codées en dur).
+	// Options dérivées des lots réellement chargés (pas de valeurs codées en dur).
 	const produitOptions = $derived([
 		{ label: 'Tous les produits', value: 'tous' },
 		...Array.from(new Set(data.lots.map((l) => l.produit)))
 			.sort()
 			.map((p) => ({ label: p, value: p }))
+	]);
+	const siteOptions = $derived([
+		{ label: 'Tous les sites', value: 'tous' },
+		...Array.from(new Set(data.lots.map((l) => l.site).filter((s) => s && s !== '—')))
+			.sort()
+			.map((s) => ({ label: s, value: s }))
 	]);
 
 	const filteredByForm = $derived(filterLots(data.lots, applied));
@@ -45,14 +51,14 @@
 
 <PageHead
 	heading="Recherche de lots"
-	description="Filtres — GTIN, numéro de lot, produit et statut."
+	description="Filtres — GTIN, numéro de lot, produit, site et statut."
 />
 
 {#if data.source === 'mock' && data.error}
 	<p class="warn">API indisponible — données de démonstration ({data.error})</p>
 {/if}
 
-<LotFilters bind:filters={draft} {produitOptions} onapply={apply} />
+<LotFilters bind:filters={draft} {produitOptions} {siteOptions} onapply={apply} />
 
 <div class="results">
 	<LotTable rows={results} />
