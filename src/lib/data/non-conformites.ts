@@ -8,6 +8,6 @@ export const openNc: NcRow[] = [
 export const quarantineLots: QuarantineLot[] = [
 	{
 		lot: 'L-2025-08744',
-		detail: 'blocage stock jusqu\'à libération qualité.'
+		detail: "blocage stock jusqu'à libération qualité."
 	}
 ];

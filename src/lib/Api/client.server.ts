@@ -51,10 +51,7 @@ async function parseJson<T>(res: Response): Promise<ApiResult<T>> {
 		};
 	}
 
-	const msg =
-		payload.error?.map((e) => e.message).join(' ') ||
-		payload.message ||
-		'Erreur API';
+	const msg = payload.error?.map((e) => e.message).join(' ') || payload.message || 'Erreur API';
 
 	return { ok: false, status: res.status, message: msg };
 }

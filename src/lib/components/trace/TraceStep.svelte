@@ -8,7 +8,12 @@
 </script>
 
 <article class="step">
-	<div class="icon" class:amont={icon === 'amont'} class:transform={icon === 'transform'} class:aval={icon === 'aval'}>
+	<div
+		class="icon"
+		class:amont={icon === 'amont'}
+		class:transform={icon === 'transform'}
+		class:aval={icon === 'aval'}
+	>
 		{#if icon === 'amont'}
 			<svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
 				<path

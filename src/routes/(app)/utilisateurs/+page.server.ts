@@ -2,11 +2,7 @@ import { fail } from '@sveltejs/kit';
 import type { Actions, PageServerLoad } from './$types';
 import { getMe } from '$lib/Api/auth.server';
 import { getMembers } from '$lib/Api/organization.server';
-import {
-	canInviteMembers,
-	INVITE_ROLES,
-	type InviteRole
-} from '$lib/config/invite-roles';
+import { canInviteMembers, INVITE_ROLES, type InviteRole } from '$lib/config/invite-roles';
 import { sendInvitation } from '$lib/Api/identity.server';
 import { membersToUsers, mockUsers } from '$lib/utils/org/mappers';
 

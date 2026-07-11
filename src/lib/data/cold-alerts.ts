@@ -2,8 +2,7 @@ import type { ColdAlertRow, ColdIncident } from '$lib/types/cold';
 
 export const coldIncident: ColdIncident = {
 	id: 'COLD-2025-089',
-	message:
-		'Dépassement > 8 °C sur ligne expédition Loire — équipe terrain notifiée.'
+	message: 'Dépassement > 8 °C sur ligne expédition Loire — équipe terrain notifiée.'
 };
 
 export const coldAlerts: ColdAlertRow[] = [

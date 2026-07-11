@@ -10,7 +10,13 @@
 	let { filters = $bindable(), onapply }: Props = $props();
 </script>
 
-<form class="filters" onsubmit={(e) => { e.preventDefault(); onapply?.(); }}>
+<form
+	class="filters"
+	onsubmit={(e) => {
+		e.preventDefault();
+		onapply?.();
+	}}
+>
 	<label class="field">
 		<span>GTIN</span>
 		<input type="text" placeholder="356007…" bind:value={filters.gtin} />

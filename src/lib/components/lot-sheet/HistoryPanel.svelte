@@ -17,21 +17,21 @@
 	{:else}
 		<ul>
 			{#each events as event}
-			<li>
-				<span class="dot" aria-hidden="true"></span>
-				<div>
-					<p class="when">
-						{event.time}
-						{#if event.day}
-							— {event.day}
-						{/if}
-					</p>
-					<p class="title">{event.title}</p>
-					<p class="detail">{event.detail}</p>
-				</div>
-			</li>
-		{/each}
-	</ul>
+				<li>
+					<span class="dot" aria-hidden="true"></span>
+					<div>
+						<p class="when">
+							{event.time}
+							{#if event.day}
+								— {event.day}
+							{/if}
+						</p>
+						<p class="title">{event.title}</p>
+						<p class="detail">{event.detail}</p>
+					</div>
+				</li>
+			{/each}
+		</ul>
 	{/if}
 </section>
 

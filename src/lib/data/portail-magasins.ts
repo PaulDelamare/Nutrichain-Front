@@ -11,6 +11,5 @@ export const storeStats: StoreStat[] = [
 
 export const activeBrief = {
 	title: 'Consigne active',
-	text:
-		'Retirer du rayon les références listées dans RAP-2025-014 et scanner le code de confirmation dans l\'app terrain.'
+	text: "Retirer du rayon les références listées dans RAP-2025-014 et scanner le code de confirmation dans l'app terrain."
 };

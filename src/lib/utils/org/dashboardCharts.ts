@@ -157,10 +157,7 @@ function alertSeverityChart(alerts: ApiAlert[]): ChartSegment[] {
 	}));
 }
 
-function qualityResultsChart(
-	qualityRows: ApiQualityControl[],
-	batchCount: number
-): ChartSegment[] {
+function qualityResultsChart(qualityRows: ApiQualityControl[], batchCount: number): ChartSegment[] {
 	const nonConforme = qualityRows.filter((q) => q.resultat === 'NON_CONFORME').length;
 	const enCours = qualityRows.filter((q) => q.resultat === 'EN_COURS').length;
 	const conforme = Math.max(batchCount - nonConforme - enCours, 0);

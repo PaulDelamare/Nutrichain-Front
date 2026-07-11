@@ -4,10 +4,7 @@ export const connectors: Connector[] = [
 	{
 		name: 'SAP S/4HANA',
 		statut: 'ok',
-		lines: [
-			'Flux articles & lots — delta toutes les 15 min',
-			'Dernière synchro : il y a 3 min'
-		]
+		lines: ['Flux articles & lots — delta toutes les 15 min', 'Dernière synchro : il y a 3 min']
 	},
 	{
 		name: 'WMS Reflex',
@@ -17,6 +14,6 @@ export const connectors: Connector[] = [
 	{
 		name: 'TMS',
 		statut: 'latence',
-		lines: ['2 expéditions en file d\'attente']
+		lines: ["2 expéditions en file d'attente"]
 	}
 ];

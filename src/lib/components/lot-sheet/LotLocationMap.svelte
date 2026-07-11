@@ -60,9 +60,7 @@
 					.filter(Boolean)
 					.join('<br />');
 
-				L.marker([pin.lat, pin.lng], { icon })
-					.addTo(map)
-					.bindPopup(popupLines);
+				L.marker([pin.lat, pin.lng], { icon }).addTo(map).bindPopup(popupLines);
 
 				mapReady = true;
 				requestAnimationFrame(() => map?.invalidateSize());
@@ -98,7 +96,12 @@
 			<span>{mapError}</span>
 		</div>
 	{:else}
-		<div class="map-host" bind:this={container} role="application" aria-label="Carte de localisation du lot"></div>
+		<div
+			class="map-host"
+			bind:this={container}
+			role="application"
+			aria-label="Carte de localisation du lot"
+		></div>
 		{#if !mapReady}
 			<div class="lot-map-loading">Chargement de la carte…</div>
 		{/if}

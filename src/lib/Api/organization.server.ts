@@ -95,9 +95,9 @@ export const getQualityControls = (fetch: typeof globalThis.fetch, cookies: Cook
 	orgApi(fetch, cookies).get<ApiQualityControl[]>('/api/organization/quality-controls');
 
 export const getQuarantineBatches = (fetch: typeof globalThis.fetch, cookies: Cookies) =>
-	orgApi(fetch, cookies).get<
-		{ id: string; produit?: { nom: string }; statut: string }[]
-	>('/api/organization/quarantine-batches');
+	orgApi(fetch, cookies).get<{ id: string; produit?: { nom: string }; statut: string }[]>(
+		'/api/organization/quarantine-batches'
+	);
 
 export const getEquipment = (fetch: typeof globalThis.fetch, cookies: Cookies) =>
 	orgApi(fetch, cookies).get<ApiEquipment[]>('/api/organization/equipment');

@@ -24,7 +24,13 @@
 			<span>{recall.progressLabel}</span>
 			<span class="pct">{recall.progress} %</span>
 		</div>
-		<div class="track" role="progressbar" aria-valuenow={recall.progress} aria-valuemin="0" aria-valuemax="100">
+		<div
+			class="track"
+			role="progressbar"
+			aria-valuenow={recall.progress}
+			aria-valuemin="0"
+			aria-valuemax="100"
+		>
 			<div class="fill" style="width: {recall.progress}%"></div>
 		</div>
 	</div>

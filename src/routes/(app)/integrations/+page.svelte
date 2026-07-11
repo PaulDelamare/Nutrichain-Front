@@ -15,11 +15,7 @@
 	});
 
 	const connectors = $derived(
-		filterRowsByText(data.connectors, pageSearch.query, (c) => [
-			c.name,
-			c.statut,
-			...c.lines
-		])
+		filterRowsByText(data.connectors, pageSearch.query, (c) => [c.name, c.statut, ...c.lines])
 	);
 </script>
 
@@ -29,7 +25,9 @@
 />
 
 {#if data.source === 'mock'}
-	<p class="banner">Connecteurs partiellement dérivés du journal d'audit — pas de modèle dédié en base.</p>
+	<p class="banner">
+		Connecteurs partiellement dérivés du journal d'audit — pas de modèle dédié en base.
+	</p>
 {/if}
 
 <div class="grid">

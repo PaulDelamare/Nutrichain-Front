@@ -21,7 +21,9 @@
 		return { chartH, innerW, innerH, barGap, barW };
 	});
 
-	const totals = $derived(labels.map((_, i) => series.reduce((sum, s) => sum + (s.data[i] ?? 0), 0)));
+	const totals = $derived(
+		labels.map((_, i) => series.reduce((sum, s) => sum + (s.data[i] ?? 0), 0))
+	);
 	const maxTotal = $derived(Math.max(...totals, 1));
 
 	type BarPart = { y: number; h: number; color: string };
@@ -86,7 +88,12 @@
 				/>
 			{/if}
 
-			<text x={bar.x + layout.barW / 2} y={layout.chartH - 6} text-anchor="middle" class="axis-label">
+			<text
+				x={bar.x + layout.barW / 2}
+				y={layout.chartH - 6}
+				text-anchor="middle"
+				class="axis-label"
+			>
 				{bar.label}
 			</text>
 		{/each}

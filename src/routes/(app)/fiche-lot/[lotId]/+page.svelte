@@ -17,12 +17,7 @@
 	});
 
 	const events = $derived(
-		filterRowsByText(data.sheet.events, pageSearch.query, (e) => [
-			e.time,
-			e.day,
-			e.title,
-			e.detail
-		])
+		filterRowsByText(data.sheet.events, pageSearch.query, (e) => [e.time, e.day, e.title, e.detail])
 	);
 </script>
 

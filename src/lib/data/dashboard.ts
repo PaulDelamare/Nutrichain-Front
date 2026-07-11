@@ -26,12 +26,12 @@ export const kpis: Kpi[] = [
 
 export const recentEvents: EpcisEvent[] = [
 	{
-		when: 'Aujourd\'hui — 14:32',
+		when: "Aujourd'hui — 14:32",
 		title: 'ObjectEvent — réception',
 		meta: 'SSCC 00376123456789012345 · Site Bretagne Nord'
 	},
 	{
-		when: 'Aujourd\'hui — 11:08',
+		when: "Aujourd'hui — 11:08",
 		title: 'AggregationEvent — palette',
 		meta: 'SSCC 00376123456789012999 · Entrepôt Rennes'
 	},

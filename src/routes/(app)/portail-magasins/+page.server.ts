@@ -1,6 +1,11 @@
 import type { PageServerLoad } from './$types';
 import { getAlerts, getCustomers, getShipments } from '$lib/Api/organization.server';
-import { buildPortailBrief, buildPortailStats, mockBrief, mockStoreStats } from '$lib/utils/org/mappers';
+import {
+	buildPortailBrief,
+	buildPortailStats,
+	mockBrief,
+	mockStoreStats
+} from '$lib/utils/org/mappers';
 
 export const load: PageServerLoad = async ({ fetch, cookies }) => {
 	const [customers, shipments, alerts] = await Promise.all([

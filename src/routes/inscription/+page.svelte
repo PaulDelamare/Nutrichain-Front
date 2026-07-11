@@ -16,7 +16,9 @@
 		{#if data.invitation}
 			<div class="invite-banner">
 				<p>Invitation pour <strong>{data.invitation.email}</strong></p>
-				<p class="meta">Rôle : {data.invitation.role} · Valide jusqu'au {data.invitation.expiresAt}</p>
+				<p class="meta">
+					Rôle : {data.invitation.role} · Valide jusqu'au {data.invitation.expiresAt}
+				</p>
 			</div>
 		{:else}
 			<p class="intro">Création de compte réservée aux utilisateurs invités.</p>

@@ -93,7 +93,8 @@
 		height: 100%;
 		background: #1a2332;
 		color: #cbd5e1;
-		transition: transform var(--shell-duration, 0.28s) var(--shell-ease, cubic-bezier(0.4, 0, 0.2, 1));
+		transition: transform var(--shell-duration, 0.28s)
+			var(--shell-ease, cubic-bezier(0.4, 0, 0.2, 1));
 		will-change: transform;
 	}
 
@@ -200,7 +201,9 @@
 		font-size: 0.875rem;
 		color: #cbd5e1;
 		text-decoration: none;
-		transition: background 0.15s, color 0.15s;
+		transition:
+			background 0.15s,
+			color 0.15s;
 	}
 
 	.nav-link:hover {

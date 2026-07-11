@@ -1,9 +1,23 @@
-import type { ApiAlert, ApiAuditLog, ApiEquipment, ApiMember, ApiMovement, ApiQualityControl } from '$lib/Api/organization.server';
+import type {
+	ApiAlert,
+	ApiAuditLog,
+	ApiEquipment,
+	ApiMember,
+	ApiMovement,
+	ApiQualityControl
+} from '$lib/Api/organization.server';
 import type { ApiBatch } from '$lib/Api/traceability.server';
 import type { Kpi, EpcisEvent, TaskItem } from '$lib/data/dashboard';
-import { kpis as mockKpis, recentEvents as mockEvents, tasks as mockTasks } from '$lib/data/dashboard';
+import {
+	kpis as mockKpis,
+	recentEvents as mockEvents,
+	tasks as mockTasks
+} from '$lib/data/dashboard';
 import type { ColdAlertRow, ColdIncident } from '$lib/types/cold';
-import { coldAlerts as mockColdAlerts, coldIncident as mockColdIncident } from '$lib/data/cold-alerts';
+import {
+	coldAlerts as mockColdAlerts,
+	coldIncident as mockColdIncident
+} from '$lib/data/cold-alerts';
 import type { NcRow, QuarantineLot } from '$lib/types/nc';
 import { openNc as mockNc, quarantineLots as mockQuarantine } from '$lib/data/non-conformites';
 import type { Recall } from '$lib/types/recall';

@@ -4,7 +4,7 @@ export const users: AppUser[] = [
 	{
 		email: 'marie.dupont@entreprise.fr',
 		role: 'Qualité',
-		lastLogin: 'Aujourd\'hui — 09:14',
+		lastLogin: "Aujourd'hui — 09:14",
 		mfa: true
 	},
 	{

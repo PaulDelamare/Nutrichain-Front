@@ -9,7 +9,12 @@
 	let { statut }: Props = $props();
 </script>
 
-<span class="badge" class:conforme={statut === 'conforme'} class:surveillance={statut === 'surveillance'} class:quarantaine={statut === 'quarantaine'}>
+<span
+	class="badge"
+	class:conforme={statut === 'conforme'}
+	class:surveillance={statut === 'surveillance'}
+	class:quarantaine={statut === 'quarantaine'}
+>
 	{lotStatusLabel(statut)}
 </span>
 

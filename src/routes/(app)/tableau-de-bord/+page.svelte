@@ -45,51 +45,51 @@
 		{/if}
 
 		<div class="kpis">
-		{#each data.kpis as kpi}
-			<KpiCard label={kpi.label} value={kpi.value} detail={kpi.detail} />
-		{/each}
-	</div>
+			{#each data.kpis as kpi}
+				<KpiCard label={kpi.label} value={kpi.value} detail={kpi.detail} />
+			{/each}
+		</div>
 
-	<section class="charts">
-		<ChartCard title="Répartition des lots" subtitle="Par statut opérationnel">
-			<DonutChart segments={data.charts.lotStatus} centerLabel="lots" />
-		</ChartCard>
+		<section class="charts">
+			<ChartCard title="Répartition des lots" subtitle="Par statut opérationnel">
+				<DonutChart segments={data.charts.lotStatus} centerLabel="lots" />
+			</ChartCard>
 
-		<ChartCard title="Flux logistiques" subtitle="7 derniers jours — événements EPCIS">
-			<StackedBarChart
-				labels={data.charts.weeklyMovements.labels}
-				series={data.charts.weeklyMovements.series}
-			/>
-		</ChartCard>
+			<ChartCard title="Flux logistiques" subtitle="7 derniers jours — événements EPCIS">
+				<StackedBarChart
+					labels={data.charts.weeklyMovements.labels}
+					series={data.charts.weeklyMovements.series}
+				/>
+			</ChartCard>
 
-		<ChartCard title="Alertes actives" subtitle="Par niveau de gravité">
-			<HorizontalBarChart segments={data.charts.alertSeverity} />
-		</ChartCard>
+			<ChartCard title="Alertes actives" subtitle="Par niveau de gravité">
+				<HorizontalBarChart segments={data.charts.alertSeverity} />
+			</ChartCard>
 
-		<ChartCard title="Contrôles qualité" subtitle="État des lots suivis">
-			<DonutChart segments={data.charts.qualityResults} centerLabel="contrôles" />
-		</ChartCard>
-	</section>
-
-	<div class="panels">
-		<section class="panel">
-			<h3>Activité récente (EPCIS)</h3>
-			<ul>
-				{#each recentEvents as event}
-					<EventRow when={event.when} title={event.title} meta={event.meta} />
-				{/each}
-			</ul>
+			<ChartCard title="Contrôles qualité" subtitle="État des lots suivis">
+				<DonutChart segments={data.charts.qualityResults} centerLabel="contrôles" />
+			</ChartCard>
 		</section>
 
-		<section class="panel">
-			<h3>À traiter</h3>
-			<div class="tasks">
-				{#each tasks as task}
-					<TaskAlert variant={task.variant} text={task.text} link={task.link} />
-				{/each}
-			</div>
-		</section>
-	</div>
+		<div class="panels">
+			<section class="panel">
+				<h3>Activité récente (EPCIS)</h3>
+				<ul>
+					{#each recentEvents as event}
+						<EventRow when={event.when} title={event.title} meta={event.meta} />
+					{/each}
+				</ul>
+			</section>
+
+			<section class="panel">
+				<h3>À traiter</h3>
+				<div class="tasks">
+					{#each tasks as task}
+						<TaskAlert variant={task.variant} text={task.text} link={task.link} />
+					{/each}
+				</div>
+			</section>
+		</div>
 	</div>
 </div>
 

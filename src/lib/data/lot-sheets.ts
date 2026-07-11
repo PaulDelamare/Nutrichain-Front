@@ -16,7 +16,7 @@ const sheets: Record<string, LotSheet> = {
 		events: [
 			{
 				time: '14:32',
-				day: 'Aujourd\'hui',
+				day: "Aujourd'hui",
 				title: 'Mesure IoT +3,8 °C',
 				detail: 'Chambre froide B — seuil OK'
 			},

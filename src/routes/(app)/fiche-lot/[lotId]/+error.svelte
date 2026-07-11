@@ -1,9 +1,7 @@
 <script lang="ts">
 	import { page } from '$app/stores';
 
-	const message = $derived(
-		$page.error?.message ?? 'Ce lot n’existe pas ou n’est pas accessible.'
-	);
+	const message = $derived($page.error?.message ?? 'Ce lot n’existe pas ou n’est pas accessible.');
 	const title = $derived($page.status === 403 ? 'Accès refusé' : 'Lot introuvable');
 </script>
 

@@ -9,7 +9,11 @@
 	let { statut }: Props = $props();
 </script>
 
-<span class="badge" class:en_cours={statut === 'en_cours'} class:quarantaine={statut === 'quarantaine'}>
+<span
+	class="badge"
+	class:en_cours={statut === 'en_cours'}
+	class:quarantaine={statut === 'quarantaine'}
+>
 	{ncStatusLabel(statut)}
 </span>
 

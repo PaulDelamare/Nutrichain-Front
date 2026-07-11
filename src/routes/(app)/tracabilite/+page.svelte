@@ -33,7 +33,7 @@
 	<p class="banner">Données de démonstration — connectez l’API pour la traçabilité réelle.</p>
 {/if}
 
-<TraceTree steps={steps} />
+<TraceTree {steps} />
 
 <style>
 	.banner {

@@ -1,6 +1,11 @@
 import type { PageServerLoad } from './$types';
 import { getBatches } from '$lib/Api/traceability.server';
-import { getAlerts, getQualityControls, getQuarantineBatches, getMovements } from '$lib/Api/organization.server';
+import {
+	getAlerts,
+	getQualityControls,
+	getQuarantineBatches,
+	getMovements
+} from '$lib/Api/organization.server';
 import {
 	buildDashboardKpis,
 	buildDashboardTasks,
@@ -26,8 +31,7 @@ export const load: PageServerLoad = async ({ fetch, cookies }) => {
 	const quarantineList = quarantine.ok ? quarantine.data : [];
 	const movementList = movements.ok ? movements.data : [];
 
-	const source =
-		batches.ok && alerts.ok ? ('api' as const) : ('mock' as const);
+	const source = batches.ok && alerts.ok ? ('api' as const) : ('mock' as const);
 
 	return {
 		source,
@@ -42,7 +46,8 @@ export const load: PageServerLoad = async ({ fetch, cookies }) => {
 			qualityList,
 			!(batches.ok && alerts.ok)
 		),
-		recentEvents: movementList.length > 0 ? movementsToEvents(movementList.slice(0, 5)) : mockEvents,
+		recentEvents:
+			movementList.length > 0 ? movementsToEvents(movementList.slice(0, 5)) : mockEvents,
 		tasks: alerts.ok ? buildDashboardTasks(alertList, qualityList.length) : mockTasks
 	};
 };

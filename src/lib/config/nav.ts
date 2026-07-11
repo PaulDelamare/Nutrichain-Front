@@ -21,7 +21,7 @@ export const navGroups: NavGroup[] = [
 				href: '/tableau-de-bord',
 				label: 'Tableau de bord',
 				title: 'Tableau de bord',
-				heading: 'Vue d\'ensemble',
+				heading: "Vue d'ensemble",
 				description: 'KPI temps réel — lots suivis, alertes, rappels et synchronisations.'
 			},
 			{
@@ -29,16 +29,14 @@ export const navGroups: NavGroup[] = [
 				label: 'Recherche lots',
 				title: 'Recherche de lots',
 				heading: 'Recherche de lots',
-				description:
-					'Filtres avancés — GTIN, lot, SSCC, produit, site, dates, statut.'
+				description: 'Filtres avancés — GTIN, lot, SSCC, produit, site, dates, statut.'
 			},
 			{
 				href: '/tracabilite',
 				label: 'Traçabilité',
 				title: 'Traçabilité',
 				heading: 'Arbre de traçabilité',
-				description:
-					'Vue amont / aval — matières premières vers produits finis et expéditions.'
+				description: 'Vue amont / aval — matières premières vers produits finis et expéditions.'
 			}
 		]
 	},
@@ -50,24 +48,21 @@ export const navGroups: NavGroup[] = [
 				label: 'Chaîne du froid',
 				title: 'Chaîne du froid',
 				heading: 'Alertes chaîne du froid',
-				description:
-					'Surveillance temps réel — seuils, capteurs, escalade qualité.'
+				description: 'Surveillance temps réel — seuils, capteurs, escalade qualité.'
 			},
 			{
 				href: '/non-conformites',
 				label: 'Non-conformités',
 				title: 'Non-conformités',
 				heading: 'Non-conformités & quarantaine',
-				description:
-					'Suivi des écarts, causes, actions correctives et lots bloqués.'
+				description: 'Suivi des écarts, causes, actions correctives et lots bloqués.'
 			},
 			{
 				href: '/rappels-produits',
 				label: 'Rappels produits',
 				title: 'Rappels produits',
 				heading: 'Rappels produits',
-				description:
-					'Workflow — lots concernés, sites impactés, progression des retraits.'
+				description: 'Workflow — lots concernés, sites impactés, progression des retraits.'
 			}
 		]
 	},
@@ -87,7 +82,7 @@ export const navGroups: NavGroup[] = [
 				label: 'Intégrations',
 				title: 'Intégrations',
 				heading: 'Intégrations ERP / WMS / TMS',
-				description: 'Connecteurs, états de synchronisation et files d\'attente.'
+				description: "Connecteurs, états de synchronisation et files d'attente."
 			}
 		]
 	},
@@ -106,7 +101,7 @@ export const navGroups: NavGroup[] = [
 				label: 'Audit & logs',
 				title: 'Audit & logs',
 				heading: 'Audit & logs',
-				description: 'Journal d\'audit et événements système.'
+				description: "Journal d'audit et événements système."
 			}
 		]
 	}
@@ -118,9 +113,7 @@ export function findNavItem(pathname: string): NavItem | undefined {
 	if (pathname.startsWith('/fiche-lot/')) {
 		return flatNav.find((item) => item.href === '/recherche-lots');
 	}
-	return flatNav.find(
-		(item) => pathname === item.href || pathname.startsWith(`${item.href}/`)
-	);
+	return flatNav.find((item) => pathname === item.href || pathname.startsWith(`${item.href}/`));
 }
 
 const fallbackTitle = 'NutriChain';

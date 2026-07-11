@@ -9,7 +9,7 @@
 {#if enabled}
 	<span class="badge">Oui</span>
 {:else}
-	<span class="badge off">Non</span>
+	<span class="off badge">Non</span>
 {/if}
 
 <style>

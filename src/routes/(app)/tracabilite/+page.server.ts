@@ -17,5 +17,9 @@ export const load: PageServerLoad = async ({ fetch, cookies, url }) => {
 		};
 	}
 
-	return { steps: mockTraceSteps, source: 'mock' as const, error: suppliers.message || batches.message };
+	return {
+		steps: mockTraceSteps,
+		source: 'mock' as const,
+		error: suppliers.message || batches.message
+	};
 };

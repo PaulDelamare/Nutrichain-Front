@@ -34,13 +34,7 @@
 
 			<label>
 				<span>Adresse e-mail</span>
-				<input
-					type="email"
-					name="email"
-					value={form?.email ?? ''}
-					required
-					autocomplete="email"
-				/>
+				<input type="email" name="email" value={form?.email ?? ''} required autocomplete="email" />
 			</label>
 
 			<label>
