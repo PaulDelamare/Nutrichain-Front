@@ -1,10 +1,12 @@
-export type InviteRole = 'owner' | 'admin' | 'manager' | 'operator';
+// Rôles réellement attribuables via invitation, alignés sur l'API (INVITABLE_ROLES) :
+// owner n'est pas invitable (c'est le créateur de l'organisation).
+export type InviteRole = 'admin' | 'quality' | 'operator' | 'viewer';
 
 export const INVITE_ROLE_OPTIONS: { value: InviteRole; label: string }[] = [
 	{ value: 'operator', label: 'Opérateur' },
-	{ value: 'manager', label: 'Manager' },
+	{ value: 'quality', label: 'Qualité' },
 	{ value: 'admin', label: 'Administrateur' },
-	{ value: 'owner', label: 'Propriétaire' }
+	{ value: 'viewer', label: 'Lecteur' }
 ];
 
 export const INVITE_ROLES: InviteRole[] = INVITE_ROLE_OPTIONS.map((r) => r.value);
