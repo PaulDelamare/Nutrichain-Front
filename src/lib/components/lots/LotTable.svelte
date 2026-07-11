@@ -32,7 +32,7 @@
 					<tr>
 						<td>
 							<a href={resolve('/(app)/fiche-lot/[lotId]', { lotId: encodeURIComponent(row.id) })}>
-								{row.id}
+								{row.lotNumber ?? row.id}
 							</a>
 						</td>
 						<td>{row.produit}</td>

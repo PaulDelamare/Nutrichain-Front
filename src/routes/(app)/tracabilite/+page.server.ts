@@ -20,6 +20,7 @@ export const load: PageServerLoad = async ({ fetch, cookies, url }) => {
 	const batchOptions = batches.data.map((b) => ({
 		id: b.id,
 		nom: b.produit?.nom ?? 'Produit',
+		lotNumber: b.lot_number ?? b.id.slice(0, 8),
 		statut: b.statut
 	}));
 

@@ -41,7 +41,7 @@
 		<option value="" disabled selected={!data.lotId}>— choisir un lot —</option>
 		{#each data.batches as batch (batch.id)}
 			<option value={batch.id} selected={batch.id === data.lotId}>
-				{batch.nom} — {batch.id.slice(0, 8)}… ({batch.statut})
+				{batch.nom} — {batch.lotNumber} ({batch.statut})
 			</option>
 		{/each}
 	</select>

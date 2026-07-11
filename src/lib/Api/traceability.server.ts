@@ -12,6 +12,7 @@ export type ApiBatchMouvement = {
 
 export type ApiBatch = {
 	id: string;
+	lot_number?: string | null;
 	statut: string;
 	quantite_actuelle: string | number;
 	unite_code: string;
