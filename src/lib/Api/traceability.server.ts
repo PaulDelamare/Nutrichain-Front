@@ -37,8 +37,61 @@ export type ApiProduct = {
 	categorie?: string;
 };
 
+export type ApiGenealogyBatch = {
+	id: string;
+	statut: string;
+	nom_produit: string;
+	lot_number?: string | null;
+	date_peremption?: string | null;
+};
+
+export type ApiGenealogy = {
+	batchId: string;
+	upstream: ApiGenealogyBatch[];
+	downstream: ApiGenealogyBatch[];
+};
+
+export type ApiRecallShipment = {
+	shipmentId: string;
+	shipmentRef: string;
+	customerId: string;
+	customerName: string;
+	customerContact?: string | null;
+	customerEmail?: string | null;
+	customerAddress?: string;
+	dateEnvoi: string;
+	statutLivraison: string;
+	transporteur: string;
+	batchIds: string[];
+};
+
+export type ApiRecallResult = {
+	blockedBatchesCount: number;
+	impactedBatchIds: string[];
+	affectedShipments: ApiRecallShipment[];
+	depthSaturated: boolean;
+};
+
 export function getBatches(fetch: typeof globalThis.fetch, cookies: Cookies) {
 	return api(fetch, cookies).get<ApiBatch[]>('/api/traceability/batches');
+}
+
+export function getGenealogy(fetch: typeof globalThis.fetch, cookies: Cookies, lotId: string) {
+	return api(fetch, cookies).get<ApiGenealogy>(
+		`/api/traceability/batches/${encodeURIComponent(lotId)}/genealogy`
+	);
+}
+
+export function triggerRecall(
+	fetch: typeof globalThis.fetch,
+	cookies: Cookies,
+	lotId: string,
+	reason: string
+) {
+	return api(fetch, cookies).post<ApiRecallResult>(
+		`/api/traceability/batches/${encodeURIComponent(lotId)}/recall`,
+		{ reason }
+	);
 }
 
 export function getProducts(fetch: typeof globalThis.fetch, cookies: Cookies) {

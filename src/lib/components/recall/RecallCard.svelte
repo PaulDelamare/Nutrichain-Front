@@ -44,7 +44,9 @@
 		</div>
 	</div>
 
-	<button type="button" class="notify" onclick={onnotify}>Notifier relance</button>
+	{#if onnotify}
+		<button type="button" class="notify" onclick={onnotify}>Notifier relance</button>
+	{/if}
 </article>
 
 <style>

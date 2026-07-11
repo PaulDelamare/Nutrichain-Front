@@ -6,7 +6,7 @@ import type {
 	ApiMovement,
 	ApiQualityControl
 } from '$lib/Api/organization.server';
-import type { ApiBatch } from '$lib/Api/traceability.server';
+import type { ApiBatch, ApiGenealogy } from '$lib/Api/traceability.server';
 import type { Kpi, EpcisEvent, TaskItem } from '$lib/data/dashboard';
 import {
 	kpis as mockKpis,
@@ -124,19 +124,30 @@ export function batchesToQuarantine(
 
 export function alertsToRappels(alerts: ApiAlert[]): Recall[] {
 	return alerts
-		.filter((a) => a.type === 'RAPPEL')
-		.map((a) => ({
-			id: a.id.replace('seed-alert-', 'RAP-').slice(0, 14).toUpperCase(),
-			produit: a.message.replace(/^Rappel produit — /, '') || 'Produit',
-			statut: a.statut === 'ACTIVE' ? 'en_cours' : 'cloture',
-			lots: a.related_id ?? '—',
-			sites: 'Magasins & RDC',
-			progressLabel: 'Retrait rayon',
-			progress: a.statut === 'ACTIVE' ? 78 : 100,
-			etape: 'Étape 3/5',
-			etapeTitre: 'Confirmation magasins',
-			etapeDetail: 'Suivi en cours'
-		}));
+		.filter((a) => a.type === 'RAPPEL' || a.type === 'PRODUCT_RECALL')
+		.map((a) => {
+			// Message API : « RAPPEL DÉCLENCHÉ : <motif>. Source: <lot>. Total lots impactés: N.
+			// Expéditions à notifier: M. » — on en extrait les chiffres réels.
+			const lotsImpacted = a.message.match(/Total lots impactés: (\d+)/)?.[1];
+			const shipments = a.message.match(/Expéditions à notifier: (\d+)/)?.[1];
+			const motif = a.message
+				.replace(/^Rappel produit — /, '')
+				.replace(/^RAPPEL DÉCLENCHÉ : /, '')
+				.split('. Source:')[0];
+
+			return {
+				id: a.id.replace('seed-alert-', 'RAP-').slice(0, 14).toUpperCase(),
+				produit: motif || 'Produit',
+				statut: a.statut === 'ACTIVE' ? ('en_cours' as const) : ('cloture' as const),
+				lots: lotsImpacted ? `${lotsImpacted} lot(s) bloqué(s)` : (a.related_id ?? '—'),
+				sites: shipments != null ? `${shipments} expédition(s) à notifier` : 'Magasins & RDC',
+				progressLabel: 'Retrait rayon',
+				progress: a.statut === 'ACTIVE' ? 78 : 100,
+				etape: a.statut === 'ACTIVE' ? 'En cours' : 'Clôturé',
+				etapeTitre: a.statut === 'ACTIVE' ? 'Blocage & notification' : 'Rappel terminé',
+				etapeDetail: `Lot source : ${a.related_id ?? '—'}`
+			};
+		});
 }
 
 export function movementsToEvents(movements: ApiMovement[]): EpcisEvent[] {
@@ -252,6 +263,38 @@ export function buildTraceSteps(
 			icon: 'aval'
 		});
 	}
+	return steps;
+}
+
+/** Arbre réel : ascendance → lot sélectionné → descendance (CTE généalogie API). */
+export function genealogyToTraceSteps(
+	genealogy: ApiGenealogy,
+	selected: ApiBatch | undefined
+): TraceStep[] {
+	const steps: TraceStep[] = genealogy.upstream.map((b) => ({
+		phase: 'Amont — lot parent',
+		title: `${b.nom_produit} — ${b.lot_number ?? b.id}`,
+		detail: `Statut ${b.statut}`,
+		icon: 'amont' as const
+	}));
+
+	steps.push({
+		phase: 'Lot sélectionné',
+		title: selected ? `${selected.produit?.nom ?? 'Produit'} — ${selected.id}` : genealogy.batchId,
+		badge: { label: selected?.statut ?? 'EN_STOCK', variant: 'green' },
+		icon: 'transform'
+	});
+
+	for (const b of genealogy.downstream) {
+		steps.push({
+			phase: 'Aval — lot issu',
+			title: `${b.nom_produit} — ${b.lot_number ?? b.id}`,
+			detail: `Statut ${b.statut}`,
+			badge: { label: b.statut, variant: 'blue' },
+			icon: 'aval'
+		});
+	}
+
 	return steps;
 }
 
