@@ -17,7 +17,7 @@
 				<th>Lot</th>
 				<th>Produit</th>
 				<th>GTIN</th>
-				<th>Site</th>
+				<th>Unité</th>
 				<th>Statut</th>
 				<th>Dernière temp.</th>
 			</tr>

@@ -1,6 +1,6 @@
 import type { PageServerLoad } from './$types';
 import { getBatches, getGenealogy } from '$lib/Api/traceability.server';
-import { genealogyToTraceSteps, mockTraceSteps } from '$lib/utils/org/mappers';
+import { genealogyToGraph } from '$lib/utils/org/mappers';
 
 export const load: PageServerLoad = async ({ fetch, cookies, url }) => {
 	const lotId = url.searchParams.get('lot');
@@ -8,7 +8,7 @@ export const load: PageServerLoad = async ({ fetch, cookies, url }) => {
 
 	if (!batches.ok) {
 		return {
-			steps: mockTraceSteps,
+			graph: null,
 			batches: [],
 			lotId: null,
 			source: 'mock' as const,
@@ -28,7 +28,7 @@ export const load: PageServerLoad = async ({ fetch, cookies, url }) => {
 		const genealogy = await getGenealogy(fetch, cookies, lotId);
 		if (genealogy.ok) {
 			return {
-				steps: genealogyToTraceSteps(
+				graph: genealogyToGraph(
 					genealogy.data,
 					batches.data.find((b) => b.id === lotId)
 				),
@@ -40,5 +40,5 @@ export const load: PageServerLoad = async ({ fetch, cookies, url }) => {
 	}
 
 	// Aucun lot choisi (ou généalogie indisponible) → état vide, pas de tracé arbitraire.
-	return { steps: null, batches: batchOptions, lotId: lotId ?? null, source: 'api' as const };
+	return { graph: null, batches: batchOptions, lotId: lotId ?? null, source: 'api' as const };
 };

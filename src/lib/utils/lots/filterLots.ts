@@ -5,9 +5,9 @@ function match(value: string, query: string): boolean {
 	return value.toLowerCase().includes(query.trim().toLowerCase());
 }
 
-function matchSite(site: string, filter: string): boolean {
+function matchProduit(produit: string, filter: string): boolean {
 	if (filter === 'tous') return true;
-	return site.toLowerCase() === filter.toLowerCase();
+	return produit === filter;
 }
 
 function matchStatut(statut: LotRow['statut'], filter: string): boolean {
@@ -19,9 +19,9 @@ export function filterLots(rows: LotRow[], filters: LotFilters): LotRow[] {
 	return rows.filter(
 		(row) =>
 			match(row.gtin, filters.gtin) &&
-			match(row.id, filters.lot) &&
-			match(row.sscc, filters.sscc) &&
-			matchSite(row.site, filters.site) &&
+			// le filtre « N° lot » cible le numéro de lot GS1 affiché (repli id).
+			match(row.lotNumber ?? row.id, filters.lot) &&
+			matchProduit(row.produit, filters.produit) &&
 			matchStatut(row.statut, filters.statut)
 	);
 }

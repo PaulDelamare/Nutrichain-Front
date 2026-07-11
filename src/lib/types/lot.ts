@@ -14,15 +14,13 @@ export type LotRow = {
 export type LotFilters = {
 	gtin: string;
 	lot: string;
-	sscc: string;
-	site: string;
+	produit: string;
 	statut: string;
 };
 
 export const emptyLotFilters = (): LotFilters => ({
 	gtin: '',
 	lot: '',
-	sscc: '',
-	site: 'tous',
+	produit: 'tous',
 	statut: 'tous'
 });

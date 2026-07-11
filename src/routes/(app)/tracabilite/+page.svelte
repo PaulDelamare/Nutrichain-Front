@@ -1,34 +1,14 @@
 <script lang="ts">
 	import PageHead from '$lib/components/page/PageHead.svelte';
-	import TraceTree from '$lib/components/trace/TraceTree.svelte';
-	import { usePageSearch } from '$lib/context/pageSearch.svelte';
-	import { filterRowsByText } from '$lib/utils/pageSearch/filterByText';
+	import TraceGenealogy from '$lib/components/trace/TraceGenealogy.svelte';
 	import type { PageData } from './$types';
 
 	let { data }: { data: PageData } = $props();
-
-	const pageSearch = usePageSearch();
-
-	$effect(() => {
-		pageSearch.configure('Rechercher étape, produit, fournisseur…');
-		return () => pageSearch.deactivate();
-	});
-
-	const steps = $derived(
-		data.steps
-			? filterRowsByText(data.steps, pageSearch.query, (s) => [
-					s.phase,
-					s.title,
-					s.detail,
-					s.badge?.label
-				])
-			: []
-	);
 </script>
 
 <PageHead
 	heading="Arbre de traçabilité"
-	description="Vue amont / aval — matières premières vers produits finis et expéditions."
+	description="Retrouvez l'origine (amont) et la descendance (aval) d'un lot : d'où viennent ses matières, et quels produits en sont issus."
 />
 
 {#if data.source === 'mock'}
@@ -47,8 +27,8 @@
 	</select>
 </form>
 
-{#if data.steps}
-	<TraceTree {steps} />
+{#if data.graph}
+	<TraceGenealogy graph={data.graph} />
 {:else}
 	<p class="empty">Sélectionnez un lot ci-dessus pour afficher sa traçabilité amont / aval.</p>
 {/if}
@@ -68,7 +48,7 @@
 		flex-direction: column;
 		gap: 0.35rem;
 		max-width: 30rem;
-		margin: 0 0 1.25rem;
+		margin: 0 0 1.5rem;
 	}
 
 	.picker label {
