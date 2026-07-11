@@ -2,9 +2,9 @@ name: CI
 
 on:
   push:
-    branches: [ main ]
+    branches: [main]
   pull_request:
-    branches: [ main ]
+    branches: [main]
 
 jobs:
   lint:
@@ -13,22 +13,35 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
-          node-version: '18'
+          node-version: '22'
           cache: 'npm'
       - run: npm ci
       - run: npm run lint
 
-  unit-tests:
+  check:
     runs-on: ubuntu-latest
-    needs: lint
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
-          node-version: '18'
+          node-version: '22'
           cache: 'npm'
       - run: npm ci
-      - run: npm run test:unit --if-present
+      - run: npm run check
+
+  unit-tests:
+    runs-on: ubuntu-latest
+    needs: [lint, check]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'npm'
+      - run: npm ci
+      # Les tests unitaires de composants tournent en mode navigateur (vitest-browser-svelte)
+      - run: npx playwright install --with-deps chromium
+      - run: npm run test:unit -- --run
 
   build:
     runs-on: ubuntu-latest
@@ -37,7 +50,7 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
-          node-version: '18'
+          node-version: '22'
           cache: 'npm'
       - run: npm ci
       - run: npm run build
@@ -49,16 +62,10 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
-          node-version: '18'
+          node-version: '22'
           cache: 'npm'
       - run: npm ci
-      - run: npm run build
-      - name: Start preview server
-        run: nohup npm run preview -- --port 4173 &>/dev/null &
-      - name: Wait for server
-        run: |
-          for i in {1..30}; do
-            curl -sSf http://localhost:4173 && break || sleep 1
-          done
-      - name: Run Playwright e2e
-        run: npm run test:e2e --if-present
+      - run: npx playwright install --with-deps chromium
+      # Le webServer de playwright.config.ts build et sert l'app sur 4173.
+      # Sans API, seuls les smoke tests tournent (le parcours API est gated par E2E_API=1).
+      - run: npm run test:e2e

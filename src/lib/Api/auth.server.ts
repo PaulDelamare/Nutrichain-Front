@@ -1,151 +1,72 @@
-import { env } from '$env/dynamic/private';
-import { Api } from './api.server';
-import type { ApiResponse } from '$lib/Models/response.model';
-import { catchErrorRequest } from '$lib/Functions/utils/catchErrorRequest/catchErrorRequest';
-import type { User } from '$lib/models/user.model';
+import type { Cookies } from '@sveltejs/kit';
+import { api, applySetCookies, type ApiResult } from './client.server';
 
-// ! Ceci est un exemple pour réaliser les routes api
-export default class AuthApi extends Api {
+export type MePayload = {
+	user: {
+		id: string;
+		name: string;
+		email: string;
+	};
+	session: Record<string, unknown>;
+	activeOrgId?: string;
+};
 
-     private authUrl = `${env.API_URL}api/auth/`;
+/** Évite un appel /api/me inutile quand aucun cookie de session n'est présent. */
+export function hasAuthSessionCookie(cookies: Cookies): boolean {
+	return cookies.getAll().some((c) => c.name.includes('better-auth') || c.name.includes('session'));
+}
 
-     private async parseJsonResponse<T>(response: Response): Promise<ApiResponse<T>> {
-          try {
-               const payload = await response.json();
-               return { ...payload, status: response.status } as ApiResponse<T>;
-          } catch {
-               return { status: response.status, message: response.statusText } as ApiResponse<T>;
-          }
-     }
+export async function signIn(
+	fetch: typeof globalThis.fetch,
+	cookies: Cookies,
+	email: string,
+	password: string
+): Promise<ApiResult<unknown>> {
+	const client = api(fetch, cookies);
+	const res = await client.post('/api/auth/sign-in/email', { email, password });
 
-     /**
-      * Registers a new user.
-      * @param user - The user data to register.
-      * @returns A promise resolving to the API response.
-      */
-     register = async (
-          firstname: string, lastname: string, email: string, password: string
-     ): Promise<ApiResponse> => {
-          try {
-               const response = await this.fetch(`${this.authUrl}register`, {
-                    method: 'POST',
-                    headers: {
-                         'Content-Type': 'application/json'
-                    },
-                    credentials: 'include',
-                    body: JSON.stringify({
-                         firstname,
-                         lastname,
-                         email,
-                         password
-                    })
-               });
+	if (res.ok) {
+		applySetCookies(res.response, cookies);
+	}
 
-               return await this.parseJsonResponse(response);
+	return res;
+}
 
-          } catch (error) {
-               catchErrorRequest(error, 'AuthApi.register');
-               throw error;
-          }
-     };
+export async function signUp(
+	fetch: typeof globalThis.fetch,
+	cookies: Cookies,
+	name: string,
+	email: string,
+	password: string,
+	token?: string
+): Promise<ApiResult<unknown> & { response?: Response }> {
+	const client = api(fetch, cookies);
+	// token = invitation.id, exigé par le guard API dès qu'un utilisateur existe.
+	const res = await client.post('/api/auth/sign-up/email', { name, email, password, token });
 
-     /**
-      * Logs in a user with the provided email and password.
-      * @param email - The user's email address.
-      * @param password - The user's password.
-      * @returns A promise resolving to the API response containing the user and access token.
-      */
-     login = async (
-          email: string,
-          password: string
-     ): Promise<ApiResponse<{ user: User; accessToken: string; refreshToken?: string }>> => {
-          try {
-               const response = await this.fetch(`${this.authUrl}login`, {
-                    method: 'POST',
-                    headers: {
-                         'Content-Type': 'application/json'
-                    },
-                    credentials: 'include',
-                    body: JSON.stringify({ email, password })
-               });
+	if (res.ok) {
+		applySetCookies(res.response, cookies);
+	}
 
-               return await this.parseJsonResponse(response);
+	return res;
+}
 
-          } catch (error) {
-               catchErrorRequest(error, 'AuthApi.login');
-               throw error;
-          }
-     };
+export async function signOut(fetch: typeof globalThis.fetch, cookies: Cookies) {
+	const client = api(fetch, cookies);
+	const res = await client.post('/api/auth/sign-out');
 
-     /**
-      * Retrieves information about the currently authenticated user.
-      * @returns A promise resolving to an ApiResponse containing the user data.
-      */
-     getInfo = async (): Promise<ApiResponse<User>> => {
-          try {
-               const response = await this.fetch(`${this.authUrl}me`, {
-                    method: 'GET',
-                    credentials: 'include',
-                    headers: {
-                         'Content-Type': 'application/json',
-                         Accept: 'application/json'
-                    }
-               });
+	for (const c of cookies.getAll()) {
+		if (c.name.includes('better-auth') || c.name.includes('session')) {
+			cookies.delete(c.name, { path: '/' });
+		}
+	}
 
-               const status = response.status;
+	return res;
+}
 
-               if (response.ok) {
-                    const data: User = await response.json();
-                    return { status, data, message: 'Success' };
-               }
-
-               const message =
-                    status === 401
-                         ? 'Unauthorized'
-                         : (await response.text().catch(() => 'Error')) || 'Error';
-
-               return { status, message } as ApiResponse<User>;
-
-          } catch (error) {
-               catchErrorRequest(error, 'AuthApi.getInfo');
-               throw error;
-          }
-     };
-
-     refresh = async (): Promise<ApiResponse<{ user: User; accessToken: string; refreshToken?: string }>> => {
-          try {
-               const response = await this.fetch(`${this.authUrl}refresh`, {
-                    method: 'POST',
-                    headers: {
-                         Accept: 'application/json',
-                         'Content-Type': 'application/json'
-                    },
-                    credentials: 'include'
-               });
-
-               return await this.parseJsonResponse(response);
-          } catch (error) {
-               catchErrorRequest(error, 'AuthApi.refresh');
-               throw error;
-          }
-     };
-
-     logout = async (): Promise<ApiResponse<{ success: boolean; message: string }>> => {
-          try {
-               const response = await this.fetch(`${this.authUrl}logout`, {
-                    method: 'POST',
-                    headers: {
-                         Accept: 'application/json',
-                         'Content-Type': 'application/json'
-                    },
-                    credentials: 'include'
-               });
-
-               return await this.parseJsonResponse(response);
-          } catch (error) {
-               catchErrorRequest(error, 'AuthApi.logout');
-               throw error;
-          }
-     };
-
+export async function getMe(
+	fetch: typeof globalThis.fetch,
+	cookies: Cookies
+): Promise<ApiResult<MePayload>> {
+	return api(fetch, cookies).get<MePayload>('/api/me');
 }

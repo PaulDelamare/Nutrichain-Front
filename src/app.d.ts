@@ -4,7 +4,7 @@ declare global {
 	namespace App {
 		// interface Error {}
 		interface Locals {
-			user: import('$lib/models/user.model').User | undefined;
+			user: import('$lib/types/session').SessionUser | undefined;
 		}
 		// interface PageData {}
 		// interface PageState {}
@@ -12,4 +12,4 @@ declare global {
 	}
 }
 
-export { };
+export {};

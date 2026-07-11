@@ -1,11 +1,13 @@
 # NutriChain Front — Application SvelteKit ⚙️
 
 ## 🔎 Présentation
+
 Ce dépôt contient le client Web de NutriChain, une application SvelteKit + TypeScript conçue pour consulter la traçabilité des lots et surveiller la chaîne du froid en temps réel. L'application consomme l'API NutriChain (auth OIDC, endpoints d'événements et capteurs) et fournit une UI mobile-friendly pour le scan, l'historique et la gestion des alertes.
 
 ---
 
 ## 🧰 Stack technique
+
 - SvelteKit (Vite)
 - TypeScript
 - Tailwind CSS
@@ -16,6 +18,7 @@ Ce dépôt contient le client Web de NutriChain, une application SvelteKit + Typ
 ---
 
 ## ▶️ Scripts utiles
+
 - `npm run dev` — serveur de dev (vite)
 - `npm run build` — build de production
 - `npm run preview` — prévisualiser le build
@@ -29,6 +32,7 @@ Ce dépôt contient le client Web de NutriChain, une application SvelteKit + Typ
 ---
 
 ## ⚙️ Variables d'environnement
+
 Crée `.env` à la racine (ne jamais committer `.env`). Exemple (`.env.example` à compléter) :
 
 ```env
@@ -41,6 +45,7 @@ NODE_ENV=development
 ---
 
 ## 📁 Architecture recommandée
+
 - `src/routes/` : pages et routes SvelteKit
 - `src/lib/components/` : composants réutilisables
 - `src/lib/stores/` : état global (ex: user, settings)
@@ -51,6 +56,7 @@ NODE_ENV=development
 ---
 
 ## 🧪 Tests & CI
+
 - Tests unitaires : `vitest`
 - Tests E2E : `playwright`
 - Ajoute CI (GitHub Actions) pour : lint → tests unitaires → build → e2e sur preview
@@ -58,5 +64,6 @@ NODE_ENV=development
 ---
 
 ## ♿ Accessibilité et mobile
+
 - Tester sur mobile et desktop (latence de scan < 500ms visée)
 - Respecter les basiques d'accessibilité (labels, focus visible, contraste)
