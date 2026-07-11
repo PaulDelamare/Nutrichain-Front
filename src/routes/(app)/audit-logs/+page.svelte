@@ -2,9 +2,15 @@
 	import PageHead from '$lib/components/page/PageHead.svelte';
 	import { usePageSearch } from '$lib/context/pageSearch.svelte';
 	import { filterRowsByText } from '$lib/utils/pageSearch/filterByText';
-	import type { PageData } from './$types';
+	import type { ActionData, PageData } from './$types';
 
-	let { data }: { data: PageData } = $props();
+	let { data, form }: { data: PageData; form: ActionData } = $props();
+
+	const REASON_LABELS: Record<string, string> = {
+		prev_hash_mismatch: 'chaînage rompu (prev_hash)',
+		signature_mismatch: 'signature altérée',
+		truncation: 'lignes supprimées (troncature)'
+	};
 
 	const pageSearch = usePageSearch();
 
@@ -22,6 +28,37 @@
 	heading="Journal d'audit"
 	description="Piste WORM — actions, entités, horodatage (chaînage de hash)."
 />
+
+<section class="verify">
+	<form method="POST" action="?/verify">
+		<button type="submit">Vérifier l'intégrité de la chaîne</button>
+	</form>
+	<p class="verify-hint">
+		Recalcule le hachage de chaque entrée et vérifie le chaînage — détecte toute altération ou
+		suppression a posteriori (journal inviolable de type WORM).
+	</p>
+
+	{#if form?.verifyError}
+		<p class="verify-result broken" role="status">Vérification impossible — {form.verifyError}</p>
+	{:else if form?.verify}
+		{#if form.verify.valid}
+			<p class="verify-result ok" role="status">
+				✅ Chaîne intacte — {form.verify.rowsChecked} entrée(s) vérifiée(s), aucune altération détectée.
+			</p>
+		{:else if form.verify.brokenAtReason === 'truncation'}
+			<p class="verify-result broken" role="status">
+				❌ Chaîne compromise — lignes supprimées (troncature) : attendu {form.verify
+					.expectedRowCount} entrées, {form.verify.actualRowCount} trouvées.
+			</p>
+		{:else}
+			<p class="verify-result broken" role="status">
+				❌ Chaîne compromise — anomalie à l'entrée #{form.verify.brokenAtId} ({REASON_LABELS[
+					form.verify.brokenAtReason ?? ''
+				] ?? 'anomalie détectée'}).
+			</p>
+		{/if}
+	{/if}
+</section>
 
 {#if data.source === 'mock' && data.error}
 	<p class="banner">API indisponible — {data.error}</p>
@@ -104,5 +141,49 @@
 	.mono {
 		font-family: ui-monospace, monospace;
 		font-size: 0.8125rem;
+	}
+
+	.verify {
+		margin: 0 0 1.25rem;
+	}
+
+	.verify button {
+		padding: 0.5rem 1rem;
+		border: none;
+		border-radius: 0.375rem;
+		background: var(--nc-brand-dark);
+		color: #fff;
+		font-size: 0.875rem;
+		font-weight: 500;
+		cursor: pointer;
+	}
+
+	.verify button:hover {
+		background: var(--nc-brand-hover);
+	}
+
+	.verify-hint {
+		margin: 0.5rem 0 0;
+		font-size: 0.8125rem;
+		color: var(--nc-text-muted);
+	}
+
+	.verify-result {
+		margin: 0.75rem 0 0;
+		padding: 0.625rem 0.875rem;
+		border-radius: 0.5rem;
+		font-size: 0.875rem;
+	}
+
+	.verify-result.ok {
+		background: #f0fdf4;
+		border: 1px solid #bbf7d0;
+		color: #166534;
+	}
+
+	.verify-result.broken {
+		background: #fef2f2;
+		border: 1px solid #fecaca;
+		color: #991b1b;
 	}
 </style>
