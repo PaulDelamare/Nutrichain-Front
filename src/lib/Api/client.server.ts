@@ -22,6 +22,14 @@ export type ApiErr = {
 
 export type ApiResult<T> = ApiOk<T> | ApiErr;
 
+// Échec réseau (API down, DNS, timeout) : on dégrade en ApiErr au lieu de laisser
+// le fetch rejeter — sinon chaque load/action SSR devient une page 500.
+const UNREACHABLE: ApiErr = {
+	ok: false,
+	status: 503,
+	message: 'API injoignable — réessayez plus tard.'
+};
+
 function baseUrl(): string {
 	return (env.API_URL ?? 'http://localhost:3000').replace(/\/$/, '');
 }
@@ -110,18 +118,27 @@ export class ApiClient {
 	}
 
 	get<T>(path: string): Promise<ApiResult<T>> {
-		return this.fetch(this.url(path), { headers: this.headers() }).then(parseJson<T>);
+		return this.fetch(this.url(path), { headers: this.headers() })
+			.then(parseJson<T>)
+			.catch(() => UNREACHABLE);
 	}
 
-	async post<T>(path: string, body?: unknown): Promise<ApiResult<T> & { response: Response }> {
-		const res = await this.fetch(this.url(path), {
-			method: 'POST',
-			headers: this.headers({ 'Content-Type': 'application/json' }),
-			body: body ? JSON.stringify(body) : undefined
-		});
+	async post<T>(
+		path: string,
+		body?: unknown
+	): Promise<(ApiOk<T> & { response: Response }) | (ApiErr & { response?: Response })> {
+		try {
+			const res = await this.fetch(this.url(path), {
+				method: 'POST',
+				headers: this.headers({ 'Content-Type': 'application/json' }),
+				body: body ? JSON.stringify(body) : undefined
+			});
 
-		const parsed = await parseJson<T>(res);
-		return { ...parsed, response: res };
+			const parsed = await parseJson<T>(res);
+			return { ...parsed, response: res };
+		} catch {
+			return { ...UNREACHABLE };
+		}
 	}
 }
 
