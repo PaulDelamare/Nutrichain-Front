@@ -24,7 +24,7 @@ import type { Recall } from '$lib/types/recall';
 import { rappels as mockRappels } from '$lib/data/rappels';
 import type { AppUser } from '$lib/types/user';
 import { users as mockUsers } from '$lib/data/utilisateurs';
-import type { TraceStep } from '$lib/types/trace';
+import type { TraceStep, TraceGraph } from '$lib/types/trace';
 import { traceSteps as mockTraceSteps } from '$lib/data/trace-tree';
 import type { LotEvent } from '$lib/types/lot-sheet';
 import type { Connector } from '$lib/types/integration';
@@ -277,38 +277,34 @@ export function buildTraceSteps(
 	return steps;
 }
 
-/** Arbre réel : ascendance → lot sélectionné → descendance (CTE généalogie API). */
-export function genealogyToTraceSteps(
+/** Généalogie structurée : amont (lots parents) → lot analysé → aval (lots issus). */
+export function genealogyToGraph(
 	genealogy: ApiGenealogy,
 	selected: ApiBatch | undefined
-): TraceStep[] {
-	const steps: TraceStep[] = genealogy.upstream.map((b) => ({
-		phase: 'Amont — lot parent',
-		title: `${b.nom_produit} — ${b.lot_number ?? b.id}`,
-		detail: `Statut ${b.statut}`,
-		icon: 'amont' as const
-	}));
-
-	steps.push({
-		phase: 'Lot sélectionné',
-		title: selected
-			? `${selected.produit?.nom ?? 'Produit'} — ${selected.lot_number ?? selected.id}`
-			: genealogy.batchId,
-		badge: { label: selected?.statut ?? 'EN_STOCK', variant: 'green' },
-		icon: 'transform'
-	});
-
-	for (const b of genealogy.downstream) {
-		steps.push({
-			phase: 'Aval — lot issu',
+): TraceGraph {
+	return {
+		upstream: genealogy.upstream.map((b) => ({
+			phase: 'Lot parent',
+			title: `${b.nom_produit} — ${b.lot_number ?? b.id}`,
+			detail: `Statut ${b.statut}`,
+			icon: 'amont' as const
+		})),
+		selected: {
+			phase: 'Lot analysé',
+			title: selected
+				? `${selected.produit?.nom ?? 'Produit'} — ${selected.lot_number ?? selected.id}`
+				: genealogy.batchId,
+			badge: { label: selected?.statut ?? 'EN_STOCK', variant: 'green' },
+			icon: 'transform'
+		},
+		downstream: genealogy.downstream.map((b) => ({
+			phase: 'Lot issu',
 			title: `${b.nom_produit} — ${b.lot_number ?? b.id}`,
 			detail: `Statut ${b.statut}`,
 			badge: { label: b.statut, variant: 'blue' },
-			icon: 'aval'
-		});
-	}
-
-	return steps;
+			icon: 'aval' as const
+		}))
+	};
 }
 
 export function auditLogsToRows(logs: ApiAuditLog[]) {

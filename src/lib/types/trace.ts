@@ -12,3 +12,10 @@ export type TraceStep = {
 	badge?: TraceBadge;
 	icon: TraceIcon;
 };
+
+/** Généalogie structurée d'un lot : origine (amont) → lot → descendance (aval). */
+export type TraceGraph = {
+	upstream: TraceStep[];
+	selected: TraceStep;
+	downstream: TraceStep[];
+};
