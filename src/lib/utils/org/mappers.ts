@@ -71,11 +71,18 @@ export function membersToUsers(members: ApiMember[]): AppUser[] {
 	}));
 }
 
+// Types d'alerte « chaîne du froid » : TEMP_EXCURSION est celui réellement émis par
+// l'API (module IoT) ; FROID est conservé par compatibilité.
+const COLD_ALERT_TYPES = ['TEMP_EXCURSION', 'FROID'];
+
+// Idem pour les rappels : l'API émet PRODUCT_RECALL ; RAPPEL est conservé par compatibilité.
+const RECALL_ALERT_TYPES = ['PRODUCT_RECALL', 'RAPPEL'];
+
 export function alertsToCold(
 	alerts: ApiAlert[],
 	equipment: ApiEquipment[]
 ): { incident: ColdIncident | null; rows: ColdAlertRow[] } {
-	const cold = alerts.filter((a) => a.type === 'FROID' && a.statut === 'ACTIVE');
+	const cold = alerts.filter((a) => COLD_ALERT_TYPES.includes(a.type) && a.statut === 'ACTIVE');
 	if (cold.length === 0) return { incident: null, rows: [] };
 
 	const incident: ColdIncident = {
@@ -124,7 +131,7 @@ export function batchesToQuarantine(
 
 export function alertsToRappels(alerts: ApiAlert[]): Recall[] {
 	return alerts
-		.filter((a) => a.type === 'RAPPEL' || a.type === 'PRODUCT_RECALL')
+		.filter((a) => RECALL_ALERT_TYPES.includes(a.type))
 		.map((a) => {
 			// Message API : « RAPPEL DÉCLENCHÉ : <motif>. Source: <lot>. Total lots impactés: N.
 			// Expéditions à notifier: M. » — on en extrait les chiffres réels.
@@ -184,8 +191,12 @@ export function buildDashboardKpis(
 	qualityCount: number,
 	quarantineCount: number
 ): Kpi[] {
-	const cold = alerts.filter((a) => a.type === 'FROID' && a.statut === 'ACTIVE').length;
-	const rappels = alerts.filter((a) => a.type === 'RAPPEL' && a.statut === 'ACTIVE').length;
+	const cold = alerts.filter(
+		(a) => COLD_ALERT_TYPES.includes(a.type) && a.statut === 'ACTIVE'
+	).length;
+	const rappels = alerts.filter(
+		(a) => RECALL_ALERT_TYPES.includes(a.type) && a.statut === 'ACTIVE'
+	).length;
 	return [
 		{
 			label: 'Lots suivis',
@@ -219,7 +230,7 @@ export function buildDashboardTasks(alerts: ApiAlert[], qualityCount: number): T
 			text: `Validation qualité — ${qualityCount} contrôle(s) à traiter.`
 		});
 	}
-	const rappel = alerts.find((a) => a.type === 'RAPPEL' && a.statut === 'ACTIVE');
+	const rappel = alerts.find((a) => RECALL_ALERT_TYPES.includes(a.type) && a.statut === 'ACTIVE');
 	if (rappel) {
 		tasks.push({
 			variant: 'warn',
@@ -280,7 +291,9 @@ export function genealogyToTraceSteps(
 
 	steps.push({
 		phase: 'Lot sélectionné',
-		title: selected ? `${selected.produit?.nom ?? 'Produit'} — ${selected.id}` : genealogy.batchId,
+		title: selected
+			? `${selected.produit?.nom ?? 'Produit'} — ${selected.lot_number ?? selected.id}`
+			: genealogy.batchId,
 		badge: { label: selected?.statut ?? 'EN_STOCK', variant: 'green' },
 		icon: 'transform'
 	});
@@ -324,7 +337,7 @@ export function buildPortailStats(
 }
 
 export function buildPortailBrief(alerts: ApiAlert[]) {
-	const rappel = alerts.find((a) => a.type === 'RAPPEL' && a.statut === 'ACTIVE');
+	const rappel = alerts.find((a) => RECALL_ALERT_TYPES.includes(a.type) && a.statut === 'ACTIVE');
 	if (!rappel) return mockBrief;
 	return {
 		title: 'Consigne active',
