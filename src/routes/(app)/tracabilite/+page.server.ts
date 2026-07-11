@@ -1,42 +1,43 @@
 import type { PageServerLoad } from './$types';
 import { getBatches, getGenealogy } from '$lib/Api/traceability.server';
-import { getSuppliers } from '$lib/Api/organization.server';
-import { buildTraceSteps, genealogyToTraceSteps, mockTraceSteps } from '$lib/utils/org/mappers';
+import { genealogyToTraceSteps, mockTraceSteps } from '$lib/utils/org/mappers';
 
 export const load: PageServerLoad = async ({ fetch, cookies, url }) => {
 	const lotId = url.searchParams.get('lot');
-	const [suppliers, batches] = await Promise.all([
-		getSuppliers(fetch, cookies),
-		getBatches(fetch, cookies)
-	]);
+	const batches = await getBatches(fetch, cookies);
 
-	if (suppliers.ok && batches.ok) {
-		// Lot ciblé → généalogie réelle (CTE récursive API) au lieu du parcours générique.
-		if (lotId) {
-			const genealogy = await getGenealogy(fetch, cookies, lotId);
-			if (genealogy.ok) {
-				return {
-					steps: genealogyToTraceSteps(
-						genealogy.data,
-						batches.data.find((b) => b.id === lotId)
-					),
-					lotId,
-					source: 'api' as const
-				};
-			}
-		}
-
+	if (!batches.ok) {
 		return {
-			steps: buildTraceSteps(suppliers.data, batches.data, lotId),
-			lotId,
-			source: 'api' as const
+			steps: mockTraceSteps,
+			batches: [],
+			lotId: null,
+			source: 'mock' as const,
+			error: batches.message
 		};
 	}
 
-	return {
-		steps: mockTraceSteps,
-		lotId,
-		source: 'mock' as const,
-		error: suppliers.message || batches.message
-	};
+	// Liste des lots pour le sélecteur — la traçabilité se lit toujours POUR un lot donné.
+	const batchOptions = batches.data.map((b) => ({
+		id: b.id,
+		nom: b.produit?.nom ?? 'Produit',
+		statut: b.statut
+	}));
+
+	if (lotId) {
+		const genealogy = await getGenealogy(fetch, cookies, lotId);
+		if (genealogy.ok) {
+			return {
+				steps: genealogyToTraceSteps(
+					genealogy.data,
+					batches.data.find((b) => b.id === lotId)
+				),
+				batches: batchOptions,
+				lotId,
+				source: 'api' as const
+			};
+		}
+	}
+
+	// Aucun lot choisi (ou généalogie indisponible) → état vide, pas de tracé arbitraire.
+	return { steps: null, batches: batchOptions, lotId: lotId ?? null, source: 'api' as const };
 };
