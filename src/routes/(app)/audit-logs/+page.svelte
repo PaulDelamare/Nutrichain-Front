@@ -15,12 +15,22 @@
 	const pageSearch = usePageSearch();
 
 	$effect(() => {
-		pageSearch.configure('Rechercher action, entité, identifiant…');
+		pageSearch.configure('Rechercher action, motif, entité, identifiant…');
 		return () => pageSearch.deactivate();
 	});
 
+	// Filtre par type d'action : liste des actions réellement présentes (code → libellé).
+	let actionFilter = $state('all');
+	const actionOptions = $derived([
+		...new Map(data.rows.map((r) => [r.action, r.actionLabel])).entries()
+	]);
+
 	const rows = $derived(
-		filterRowsByText(data.rows, pageSearch.query, (r) => [r.when, r.action, r.entity, r.entityId])
+		filterRowsByText(
+			data.rows.filter((r) => actionFilter === 'all' || r.action === actionFilter),
+			pageSearch.query,
+			(r) => [r.when, r.actionLabel, r.detail, r.entity, r.entityId]
+		)
 	);
 </script>
 
@@ -60,6 +70,18 @@
 	{/if}
 </section>
 
+{#if data.source !== 'mock' && actionOptions.length > 1}
+	<div class="filter">
+		<label for="action-filter">Filtrer par action</label>
+		<select id="action-filter" bind:value={actionFilter}>
+			<option value="all">Toutes les actions</option>
+			{#each actionOptions as [code, label] (code)}
+				<option value={code}>{label}</option>
+			{/each}
+		</select>
+	</div>
+{/if}
+
 {#if data.source === 'mock' && data.error}
 	<p class="banner">API indisponible — {data.error}</p>
 {:else if rows.length === 0}
@@ -71,6 +93,7 @@
 				<tr>
 					<th>Horodatage</th>
 					<th>Action</th>
+					<th>Détail</th>
 					<th>Entité</th>
 					<th>Identifiant</th>
 				</tr>
@@ -79,7 +102,8 @@
 				{#each rows as row (row.id)}
 					<tr>
 						<td>{row.when}</td>
-						<td><code>{row.action}</code></td>
+						<td><span class="action" title={row.action}>{row.actionLabel}</span></td>
+						<td class="detail">{row.detail || '—'}</td>
 						<td>{row.entity}</td>
 						<td class="mono">{row.entityId}</td>
 					</tr>
@@ -141,6 +165,32 @@
 	.mono {
 		font-family: ui-monospace, monospace;
 		font-size: 0.8125rem;
+	}
+
+	.action {
+		font-weight: 500;
+		color: var(--nc-text);
+	}
+
+	.detail {
+		color: var(--nc-text);
+	}
+
+	.filter {
+		display: flex;
+		align-items: center;
+		gap: 0.5rem;
+		margin: 0 0 0.75rem;
+		font-size: 0.8125rem;
+		color: var(--nc-text-muted);
+	}
+
+	.filter select {
+		padding: 0.35rem 0.5rem;
+		border: 1px solid #e2e8f0;
+		border-radius: 0.375rem;
+		font-size: 0.8125rem;
+		background: #fff;
 	}
 
 	.verify {

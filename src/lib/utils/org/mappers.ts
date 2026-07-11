@@ -307,11 +307,41 @@ export function genealogyToGraph(
 	};
 }
 
+// Libellés lisibles des actions tracées (les codes bruts restent recherchables).
+const AUDIT_ACTION_LABELS: Record<string, string> = {
+	ADD: 'Ajout',
+	CREATE: 'Création',
+	OBSERVE: 'Observation',
+	CREATE_EQUIPMENT: 'Matériel créé',
+	CREATE_RECEIPT: 'Réception enregistrée',
+	CREATE_RECEIPT_VIA_SYNC: 'Réception (mobile)',
+	LIFT_BATCH_QUARANTINE: 'Levée de quarantaine',
+	BATCH_RECALL_TRIGGERED: 'Rappel déclenché',
+	ALERT_RESOLVED: 'Alerte résolue',
+	EXPEDITION: 'Expédition',
+	TEMP_EXCURSION_DETECTED: 'Excursion de température',
+	TRANSFORM_CONSUME: 'Transformation — consommation',
+	TRANSFORM_CREATE: 'Transformation — production',
+	TRANSFORMATION_ENTREE: 'Transformation — entrée',
+	TRANSFORMATION_SORTIE: 'Transformation — sortie'
+};
+
+// Détail lisible : le motif d'une décision (levée de quarantaine…) ou un changement de statut.
+function auditDetail(l: ApiAuditLog): string {
+	const nv = l.nouvelle_valeur;
+	const ov = l.ancienne_valeur;
+	if (nv && typeof nv.motif === 'string' && nv.motif.trim()) return nv.motif.trim();
+	if (ov?.statut && nv?.statut && ov.statut !== nv.statut) return `${ov.statut} → ${nv.statut}`;
+	return '';
+}
+
 export function auditLogsToRows(logs: ApiAuditLog[]) {
 	return logs.map((l) => ({
 		id: l.id,
 		when: fmtWhen(l.horodatage),
 		action: l.action,
+		actionLabel: AUDIT_ACTION_LABELS[l.action] ?? l.action,
+		detail: auditDetail(l),
 		entity: l.entity,
 		entityId: l.entity_id
 	}));
