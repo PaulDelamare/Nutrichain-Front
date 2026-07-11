@@ -1,13 +1,21 @@
 <script lang="ts">
-	import { lotSiteOptions, lotStatutOptions } from '$lib/data/lot-search';
+	import { lotStatutOptions } from '$lib/data/lot-search';
 	import type { LotFilters } from '$lib/types/lot';
+
+	type Option = { label: string; value: string };
 
 	type Props = {
 		filters: LotFilters;
+		// Options de produits dérivées des lots réellement chargés (dynamique).
+		produitOptions?: Option[];
 		onapply?: () => void;
 	};
 
-	let { filters = $bindable(), onapply }: Props = $props();
+	let {
+		filters = $bindable(),
+		produitOptions = [{ label: 'Tous les produits', value: 'tous' }],
+		onapply
+	}: Props = $props();
 </script>
 
 <form
@@ -28,14 +36,9 @@
 	</label>
 
 	<label class="field">
-		<span>SSCC</span>
-		<input type="text" placeholder="0037612…" bind:value={filters.sscc} />
-	</label>
-
-	<label class="field">
-		<span>Site</span>
-		<select bind:value={filters.site}>
-			{#each lotSiteOptions as opt (opt.value)}
+		<span>Produit</span>
+		<select bind:value={filters.produit}>
+			{#each produitOptions as opt (opt.value)}
 				<option value={opt.value}>{opt.label}</option>
 			{/each}
 		</select>
