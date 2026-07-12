@@ -6,7 +6,9 @@ import type { LotRow, LotStatus } from '$lib/types/lot';
 
 function mapStatut(statut: string): LotStatus {
 	const s = statut.toUpperCase();
-	if (s.includes('QUARANT')) return 'quarantaine';
+	// BLOQUE = lot bloqué (quarantaine qualité ou rappel) : c'est le statut réellement
+	// filtré par l'API pour la quarantaine.
+	if (s.includes('QUARANT') || s.includes('BLOQU')) return 'quarantaine';
 	if (s.includes('SURVEILL') || s.includes('ALERT')) return 'surveillance';
 	return 'conforme';
 }

@@ -3,12 +3,13 @@
 	import IdentityCard from '$lib/components/lot-sheet/IdentityCard.svelte';
 	import HistoryPanel from '$lib/components/lot-sheet/HistoryPanel.svelte';
 	import LocationPanel from '$lib/components/lot-sheet/LocationPanel.svelte';
+	import LotActionsPanel from '$lib/components/lot-sheet/LotActionsPanel.svelte';
 	import PageHead from '$lib/components/page/PageHead.svelte';
 	import { usePageSearch } from '$lib/context/pageSearch.svelte';
 	import { filterRowsByText } from '$lib/utils/pageSearch/filterByText';
-	import type { PageData } from './$types';
+	import type { ActionData, PageData } from './$types';
 
-	let { data }: { data: PageData } = $props();
+	let { data, form }: { data: PageData; form: ActionData } = $props();
 
 	const pageSearch = usePageSearch();
 
@@ -49,7 +50,10 @@
 		<IdentityCard sheet={data.sheet} />
 		<HistoryPanel {events} temperature={data.sheet.temperature} />
 	</div>
-	<LocationPanel sheet={data.sheet} />
+	<div class="side">
+		<LotActionsPanel lotId={data.sheet.id} statut={data.sheet.statut} {form} />
+		<LocationPanel sheet={data.sheet} />
+	</div>
 </div>
 
 <style>
@@ -96,6 +100,12 @@
 		flex-direction: column;
 		gap: 1rem;
 		min-width: 0;
+	}
+
+	.side {
+		display: flex;
+		flex-direction: column;
+		gap: 1rem;
 	}
 
 	@media (max-width: 900px) {

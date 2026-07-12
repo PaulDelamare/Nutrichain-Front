@@ -1,8 +1,8 @@
-import { error } from '@sveltejs/kit';
-import type { PageServerLoad } from './$types';
-import { getBatchById } from '$lib/Api/logistics.server';
+import { error, fail } from '@sveltejs/kit';
+import type { Actions, PageServerLoad } from './$types';
+import { getBatchById, releaseQuarantine } from '$lib/Api/logistics.server';
 import { getMovements } from '$lib/Api/organization.server';
-import { getBatches } from '$lib/Api/traceability.server';
+import { getBatches, triggerRecall } from '$lib/Api/traceability.server';
 import type { ApiBatch } from '$lib/Api/traceability.server';
 import { batchToSheet } from '$lib/utils/lots/mapBatch';
 
@@ -47,3 +47,27 @@ export const load: PageServerLoad = async ({ fetch, cookies, params }) => {
 	}
 	error(res.status, { message: res.message });
 };
+
+export const actions = {
+	// Lever la quarantaine du lot (décision qualité) directement depuis sa fiche.
+	release: async ({ request, fetch, cookies, params }) => {
+		const motif = String((await request.formData()).get('motif') ?? '').trim();
+		if (motif.length < 3) {
+			return fail(400, { releaseError: 'Motif de levée requis (au moins 3 caractères).' });
+		}
+		const res = await releaseQuarantine(fetch, cookies, params.lotId, motif);
+		if (!res.ok) return fail(res.status, { releaseError: res.message });
+		return { released: true };
+	},
+
+	// Déclencher un rappel produit à partir du lot (bloque le lot et sa descendance).
+	recall: async ({ request, fetch, cookies, params }) => {
+		const reason = String((await request.formData()).get('reason') ?? '').trim();
+		if (reason.length < 3) {
+			return fail(400, { recallError: 'Motif de rappel requis (au moins 3 caractères).' });
+		}
+		const res = await triggerRecall(fetch, cookies, params.lotId, reason);
+		if (!res.ok) return fail(res.status, { recallError: res.message });
+		return { recall: res.data };
+	}
+} satisfies Actions;
