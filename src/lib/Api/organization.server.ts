@@ -26,6 +26,9 @@ export type ApiAuditLog = {
 	entity_id: string;
 	horodatage: string;
 	id_user?: string | null;
+	// État avant/après l'action (contient le motif d'une levée de quarantaine, un changement de statut, etc.)
+	ancienne_valeur?: Record<string, unknown> | null;
+	nouvelle_valeur?: Record<string, unknown> | null;
 };
 
 export type ApiQualityControl = {

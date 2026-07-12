@@ -4,9 +4,9 @@
 	import PageHead from '$lib/components/page/PageHead.svelte';
 	import { usePageSearch } from '$lib/context/pageSearch.svelte';
 	import { filterRowsByText } from '$lib/utils/pageSearch/filterByText';
-	import type { PageData } from './$types';
+	import type { ActionData, PageData } from './$types';
 
-	let { data }: { data: PageData } = $props();
+	let { data, form }: { data: PageData; form: ActionData } = $props();
 
 	const pageSearch = usePageSearch();
 
@@ -36,6 +36,14 @@
 	<p class="banner">API indisponible — {data.error}</p>
 {/if}
 
+{#if form?.released}
+	<p class="feedback ok" role="status">
+		✅ Quarantaine levée — le lot est remis en stock (décision tracée dans l'audit).
+	</p>
+{:else if form?.releaseError}
+	<p class="feedback err" role="status">❌ Levée impossible — {form.releaseError}</p>
+{/if}
+
 <div class="grid">
 	<NcPanel rows={openNc} />
 	<QuarantinePanel lots={quarantineLots} onexport={exportList} />
@@ -49,6 +57,25 @@
 		background: #fffbeb;
 		color: #92400e;
 		font-size: 0.8125rem;
+	}
+
+	.feedback {
+		margin: 0 0 0.75rem;
+		padding: 0.625rem 0.875rem;
+		border-radius: 0.5rem;
+		font-size: 0.875rem;
+	}
+
+	.feedback.ok {
+		background: #f0fdf4;
+		border: 1px solid #bbf7d0;
+		color: #166534;
+	}
+
+	.feedback.err {
+		background: #fef2f2;
+		border: 1px solid #fecaca;
+		color: #991b1b;
 	}
 
 	.grid {
