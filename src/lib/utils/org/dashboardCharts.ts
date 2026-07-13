@@ -5,6 +5,7 @@ import { normalizeQualityResult } from './quality';
 
 const LOT_STATUS_LABELS: Record<string, string> = {
 	EN_STOCK: 'En stock',
+	EN_ATTENTE_QC: 'En attente de contrôle',
 	SURVEILLANCE: 'Surveillance',
 	QUARANTAINE: 'Quarantaine',
 	QUARANTINE: 'Quarantaine',
@@ -16,6 +17,7 @@ const LOT_STATUS_LABELS: Record<string, string> = {
 
 const LOT_STATUS_COLORS: Record<string, string> = {
 	EN_STOCK: '#1b6b5c',
+	EN_ATTENTE_QC: '#6366f1',
 	SURVEILLANCE: '#5aafa0',
 	QUARANTAINE: '#f59e0b',
 	QUARANTINE: '#f59e0b',

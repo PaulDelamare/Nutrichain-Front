@@ -10,10 +10,13 @@ function mapStatut(statut: string): LotStatus {
 	const s = statut.toUpperCase();
 	// BLOQUE = lot bloqué (quarantaine qualité ou rappel) : c'est le statut réellement
 	// filtré par l'API pour la quarantaine.
-	if (s.includes('QUARANT') || s.includes('BLOQU')) return 'quarantaine';
-	if (s.includes('SURVEILL') || s.includes('ALERT')) return 'surveillance';
-	if (s.includes('PERIM')) return 'perime';
-	if (s.includes('EXPEDIE')) return 'expedie';
+	// Correspondance EXACTE : un test par sous-chaîne piégerait un futur statut
+	// (« EN_ATTENTE_ALERTE… » matcherait ALERT).
+	if (s === 'EN_ATTENTE_QC') return 'attente_qc';
+	if (s === 'BLOQUE' || s === 'QUARANTAINE') return 'quarantaine';
+	if (s === 'ALERTE' || s === 'SURVEILLANCE') return 'surveillance';
+	if (s === 'PERIME') return 'perime';
+	if (s === 'EXPEDIE') return 'expedie';
 	if (s === 'EN_STOCK' || s === 'PRET') return 'conforme';
 	return 'inconnu';
 }

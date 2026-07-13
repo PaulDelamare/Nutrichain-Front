@@ -28,6 +28,22 @@ const SHAPES: Record<string, EventShape> = {
 			return controle ? `Contrôle à réception : ${controle}${bloque}` : '';
 		}
 	},
+	CONTROLE_QUALITE: {
+		title: 'Contrôle qualité',
+		// La couleur suit le RÉSULTAT : un contrôle non conforme met le lot en quarantaine.
+		tone: (m) => (m.resultat === 'NON_CONFORME' ? 'warn' : 'ok'),
+		context: (m) => {
+			const resultat = str(m, 'resultat') === 'NON_CONFORME' ? 'Non conforme' : 'Conforme';
+			const test = str(m, 'type_test');
+			const suite =
+				m.statut_resultant === 'EN_STOCK'
+					? ' — lot libéré'
+					: m.statut_resultant === 'BLOQUE'
+						? ' — lot placé en quarantaine'
+						: '';
+			return [test && `${test} : ${resultat}${suite}`].filter(Boolean).join(' · ');
+		}
+	},
 	TRANSFORMATION_ENTREE: {
 		title: 'Transformation — production',
 		tone: 'ok',

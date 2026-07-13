@@ -1,5 +1,6 @@
 <script lang="ts">
 	import NcPanel from '$lib/components/nc/NcPanel.svelte';
+	import PendingQcPanel from '$lib/components/nc/PendingQcPanel.svelte';
 	import QuarantinePanel from '$lib/components/nc/QuarantinePanel.svelte';
 	import PageHead from '$lib/components/page/PageHead.svelte';
 	import { usePageSearch } from '$lib/context/pageSearch.svelte';
@@ -11,7 +12,7 @@
 	const pageSearch = usePageSearch();
 
 	$effect(() => {
-		pageSearch.configure('Rechercher NC, type, lot en quarantaine…');
+		pageSearch.configure('Rechercher NC, lot en attente, lot en quarantaine…');
 		return () => pageSearch.deactivate();
 	});
 
@@ -20,6 +21,9 @@
 	);
 	const quarantineLots = $derived(
 		filterRowsByText(data.quarantineLots, pageSearch.query, (l) => [l.lot, l.detail])
+	);
+	const pendingQc = $derived(
+		filterRowsByText(data.pendingQc, pageSearch.query, (l) => [l.lot, l.produit, l.quantite])
 	);
 
 	function exportList() {
@@ -44,7 +48,27 @@
 	<p class="feedback err" role="status">❌ Levée impossible — {form.releaseError}</p>
 {/if}
 
+{#if form?.controlled}
+	<p class="feedback ok" role="status">
+		{#if form.statutLot === 'EN_STOCK'}
+			✅ Contrôle conforme — le lot est libéré : il peut désormais être expédié.
+		{:else}
+			✅ Contrôle non conforme enregistré — le lot est placé en quarantaine.
+		{/if}
+	</p>
+{/if}
+
 {#if !data.error}
+	<!-- La barrière qualité en premier : c'est ce qui BLOQUE la sortie d'usine, donc ce qui
+	     attend une action. Les non-conformités passées et la quarantaine viennent après. -->
+	<div class="pending">
+		<PendingQcPanel
+			lots={pendingQc}
+			errorLotId={form?.controlLotId}
+			errorMessage={form?.controlError}
+		/>
+	</div>
+
 	<div class="grid">
 		<NcPanel rows={openNc} />
 		<QuarantinePanel lots={quarantineLots} onexport={exportList} />
@@ -52,6 +76,10 @@
 {/if}
 
 <style>
+	.pending {
+		margin-bottom: 1rem;
+	}
+
 	.banner {
 		margin: 0 0 0.75rem;
 		padding: 0.5rem 0.75rem;
