@@ -1,18 +1,17 @@
 import { fail } from '@sveltejs/kit';
 import type { Actions, PageServerLoad } from './$types';
-import { loadApiOrMock } from '$lib/Api/load.server';
 import { getAuditLogs } from '$lib/Api/organization.server';
 import { verifyAudit } from '$lib/Api/audit.server';
 import { auditLogsToRows } from '$lib/utils/org/mappers';
 
 export const load: PageServerLoad = async ({ fetch, cookies }) => {
-	const { data, source, error } = await loadApiOrMock(() => getAuditLogs(fetch, cookies, 50), []);
+	const logs = await getAuditLogs(fetch, cookies, 50);
 
-	return {
-		rows: source === 'api' ? auditLogsToRows(data) : [],
-		source,
-		error
-	};
+	if (!logs.ok) {
+		return { rows: [], error: logs.message };
+	}
+
+	return { rows: auditLogsToRows(logs.data) };
 };
 
 export const actions = {

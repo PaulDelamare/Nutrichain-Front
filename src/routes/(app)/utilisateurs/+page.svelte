@@ -25,7 +25,7 @@
 	description="Gestion des accès — RBAC, MFA, politique de mot de passe."
 />
 
-{#if data.source === 'mock' && data.error}
+{#if data.error}
 	<p class="banner">API indisponible — {data.error}</p>
 {/if}
 

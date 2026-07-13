@@ -1,6 +1,7 @@
 <script lang="ts">
 	import ConnectorCard from '$lib/components/integration/ConnectorCard.svelte';
 	import PageHead from '$lib/components/page/PageHead.svelte';
+	import Placeholder from '$lib/components/page/Placeholder.svelte';
 	import { usePageSearch } from '$lib/context/pageSearch.svelte';
 	import { filterRowsByText } from '$lib/utils/pageSearch/filterByText';
 	import type { PageData } from './$types';
@@ -24,17 +25,21 @@
 	description="Connecteurs, états de synchronisation et files d'attente."
 />
 
-{#if data.source === 'mock'}
-	<p class="banner">
-		Connecteurs partiellement dérivés du journal d'audit — pas de modèle dédié en base.
-	</p>
+{#if data.error}
+	<p class="banner">API indisponible — {data.error}</p>
 {/if}
 
-<div class="grid">
-	{#each connectors as connector (connector.name)}
-		<ConnectorCard {connector} />
-	{/each}
-</div>
+{#if connectors.length > 0}
+	<div class="grid">
+		{#each connectors as connector (connector.name)}
+			<ConnectorCard {connector} />
+		{/each}
+	</div>
+{:else if !data.error}
+	<Placeholder
+		message="Aucun connecteur configuré. Les flux ERP / WMS / TMS ne sont pas encore branchés."
+	/>
+{/if}
 
 <style>
 	.banner {

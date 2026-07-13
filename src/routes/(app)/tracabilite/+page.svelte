@@ -21,8 +21,8 @@
 	description="Retrouvez l'origine (amont) et la descendance (aval) d'un lot : d'où viennent ses matières, et quels produits en sont issus."
 />
 
-{#if data.source === 'mock'}
-	<p class="banner">Données de démonstration — connectez l'API pour la traçabilité réelle.</p>
+{#if data.error}
+	<p class="banner">API indisponible — {data.error}</p>
 {/if}
 
 <form method="GET" class="picker" bind:this={picker}>

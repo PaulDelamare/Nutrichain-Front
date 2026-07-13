@@ -5,12 +5,13 @@
 
 	type Props = {
 		title: string;
-		coldAlerts?: number;
+		// null = le compte n'a pas pu être vérifié : on n'affiche rien plutôt qu'un « 0 » faux.
+		coldAlerts: number | null;
 		sidebarCollapsed?: boolean;
 		onMenuToggle?: () => void;
 	};
 
-	let { title, coldAlerts = 3, sidebarCollapsed = false, onMenuToggle }: Props = $props();
+	let { title, coldAlerts, sidebarCollapsed = false, onMenuToggle }: Props = $props();
 
 	const pageSearch = usePageSearch();
 </script>
@@ -49,8 +50,8 @@
 	</div>
 
 	<div class="topbar-actions">
-		{#if coldAlerts > 0}
-			<span class="badge-alert">{coldAlerts} alertes froid</span>
+		{#if coldAlerts !== null && coldAlerts > 0}
+			<span class="badge-alert">{coldAlerts} alerte{coldAlerts > 1 ? 's' : ''} froid</span>
 		{/if}
 		<a href={resolve('/deconnexion')} class="logout">Déconnexion</a>
 	</div>

@@ -2,7 +2,7 @@ import { fail } from '@sveltejs/kit';
 import type { Actions, PageServerLoad } from './$types';
 import { getQualityControls, getQuarantineBatches } from '$lib/Api/organization.server';
 import { releaseQuarantine } from '$lib/Api/logistics.server';
-import { batchesToQuarantine, qualityToNc, mockNc, mockQuarantine } from '$lib/utils/org/mappers';
+import { batchesToQuarantine, qualityToNc } from '$lib/utils/org/mappers';
 
 export const load: PageServerLoad = async ({ fetch, cookies }) => {
 	const [quality, quarantine] = await Promise.all([
@@ -10,19 +10,15 @@ export const load: PageServerLoad = async ({ fetch, cookies }) => {
 		getQuarantineBatches(fetch, cookies)
 	]);
 
-	if (quality.ok && quarantine.ok) {
-		return {
-			source: 'api' as const,
-			openNc: qualityToNc(quality.data),
-			quarantineLots: batchesToQuarantine(quarantine.data)
-		};
+	const error = [quality, quarantine].find((r) => !r.ok)?.message;
+
+	if (error) {
+		return { openNc: [], quarantineLots: [], error };
 	}
 
 	return {
-		source: 'mock' as const,
-		openNc: mockNc,
-		quarantineLots: mockQuarantine,
-		error: quality.message || quarantine.message
+		openNc: qualityToNc(quality.ok ? quality.data : []),
+		quarantineLots: batchesToQuarantine(quarantine.ok ? quarantine.data : [])
 	};
 };
 

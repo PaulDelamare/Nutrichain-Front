@@ -1,11 +1,12 @@
 <script lang="ts">
+	import type { Snippet } from 'svelte';
 	import { page } from '$app/stores';
 	import { headerTitle } from '$lib/config/nav';
 	import { initPageSearchContext } from '$lib/context/pageSearch.svelte';
 	import SideNav from './SideNav.svelte';
 	import TopBar from './TopBar.svelte';
 
-	let { children } = $props();
+	let { children, coldAlerts }: { children: Snippet; coldAlerts: number | null } = $props();
 
 	let collapsed = $state(false);
 	const pageSearch = initPageSearchContext();
@@ -23,7 +24,12 @@
 	<SideNav {collapsed} onMenuToggle={() => (collapsed = !collapsed)} />
 
 	<div class="shell-main">
-		<TopBar {title} sidebarCollapsed={collapsed} onMenuToggle={() => (collapsed = !collapsed)} />
+		<TopBar
+			{title}
+			{coldAlerts}
+			sidebarCollapsed={collapsed}
+			onMenuToggle={() => (collapsed = !collapsed)}
+		/>
 		<main class="shell-content">
 			{@render children()}
 		</main>

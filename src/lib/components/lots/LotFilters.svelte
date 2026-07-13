@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { lotStatutOptions } from '$lib/data/lot-search';
+	import { lotStatutOptions } from '$lib/config/lot-filters';
 	import type { LotFilters } from '$lib/types/lot';
 
 	type Option = { label: string; value: string };

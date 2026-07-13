@@ -7,13 +7,7 @@ export const load: PageServerLoad = async ({ fetch, cookies, url }) => {
 	const batches = await getBatches(fetch, cookies);
 
 	if (!batches.ok) {
-		return {
-			graph: null,
-			batches: [],
-			lotId: null,
-			source: 'mock' as const,
-			error: batches.message
-		};
+		return { graph: null, batches: [], lotId: null, error: batches.message };
 	}
 
 	// Liste des lots pour le sélecteur — la traçabilité se lit toujours POUR un lot donné.
@@ -33,12 +27,11 @@ export const load: PageServerLoad = async ({ fetch, cookies, url }) => {
 					batches.data.find((b) => b.id === lotId)
 				),
 				batches: batchOptions,
-				lotId,
-				source: 'api' as const
+				lotId
 			};
 		}
 	}
 
 	// Aucun lot choisi (ou généalogie indisponible) → état vide, pas de tracé arbitraire.
-	return { graph: null, batches: batchOptions, lotId: lotId ?? null, source: 'api' as const };
+	return { graph: null, batches: batchOptions, lotId: lotId ?? null };
 };

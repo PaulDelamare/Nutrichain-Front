@@ -54,15 +54,17 @@
 	description="Filtres — GTIN, numéro de lot, produit, site et statut."
 />
 
-{#if data.source === 'mock' && data.error}
-	<p class="warn">API indisponible — données de démonstration ({data.error})</p>
+{#if data.error}
+	<p class="warn">API indisponible — {data.error}</p>
 {/if}
 
-<LotFilters bind:filters={draft} {produitOptions} {siteOptions} onapply={apply} />
+{#if !data.error}
+	<LotFilters bind:filters={draft} {produitOptions} {siteOptions} onapply={apply} />
 
-<div class="results">
-	<LotTable rows={results} />
-</div>
+	<div class="results">
+		<LotTable rows={results} />
+	</div>
+{/if}
 
 <style>
 	.warn {

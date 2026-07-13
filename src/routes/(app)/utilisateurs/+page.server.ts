@@ -4,7 +4,7 @@ import { getMe } from '$lib/Api/auth.server';
 import { getMembers } from '$lib/Api/organization.server';
 import { canInviteMembers, INVITE_ROLES, type InviteRole } from '$lib/config/invite-roles';
 import { sendInvitation } from '$lib/Api/identity.server';
-import { membersToUsers, mockUsers } from '$lib/utils/org/mappers';
+import { membersToUsers } from '$lib/utils/org/mappers';
 
 export const load: PageServerLoad = async ({ fetch, cookies, locals }) => {
 	const membersRes = await getMembers(fetch, cookies);
@@ -18,20 +18,18 @@ export const load: PageServerLoad = async ({ fetch, cookies, locals }) => {
 		canInvite = canInviteMembers(currentRole);
 	}
 
-	if (membersRes.ok) {
+	if (!membersRes.ok) {
 		return {
-			users: membersToUsers(membersRes.data),
-			source: 'api' as const,
-			canInvite,
+			users: [],
+			error: membersRes.message,
+			canInvite: false,
 			currentRole
 		};
 	}
 
 	return {
-		users: mockUsers,
-		source: 'mock' as const,
-		error: membersRes.message,
-		canInvite: false,
+		users: membersToUsers(membersRes.data),
+		canInvite,
 		currentRole
 	};
 };

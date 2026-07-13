@@ -6,8 +6,6 @@ export type Recall = {
 	statut: RecallStatus;
 	lots: string;
 	sites: string;
-	progressLabel: string;
-	progress: number;
 	etape: string;
 	etapeTitre: string;
 	etapeDetail: string;

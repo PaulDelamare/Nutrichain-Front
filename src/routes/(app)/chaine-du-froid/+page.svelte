@@ -2,6 +2,7 @@
 	import ColdAlertTable from '$lib/components/cold/ColdAlertTable.svelte';
 	import IncidentBanner from '$lib/components/cold/IncidentBanner.svelte';
 	import PageHead from '$lib/components/page/PageHead.svelte';
+	import Placeholder from '$lib/components/page/Placeholder.svelte';
 	import { usePageSearch } from '$lib/context/pageSearch.svelte';
 	import { filterRowsByText } from '$lib/utils/pageSearch/filterByText';
 	import type { PageData } from './$types';
@@ -32,13 +33,19 @@
 	description="Surveillance temps réel — seuils, capteurs, escalade qualité."
 />
 
-{#if data.source === 'mock' && data.error}
-	<p class="banner">API indisponible — affichage démo</p>
+{#if data.error}
+	<p class="banner">API indisponible — {data.error}</p>
 {/if}
 
-<IncidentBanner incident={data.incident} />
+{#if data.incident}
+	<IncidentBanner incident={data.incident} />
+{/if}
 
-<ColdAlertTable rows={alerts} />
+{#if data.alerts.length > 0}
+	<ColdAlertTable rows={alerts} />
+{:else if !data.error}
+	<Placeholder message="Aucune alerte de chaîne du froid active." />
+{/if}
 
 <style>
 	.banner {

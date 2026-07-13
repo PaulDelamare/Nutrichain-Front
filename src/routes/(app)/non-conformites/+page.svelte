@@ -32,7 +32,7 @@
 	description="Suivi des écarts, causes, actions correctives et lots bloqués."
 />
 
-{#if data.source === 'mock' && data.error}
+{#if data.error}
 	<p class="banner">API indisponible — {data.error}</p>
 {/if}
 
@@ -44,10 +44,12 @@
 	<p class="feedback err" role="status">❌ Levée impossible — {form.releaseError}</p>
 {/if}
 
-<div class="grid">
-	<NcPanel rows={openNc} />
-	<QuarantinePanel lots={quarantineLots} onexport={exportList} />
-</div>
+{#if !data.error}
+	<div class="grid">
+		<NcPanel rows={openNc} />
+		<QuarantinePanel lots={quarantineLots} onexport={exportList} />
+	</div>
+{/if}
 
 <style>
 	.banner {

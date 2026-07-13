@@ -1,24 +1,20 @@
 import { fail } from '@sveltejs/kit';
 import type { Actions, PageServerLoad } from './$types';
-import { loadApiOrMock } from '$lib/Api/load.server';
 import { getAlerts } from '$lib/Api/organization.server';
 import { getBatches, triggerRecall } from '$lib/Api/traceability.server';
-import { alertsToRappels, mockRappels } from '$lib/utils/org/mappers';
+import { alertsToRappels } from '$lib/utils/org/mappers';
 
 export const load: PageServerLoad = async ({ fetch, cookies }) => {
-	const [{ data, source, error }, batches] = await Promise.all([
-		loadApiOrMock(() => getAlerts(fetch, cookies), []),
+	const [alerts, batches] = await Promise.all([
+		getAlerts(fetch, cookies),
 		getBatches(fetch, cookies)
 	]);
 
-	const rappels = source === 'api' ? alertsToRappels(data) : mockRappels;
-
 	return {
-		rappels: rappels.length > 0 ? rappels : mockRappels,
+		rappels: alerts.ok ? alertsToRappels(alerts.data) : [],
 		// Lots encore rappelables (un lot déjà bloqué/en alerte n'est pas re-rappelable)
 		batches: batches.ok ? batches.data.filter((b) => !['BLOQUE', 'ALERTE'].includes(b.statut)) : [],
-		source: rappels.length > 0 && source === 'api' ? 'api' : 'mock',
-		error
+		error: [alerts, batches].find((r) => !r.ok)?.message
 	};
 };
 

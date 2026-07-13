@@ -14,6 +14,8 @@
 	class:conforme={statut === 'conforme'}
 	class:surveillance={statut === 'surveillance'}
 	class:quarantaine={statut === 'quarantaine'}
+	class:perime={statut === 'perime'}
+	class:neutre={statut === 'expedie' || statut === 'inconnu'}
 >
 	{lotStatusLabel(statut)}
 </span>
@@ -40,5 +42,15 @@
 	.quarantaine {
 		background: #fee2e2;
 		color: #991b1b;
+	}
+
+	.perime {
+		background: #fee2e2;
+		color: #7f1d1d;
+	}
+
+	.neutre {
+		background: #e2e8f0;
+		color: #475569;
 	}
 </style>

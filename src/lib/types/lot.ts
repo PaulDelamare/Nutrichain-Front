@@ -1,4 +1,10 @@
-export type LotStatus = 'conforme' | 'surveillance' | 'quarantaine';
+export type LotStatus =
+	| 'conforme'
+	| 'surveillance'
+	| 'quarantaine'
+	| 'perime'
+	| 'expedie'
+	| 'inconnu';
 
 export type LotRow = {
 	id: string;
