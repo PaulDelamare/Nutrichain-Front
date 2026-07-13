@@ -13,7 +13,6 @@ import type { NcRow, QuarantineLot } from '$lib/types/nc';
 import type { Recall } from '$lib/types/recall';
 import type { AppUser } from '$lib/types/user';
 import type { TraceGraph } from '$lib/types/trace';
-import type { LotEvent } from '$lib/types/lot-sheet';
 import type { Connector } from '$lib/types/integration';
 import type { StoreStat, StoreBrief } from '$lib/types/portail';
 import { openQualityIssues } from './quality';
@@ -167,18 +166,6 @@ export function movementsToEvents(movements: ApiMovement[]): EpcisEvent[] {
 			meta: `Lot ${m.lot?.id ?? '—'} · ${m.lot?.produit?.nom ?? ''}`.trim()
 		};
 	});
-}
-
-export function movementsToLotEvents(movements: ApiMovement[]): LotEvent[] {
-	return movements.map((m) => ({
-		time: new Date(m.created_at).toLocaleTimeString('fr-FR', {
-			hour: '2-digit',
-			minute: '2-digit'
-		}),
-		day: new Date(m.created_at).toLocaleDateString('fr-FR'),
-		title: m.type_action,
-		detail: `${m.quantite} ${m.unite}${m.user?.name ? ` · ${m.user.name}` : ''}`
-	}));
 }
 
 export function buildDashboardKpis(

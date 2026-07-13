@@ -1,11 +1,20 @@
 import type { LotStatus } from '$lib/types/lot';
 import type { LotMapPin } from '$lib/types/lot-map';
 
+/**
+ * Nature d'une étape, qui détermine sa couleur dans la frise.
+ *
+ * ⚠️ Métier : la quarantaine BLOQUE le lot mais reste levable (orange) ; le rappel est une
+ * décision IRRÉVERSIBLE (rouge). Les deux ne doivent jamais se confondre visuellement.
+ */
+export type LotEventTone = 'ok' | 'neutral' | 'warn' | 'danger';
+
 export type LotEvent = {
 	time: string;
 	day?: string;
 	title: string;
 	detail: string;
+	tone: LotEventTone;
 };
 
 export type LotSheet = {

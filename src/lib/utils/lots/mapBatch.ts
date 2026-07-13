@@ -1,5 +1,5 @@
 import type { ApiBatch } from '$lib/Api/traceability.server';
-import { movementsToLotEvents } from '$lib/utils/org/mappers';
+import { movementsToLotEvents } from '$lib/utils/lots/lotEvents';
 import { resolveLotMapLocation } from '$lib/utils/lots/resolveLotMapLocation';
 import type { LotSheet } from '$lib/types/lot-sheet';
 import type { LotRow, LotStatus } from '$lib/types/lot';
@@ -44,15 +44,7 @@ function fmtTemp(value: string | number | null | undefined): string {
 }
 
 export function batchToSheet(batch: ApiBatch): LotSheet {
-	const events =
-		batch.mouvements && batch.mouvements.length > 0
-			? movementsToLotEvents(
-					batch.mouvements.map((m) => ({
-						...m,
-						lot: { id: batch.id, produit: batch.produit }
-					}))
-				)
-			: [];
+	const events = movementsToLotEvents(batch.mouvements ?? []);
 
 	return {
 		id: batch.id,
