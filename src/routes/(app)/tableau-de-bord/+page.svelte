@@ -8,28 +8,19 @@
 	import TaskAlert from '$lib/components/dashboard/TaskAlert.svelte';
 	import PageHead from '$lib/components/page/PageHead.svelte';
 	import { findNavItem } from '$lib/config/nav';
-	import { usePageSearch } from '$lib/context/pageSearch.svelte';
-	import { filterRowsByText } from '$lib/utils/pageSearch/filterByText';
 	import { page } from '$app/stores';
 	import type { PageData } from './$types';
 
 	let { data }: { data: PageData } = $props();
 
-	const pageSearch = usePageSearch();
-
-	$effect(() => {
-		pageSearch.configure('Rechercher dans l’activité et les tâches…');
-		return () => pageSearch.deactivate();
-	});
+	// Pas de recherche sur le tableau de bord : elle ne filtrait que les deux panneaux du bas
+	// (activité récente, à traiter) et laissait KPI et graphes intacts — une barre de recherche
+	// qui semble ne rien faire est pire que pas de barre du tout.
 
 	const nav = $derived(findNavItem($page.url.pathname));
 
-	const recentEvents = $derived(
-		filterRowsByText(data.recentEvents, pageSearch.query, (e) => [e.when, e.title, e.meta])
-	);
-	const tasks = $derived(
-		filterRowsByText(data.tasks, pageSearch.query, (t) => [t.text, t.link?.label, t.variant])
-	);
+	const recentEvents = $derived(data.recentEvents);
+	const tasks = $derived(data.tasks);
 </script>
 
 <div class="dashboard">
