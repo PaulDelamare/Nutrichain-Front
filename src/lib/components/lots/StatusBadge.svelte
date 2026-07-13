@@ -12,6 +12,7 @@
 <span
 	class="badge"
 	class:conforme={statut === 'conforme'}
+	class:attente={statut === 'attente_qc'}
 	class:surveillance={statut === 'surveillance'}
 	class:quarantaine={statut === 'quarantaine'}
 	class:perime={statut === 'perime'}
@@ -32,6 +33,11 @@
 	.conforme {
 		background: #dcfce7;
 		color: var(--nc-brand-dark);
+	}
+
+	.attente {
+		background: #e0e7ff;
+		color: #3730a3;
 	}
 
 	.surveillance {

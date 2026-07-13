@@ -1,5 +1,6 @@
 export type LotStatus =
 	| 'conforme'
+	| 'attente_qc'
 	| 'surveillance'
 	| 'quarantaine'
 	| 'perime'

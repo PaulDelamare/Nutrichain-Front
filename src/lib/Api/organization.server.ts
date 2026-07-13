@@ -127,3 +127,35 @@ export const getCustomers = (fetch: typeof globalThis.fetch, cookies: Cookies) =
 
 export const getShipments = (fetch: typeof globalThis.fetch, cookies: Cookies) =>
 	orgApi(fetch, cookies).get<ApiShipment[]>('/api/organization/shipments');
+
+/** Lot en attente de son contrôle qualité de sortie d'usine (barrière HACCP). */
+export type ApiPendingQcBatch = {
+	id: string;
+	lot_number: string | null;
+	quantite_actuelle: string | number;
+	unite_code: string;
+	date_creation: string;
+	produit?: { nom: string };
+};
+
+export const getPendingQualityControl = (fetch: typeof globalThis.fetch, cookies: Cookies) =>
+	orgApi(fetch, cookies).get<ApiPendingQcBatch[]>('/api/organization/pending-quality-control');
+
+export type QualityControlInput = {
+	id_lot: string;
+	type_test: string;
+	resultat: 'CONFORME' | 'NON_CONFORME';
+	notes?: string;
+};
+
+// Une décision qualité engage une PERSONNE : elle passe par la session, jamais par la clé API
+// (une clé identifie une application, elle n'autorise pas une action).
+export const createQualityControl = (
+	fetch: typeof globalThis.fetch,
+	cookies: Cookies,
+	input: QualityControlInput
+) =>
+	api(fetch, cookies, { useApiKey: false }).post<{ statut_lot: string }>(
+		'/api/organization/quality-controls',
+		input
+	);
