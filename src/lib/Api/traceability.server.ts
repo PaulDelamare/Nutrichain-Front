@@ -8,6 +8,8 @@ export type ApiBatchMouvement = {
 	unite: string;
 	created_at: string;
 	user?: { name: string } | null;
+	/** Contexte de l'étape : motif d'une décision, cause d'une quarantaine, fournisseur… */
+	metadata?: Record<string, unknown> | null;
 };
 
 export type ApiBatch = {
