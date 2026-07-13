@@ -6,15 +6,9 @@ import {
 	getQuarantineBatches,
 	getMovements
 } from '$lib/Api/organization.server';
-import {
-	buildDashboardKpis,
-	buildDashboardTasks,
-	movementsToEvents,
-	mockEvents,
-	mockKpis,
-	mockTasks
-} from '$lib/utils/org/mappers';
+import { buildDashboardKpis, buildDashboardTasks, movementsToEvents } from '$lib/utils/org/mappers';
 import { buildDashboardCharts } from '$lib/utils/org/dashboardCharts';
+import { openQualityIssues } from '$lib/utils/org/quality';
 
 export const load: PageServerLoad = async ({ fetch, cookies }) => {
 	const [batches, alerts, quality, quarantine, movements] = await Promise.all([
@@ -31,23 +25,18 @@ export const load: PageServerLoad = async ({ fetch, cookies }) => {
 	const quarantineList = quarantine.ok ? quarantine.data : [];
 	const movementList = movements.ok ? movements.data : [];
 
-	const source = batches.ok && alerts.ok ? ('api' as const) : ('mock' as const);
+	// N'IMPORTE quel appel en échec doit se voir. Sinon un 403 sur les contrôles qualité
+	// afficherait « 0 anomalie ouverte » sans le moindre avertissement : un zéro fait autorité,
+	// et affirmer « aucune anomalie » à tort est plus grave que ne rien afficher.
+	const error = [batches, alerts, quality, quarantine, movements].find((r) => !r.ok)?.message;
+
+	const openIssues = openQualityIssues(qualityList).length;
 
 	return {
-		source,
-		kpis:
-			batches.ok && alerts.ok
-				? buildDashboardKpis(batchList.length, alertList, qualityList.length, quarantineList.length)
-				: mockKpis,
-		charts: buildDashboardCharts(
-			batchList,
-			alertList,
-			movementList,
-			qualityList,
-			!(batches.ok && alerts.ok)
-		),
-		recentEvents:
-			movementList.length > 0 ? movementsToEvents(movementList.slice(0, 5)) : mockEvents,
-		tasks: alerts.ok ? buildDashboardTasks(alertList, qualityList.length) : mockTasks
+		kpis: buildDashboardKpis(batchList.length, alertList, openIssues, quarantineList.length),
+		charts: buildDashboardCharts(batchList, alertList, movementList, qualityList),
+		recentEvents: movementsToEvents(movementList.slice(0, 5)),
+		tasks: buildDashboardTasks(alertList, openIssues),
+		error
 	};
 };

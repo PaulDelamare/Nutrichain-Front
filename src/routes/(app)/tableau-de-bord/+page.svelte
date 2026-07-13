@@ -40,56 +40,77 @@
 	{/if}
 
 	<div class="dashboard-body">
-		{#if data.source === 'mock'}
-			<p class="banner">Certaines métriques utilisent des valeurs de démonstration.</p>
+		{#if data.error}
+			<!-- Une source a échoué : on n'affiche AUCUN chiffre. Un « 0 anomalie » non vérifié
+			     est plus dangereux qu'une absence d'information. -->
+			<p class="banner">API indisponible — aucun indicateur affichable ({data.error})</p>
+		{:else}
+			<div class="kpis">
+				{#each data.kpis as kpi (kpi.label)}
+					<KpiCard label={kpi.label} value={kpi.value} detail={kpi.detail} />
+				{/each}
+			</div>
+
+			<section class="charts">
+				<ChartCard title="Répartition des lots" subtitle="Par statut opérationnel">
+					<DonutChart
+						segments={data.charts.lotStatus}
+						centerLabel="lots"
+						emptyMessage="Aucun lot suivi."
+					/>
+				</ChartCard>
+
+				<ChartCard title="Flux logistiques" subtitle="7 derniers jours — événements EPCIS">
+					<StackedBarChart
+						labels={data.charts.weeklyMovements.labels}
+						series={data.charts.weeklyMovements.series}
+					/>
+				</ChartCard>
+
+				<ChartCard title="Alertes actives" subtitle="Par niveau de gravité">
+					<HorizontalBarChart
+						segments={data.charts.alertSeverity}
+						emptyMessage="Aucune alerte active."
+					/>
+				</ChartCard>
+
+				<ChartCard title="Contrôles qualité" subtitle="Résultats des contrôles enregistrés">
+					<DonutChart
+						segments={data.charts.qualityResults}
+						centerLabel="contrôles"
+						emptyMessage="Aucun contrôle qualité enregistré."
+					/>
+				</ChartCard>
+			</section>
+
+			<div class="panels">
+				<section class="panel">
+					<h3>Activité récente (EPCIS)</h3>
+					{#if recentEvents.length > 0}
+						<ul>
+							{#each recentEvents as event (event)}
+								<EventRow when={event.when} title={event.title} meta={event.meta} />
+							{/each}
+						</ul>
+					{:else}
+						<p class="empty">Aucun mouvement enregistré.</p>
+					{/if}
+				</section>
+
+				<section class="panel">
+					<h3>À traiter</h3>
+					{#if tasks.length > 0}
+						<div class="tasks">
+							{#each tasks as task (task)}
+								<TaskAlert variant={task.variant} text={task.text} link={task.link} />
+							{/each}
+						</div>
+					{:else}
+						<p class="empty">Rien à traiter.</p>
+					{/if}
+				</section>
+			</div>
 		{/if}
-
-		<div class="kpis">
-			{#each data.kpis as kpi (kpi.label)}
-				<KpiCard label={kpi.label} value={kpi.value} detail={kpi.detail} />
-			{/each}
-		</div>
-
-		<section class="charts">
-			<ChartCard title="Répartition des lots" subtitle="Par statut opérationnel">
-				<DonutChart segments={data.charts.lotStatus} centerLabel="lots" />
-			</ChartCard>
-
-			<ChartCard title="Flux logistiques" subtitle="7 derniers jours — événements EPCIS">
-				<StackedBarChart
-					labels={data.charts.weeklyMovements.labels}
-					series={data.charts.weeklyMovements.series}
-				/>
-			</ChartCard>
-
-			<ChartCard title="Alertes actives" subtitle="Par niveau de gravité">
-				<HorizontalBarChart segments={data.charts.alertSeverity} />
-			</ChartCard>
-
-			<ChartCard title="Contrôles qualité" subtitle="État des lots suivis">
-				<DonutChart segments={data.charts.qualityResults} centerLabel="contrôles" />
-			</ChartCard>
-		</section>
-
-		<div class="panels">
-			<section class="panel">
-				<h3>Activité récente (EPCIS)</h3>
-				<ul>
-					{#each recentEvents as event (event)}
-						<EventRow when={event.when} title={event.title} meta={event.meta} />
-					{/each}
-				</ul>
-			</section>
-
-			<section class="panel">
-				<h3>À traiter</h3>
-				<div class="tasks">
-					{#each tasks as task (task)}
-						<TaskAlert variant={task.variant} text={task.text} link={task.link} />
-					{/each}
-				</div>
-			</section>
-		</div>
 	</div>
 </div>
 
@@ -148,7 +169,7 @@
 
 	.kpis {
 		display: grid;
-		grid-template-columns: repeat(5, minmax(0, 1fr));
+		grid-template-columns: repeat(4, minmax(0, 1fr));
 		gap: 0.75rem;
 		margin-bottom: 1.25rem;
 	}

@@ -7,30 +7,16 @@ import type {
 	ApiQualityControl
 } from '$lib/Api/organization.server';
 import type { ApiBatch, ApiGenealogy } from '$lib/Api/traceability.server';
-import type { Kpi, EpcisEvent, TaskItem } from '$lib/data/dashboard';
-import {
-	kpis as mockKpis,
-	recentEvents as mockEvents,
-	tasks as mockTasks
-} from '$lib/data/dashboard';
+import type { Kpi, EpcisEvent, TaskItem } from '$lib/types/dashboard';
 import type { ColdAlertRow, ColdIncident } from '$lib/types/cold';
-import {
-	coldAlerts as mockColdAlerts,
-	coldIncident as mockColdIncident
-} from '$lib/data/cold-alerts';
 import type { NcRow, QuarantineLot } from '$lib/types/nc';
-import { openNc as mockNc, quarantineLots as mockQuarantine } from '$lib/data/non-conformites';
 import type { Recall } from '$lib/types/recall';
-import { rappels as mockRappels } from '$lib/data/rappels';
 import type { AppUser } from '$lib/types/user';
-import { users as mockUsers } from '$lib/data/utilisateurs';
-import type { TraceStep, TraceGraph } from '$lib/types/trace';
-import { traceSteps as mockTraceSteps } from '$lib/data/trace-tree';
+import type { TraceGraph } from '$lib/types/trace';
 import type { LotEvent } from '$lib/types/lot-sheet';
 import type { Connector } from '$lib/types/integration';
-import { connectors as mockConnectors } from '$lib/data/integrations';
-import type { StoreStat } from '$lib/data/portail-magasins';
-import { storeStats as mockStoreStats, activeBrief as mockBrief } from '$lib/data/portail-magasins';
+import type { StoreStat, StoreBrief } from '$lib/types/portail';
+import { openQualityIssues } from './quality';
 
 const ROLE_LABELS: Record<string, string> = {
 	owner: 'Propriétaire',
@@ -86,7 +72,7 @@ export function alertsToCold(
 	if (cold.length === 0) return { incident: null, rows: [] };
 
 	const incident: ColdIncident = {
-		id: cold[0].id.slice(0, 12).toUpperCase(),
+		id: shortRef(cold[0].id),
 		message: cold[0].message
 	};
 
@@ -100,9 +86,9 @@ export function alertsToCold(
 					? 'investigation'
 					: 'investigation';
 		return {
-			id: a.id.replace('seed-alert-', 'COLD-').slice(0, 12).toUpperCase(),
-			site: equip?.lieu?.nom ?? 'Site',
-			zone: equip?.nom ?? 'Zone',
+			id: shortRef(a.id),
+			site: equip?.lieu?.nom ?? '—',
+			zone: equip?.nom ?? '—',
 			tempMax: temp,
 			depuis: fmtRelative(a.created_at),
 			statut
@@ -112,11 +98,23 @@ export function alertsToCold(
 	return { incident, rows };
 }
 
+// Référence courte et lisible d'une alerte. Les préfixes « RAP- » / « COLD- » d'avant étaient
+// fabriqués : l'API ne délivre aucun numéro de rappel, seulement un identifiant technique.
+function shortRef(id: string): string {
+	return id.split('-')[0].slice(0, 8).toUpperCase();
+}
+
+export function countActiveColdAlerts(alerts: ApiAlert[]): number {
+	return alerts.filter((a) => COLD_ALERT_TYPES.includes(a.type) && a.statut === 'ACTIVE').length;
+}
+
+// « NC ouvertes » : uniquement les contrôles qui demandent une action. Un contrôle conforme
+// n'a rien à faire dans une liste de non-conformités.
 export function qualityToNc(rows: ApiQualityControl[]): NcRow[] {
-	return rows.map((q) => ({
+	return openQualityIssues(rows).map((q) => ({
 		id: q.id.slice(0, 8).toUpperCase(),
 		type: q.type_test,
-		statut: q.resultat.includes('QUARANT') ? 'quarantaine' : 'en_cours'
+		statut: q.resultat.toUpperCase().includes('QUARANT') ? 'quarantaine' : 'en_cours'
 	}));
 }
 
@@ -143,13 +141,11 @@ export function alertsToRappels(alerts: ApiAlert[]): Recall[] {
 				.split('. Source:')[0];
 
 			return {
-				id: a.id.replace('seed-alert-', 'RAP-').slice(0, 14).toUpperCase(),
+				id: shortRef(a.id),
 				produit: motif || 'Produit',
 				statut: a.statut === 'ACTIVE' ? ('en_cours' as const) : ('cloture' as const),
 				lots: lotsImpacted ? `${lotsImpacted} lot(s) bloqué(s)` : (a.related_id ?? '—'),
-				sites: shipments != null ? `${shipments} expédition(s) à notifier` : 'Magasins & RDC',
-				progressLabel: 'Retrait rayon',
-				progress: a.statut === 'ACTIVE' ? 78 : 100,
+				sites: shipments != null ? `${shipments} expédition(s) à notifier` : '—',
 				etape: a.statut === 'ACTIVE' ? 'En cours' : 'Clôturé',
 				etapeTitre: a.statut === 'ACTIVE' ? 'Blocage & notification' : 'Rappel terminé',
 				etapeDetail: `Lot source : ${a.related_id ?? '—'}`
@@ -217,8 +213,7 @@ export function buildDashboardKpis(
 			label: 'Anomalies ouvertes',
 			value: String(qualityCount),
 			detail: `${quarantineCount} lot(s) en quarantaine`
-		},
-		{ ...mockKpis[4] }
+		}
 	];
 }
 
@@ -238,43 +233,7 @@ export function buildDashboardTasks(alerts: ApiAlert[], qualityCount: number): T
 			link: { href: '/rappels-produits', label: 'voir le suivi' }
 		});
 	}
-	return tasks.length > 0 ? tasks : mockTasks;
-}
-
-export function buildTraceSteps(
-	suppliers: { nom_ferme: string; id: string }[],
-	batches: ApiBatch[],
-	lotId?: string | null
-): TraceStep[] {
-	if (suppliers.length === 0 && batches.length === 0) return mockTraceSteps;
-
-	const supplier = suppliers[0];
-	const batch = (lotId && batches.find((b) => b.id === lotId)) || batches[0];
-
-	const steps: TraceStep[] = [];
-	if (supplier) {
-		steps.push({
-			phase: 'Amont — matière',
-			title: supplier.nom_ferme,
-			detail: `Fournisseur ${supplier.id}`,
-			icon: 'amont'
-		});
-	}
-	steps.push({
-		phase: 'Transformation',
-		title: 'Conditionnement & contrôle',
-		badge: { label: 'Traçabilité NutriChain', variant: 'green' },
-		icon: 'transform'
-	});
-	if (batch) {
-		steps.push({
-			phase: 'Aval — produit fini',
-			title: `${batch.id} — ${batch.produit?.nom ?? 'Produit'}`,
-			badge: { label: batch.statut, variant: 'blue' },
-			icon: 'aval'
-		});
-	}
-	return steps;
+	return tasks;
 }
 
 /** Généalogie structurée : amont (lots parents) → lot analysé → aval (lots issus). */
@@ -294,7 +253,7 @@ export function genealogyToGraph(
 			title: selected
 				? `${selected.produit?.nom ?? 'Produit'} — ${selected.lot_number ?? selected.id}`
 				: genealogy.batchId,
-			badge: { label: selected?.statut ?? 'EN_STOCK', variant: 'green' },
+			badge: selected ? { label: selected.statut, variant: 'green' } : undefined,
 			icon: 'transform'
 		},
 		downstream: genealogy.downstream.map((b) => ({
@@ -362,9 +321,9 @@ export function buildPortailStats(
 	];
 }
 
-export function buildPortailBrief(alerts: ApiAlert[]) {
+export function buildPortailBrief(alerts: ApiAlert[]): StoreBrief | null {
 	const rappel = alerts.find((a) => RECALL_ALERT_TYPES.includes(a.type) && a.statut === 'ACTIVE');
-	if (!rappel) return mockBrief;
+	if (!rappel) return null;
 	return {
 		title: 'Consigne active',
 		text: rappel.message
@@ -373,29 +332,12 @@ export function buildPortailBrief(alerts: ApiAlert[]) {
 
 export function auditToConnectors(logs: ApiAuditLog[]): Connector[] {
 	const syncLogs = logs.filter((l) => l.entity === 'integration' || l.action === 'SYNC');
-	if (syncLogs.length === 0) return mockConnectors;
+	if (syncLogs.length === 0) return [];
 	return [
 		{
 			name: 'WMS / ERP (audit)',
 			statut: 'ok',
 			lines: syncLogs.slice(0, 2).map((l) => `${l.action} — ${fmtWhen(l.horodatage)}`)
-		},
-		...mockConnectors.slice(1)
+		}
 	];
 }
-
-export {
-	mockKpis,
-	mockEvents,
-	mockTasks,
-	mockColdAlerts,
-	mockColdIncident,
-	mockNc,
-	mockQuarantine,
-	mockRappels,
-	mockUsers,
-	mockTraceSteps,
-	mockConnectors,
-	mockStoreStats,
-	mockBrief
-};

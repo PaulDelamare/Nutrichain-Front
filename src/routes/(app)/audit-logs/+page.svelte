@@ -70,7 +70,7 @@
 	{/if}
 </section>
 
-{#if data.source !== 'mock' && actionOptions.length > 1}
+{#if actionOptions.length > 1}
 	<div class="filter">
 		<label for="action-filter">Filtrer par action</label>
 		<select id="action-filter" bind:value={actionFilter}>
@@ -82,7 +82,7 @@
 	</div>
 {/if}
 
-{#if data.source === 'mock' && data.error}
+{#if data.error}
 	<p class="banner">API indisponible — {data.error}</p>
 {:else if rows.length === 0}
 	<p class="empty">Aucune entrée ne correspond à la recherche.</p>

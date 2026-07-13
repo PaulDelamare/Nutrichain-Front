@@ -1,6 +1,7 @@
 <script lang="ts">
 	import RecallCard from '$lib/components/recall/RecallCard.svelte';
 	import PageHead from '$lib/components/page/PageHead.svelte';
+	import Placeholder from '$lib/components/page/Placeholder.svelte';
 	import SearchSelect from '$lib/components/ui/SearchSelect.svelte';
 	import { usePageSearch } from '$lib/context/pageSearch.svelte';
 	import { filterRowsByText } from '$lib/utils/pageSearch/filterByText';
@@ -35,11 +36,11 @@
 
 <PageHead
 	heading="Rappels produits"
-	description="Workflow — lots concernés, sites impactés, progression des retraits."
+	description="Workflow — lots concernés, expéditions impactées, état du rappel."
 />
 
-{#if data.source === 'api'}
-	<p class="source">Données issues des alertes actives en base.</p>
+{#if data.error}
+	<p class="banner">API indisponible — {data.error}</p>
 {/if}
 
 <section class="trigger-card">
@@ -104,17 +105,24 @@
 	{/if}
 </section>
 
-<div class="list">
-	{#each rappels as recall (recall.id)}
-		<RecallCard {recall} />
-	{/each}
-</div>
+{#if rappels.length > 0}
+	<div class="list">
+		{#each rappels as recall (recall.id)}
+			<RecallCard {recall} />
+		{/each}
+	</div>
+{:else if !data.error}
+	<Placeholder message="Aucun rappel produit en cours." />
+{/if}
 
 <style>
-	.source {
+	.banner {
 		margin: 0 0 0.75rem;
+		padding: 0.5rem 0.75rem;
+		border-radius: 0.375rem;
+		background: #fffbeb;
+		color: #92400e;
 		font-size: 0.8125rem;
-		color: var(--nc-text-muted);
 	}
 
 	.trigger-card {

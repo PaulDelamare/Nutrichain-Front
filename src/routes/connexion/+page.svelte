@@ -23,7 +23,7 @@
 				<input
 					type="email"
 					name="email"
-					value={form?.email ?? 'nutrichain@test.fr'}
+					value={form?.email ?? ''}
 					autocomplete="username"
 					required
 				/>

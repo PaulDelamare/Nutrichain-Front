@@ -2,6 +2,7 @@
 	import BriefPanel from '$lib/components/store/BriefPanel.svelte';
 	import StatCard from '$lib/components/store/StatCard.svelte';
 	import PageHead from '$lib/components/page/PageHead.svelte';
+	import Placeholder from '$lib/components/page/Placeholder.svelte';
 	import type { PageData } from './$types';
 
 	let { data }: { data: PageData } = $props();
@@ -12,7 +13,7 @@
 	description="Consignes de retrait, confirmations et traçabilité simplifiée pour la force de vente."
 />
 
-{#if data.source === 'mock' && data.error}
+{#if data.error}
 	<p class="banner">API indisponible — {data.error}</p>
 {/if}
 
@@ -22,7 +23,11 @@
 	{/each}
 </div>
 
-<BriefPanel title={data.activeBrief.title} text={data.activeBrief.text} />
+{#if data.activeBrief}
+	<BriefPanel title={data.activeBrief.title} text={data.activeBrief.text} />
+{:else if !data.error}
+	<Placeholder message="Aucune consigne active — aucun rappel produit en cours." />
+{/if}
 
 <style>
 	.banner {

@@ -10,14 +10,17 @@
 		recallError?: string;
 	}
 
+	import type { LotStatus } from '$lib/types/lot';
+
 	let {
 		lotId,
 		statut,
 		form
 	}: {
 		lotId: string;
-		// Statut métier du lot : conforme (EN_STOCK), quarantaine (BLOQUE), surveillance (ALERTE = déjà rappelé).
-		statut: 'conforme' | 'surveillance' | 'quarantaine';
+		// Statut métier du lot : conforme (EN_STOCK), quarantaine (BLOQUE), surveillance (ALERTE = déjà rappelé),
+		// et périmé / expédié / inconnu — tous rappelables (un lot déjà parti est justement celui qu'on rappelle).
+		statut: LotStatus;
 		form: ActionFeedback | null;
 	} = $props();
 </script>

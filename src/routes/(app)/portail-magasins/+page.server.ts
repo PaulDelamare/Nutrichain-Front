@@ -1,11 +1,6 @@
 import type { PageServerLoad } from './$types';
 import { getAlerts, getCustomers, getShipments } from '$lib/Api/organization.server';
-import {
-	buildPortailBrief,
-	buildPortailStats,
-	mockBrief,
-	mockStoreStats
-} from '$lib/utils/org/mappers';
+import { buildPortailBrief, buildPortailStats } from '$lib/utils/org/mappers';
 
 export const load: PageServerLoad = async ({ fetch, cookies }) => {
 	const [customers, shipments, alerts] = await Promise.all([
@@ -14,19 +9,15 @@ export const load: PageServerLoad = async ({ fetch, cookies }) => {
 		getAlerts(fetch, cookies)
 	]);
 
-	if (customers.ok && shipments.ok) {
-		const alertList = alerts.ok ? alerts.data : [];
-		return {
-			source: 'api' as const,
-			storeStats: buildPortailStats(customers.data, shipments.data),
-			activeBrief: alerts.ok ? buildPortailBrief(alertList) : mockBrief
-		};
+	// Si /alerts échoue, on NE PEUT PAS dire « aucune consigne active » : un rappel peut être en
+	// cours. Sur la page destinée aux magasins, nier un rappel est le pire mensonge possible.
+	if (!customers.ok || !shipments.ok || !alerts.ok) {
+		const error = [customers, shipments, alerts].find((r) => !r.ok)?.message;
+		return { storeStats: [], activeBrief: null, error };
 	}
 
 	return {
-		source: 'mock' as const,
-		storeStats: mockStoreStats,
-		activeBrief: mockBrief,
-		error: customers.message || shipments.message
+		storeStats: buildPortailStats(customers.data, shipments.data),
+		activeBrief: buildPortailBrief(alerts.data)
 	};
 };

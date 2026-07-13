@@ -4,13 +4,18 @@ import { resolveLotMapLocation } from '$lib/utils/lots/resolveLotMapLocation';
 import type { LotSheet } from '$lib/types/lot-sheet';
 import type { LotRow, LotStatus } from '$lib/types/lot';
 
+// « Conforme » est une AFFIRMATION : elle ne doit jamais être le repli par défaut. Un lot
+// PERIME tombait auparavant dans le `return 'conforme'` final et s'affichait en vert.
 function mapStatut(statut: string): LotStatus {
 	const s = statut.toUpperCase();
 	// BLOQUE = lot bloqué (quarantaine qualité ou rappel) : c'est le statut réellement
 	// filtré par l'API pour la quarantaine.
 	if (s.includes('QUARANT') || s.includes('BLOQU')) return 'quarantaine';
 	if (s.includes('SURVEILL') || s.includes('ALERT')) return 'surveillance';
-	return 'conforme';
+	if (s.includes('PERIM')) return 'perime';
+	if (s.includes('EXPEDIE')) return 'expedie';
+	if (s === 'EN_STOCK' || s === 'PRET') return 'conforme';
+	return 'inconnu';
 }
 
 function fmtDate(iso: string | null): string {
