@@ -1,4 +1,5 @@
 import { fail } from '@sveltejs/kit';
+import { refusDecisionQualite } from '$lib/server/guards';
 import type { Actions, PageServerLoad } from './$types';
 import { getAlerts } from '$lib/Api/organization.server';
 import { getBatches, triggerRecall } from '$lib/Api/traceability.server';
@@ -19,8 +20,11 @@ export const load: PageServerLoad = async ({ fetch, cookies }) => {
 };
 
 export const actions = {
-	recall: async ({ request, fetch, cookies }) => {
+	recall: async ({ request, fetch, cookies, locals }) => {
 		const form = await request.formData();
+
+		const refus = refusDecisionQualite(locals.user);
+		if (refus) return fail(403, { error: refus });
 		const lotId = String(form.get('lotId') ?? '').trim();
 		const reason = String(form.get('reason') ?? '').trim();
 

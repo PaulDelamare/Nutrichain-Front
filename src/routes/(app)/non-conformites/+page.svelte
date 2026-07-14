@@ -66,12 +66,13 @@
 			lots={pendingQc}
 			errorLotId={form?.controlLotId}
 			errorMessage={form?.controlError}
+			role={data.user.role}
 		/>
 	</div>
 
 	<div class="grid">
 		<NcPanel rows={openNc} />
-		<QuarantinePanel lots={quarantineLots} onexport={exportList} />
+		<QuarantinePanel lots={quarantineLots} onexport={exportList} role={data.user.role} />
 	</div>
 {/if}
 

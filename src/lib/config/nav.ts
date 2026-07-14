@@ -1,4 +1,5 @@
 import type { Pathname } from '$app/types';
+import { ADMIN_ROLES, type KnownRole, type Role } from './roles';
 
 export type NavItem = {
 	href: Pathname;
@@ -8,6 +9,12 @@ export type NavItem = {
 	/** Titre principal dans la zone de contenu */
 	heading: string;
 	description?: string;
+	/**
+	 * Rôles qui voient l'entrée. Absent = visible par tous.
+	 * On ne masque que les pages dont l'API refuserait déjà la donnée : sans ça, le lien mène à
+	 * une page vide portant une erreur brute, indistinguable d'une panne.
+	 */
+	roles?: Role[];
 };
 
 export type NavGroup = {
@@ -84,7 +91,8 @@ export const navGroups: NavGroup[] = [
 				label: 'Intégrations',
 				title: 'Intégrations',
 				heading: 'Intégrations ERP / WMS / TMS',
-				description: "Connecteurs, états de synchronisation et files d'attente."
+				description: "Connecteurs, états de synchronisation et files d'attente.",
+				roles: ADMIN_ROLES
 			}
 		]
 	},
@@ -96,19 +104,39 @@ export const navGroups: NavGroup[] = [
 				label: 'Utilisateurs',
 				title: 'Utilisateurs',
 				heading: 'Utilisateurs, rôles & sécurité',
-				description: 'Gestion des accès — RBAC, MFA, politique de mot de passe.'
+				description: 'Gestion des accès — RBAC, MFA, politique de mot de passe.',
+				roles: ADMIN_ROLES
 			},
 			{
 				href: '/audit-logs',
 				label: 'Audit & logs',
 				title: 'Audit & logs',
 				heading: 'Audit & logs',
-				description: "Journal d'audit et événements système."
+				description: "Journal d'audit et événements système.",
+				roles: ADMIN_ROLES
 			}
 		]
 	}
 ];
 
+/**
+ * Navigation visible par ce rôle. Un rôle inconnu (API sans le champ) voit TOUT : mieux vaut un
+ * lien qui mène à une page refusée qu'une application amputée pour son propriétaire.
+ * Les groupes vidés disparaissent — on ne laisse pas un intitulé de section sans entrée.
+ */
+export function navPourRole(role: KnownRole): NavGroup[] {
+	return navGroups
+		.map((groupe) => ({
+			...groupe,
+			items: groupe.items.filter(
+				(item) => !item.roles || role === undefined || (role !== null && item.roles.includes(role))
+			)
+		}))
+		.filter((groupe) => groupe.items.length > 0);
+}
+
+// findNavItem/headerTitle lisent la nav COMPLÈTE : le titre d'une page reste correct même quand
+// son entrée est masquée (accès par URL directe).
 const flatNav = navGroups.flatMap((g) => g.items);
 
 export function findNavItem(pathname: string): NavItem | undefined {

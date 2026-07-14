@@ -3,6 +3,8 @@
 	import PageHead from '$lib/components/page/PageHead.svelte';
 	import Placeholder from '$lib/components/page/Placeholder.svelte';
 	import SearchSelect from '$lib/components/ui/SearchSelect.svelte';
+	import ActionReservee from '$lib/components/ui/ActionReservee.svelte';
+	import { peutDeciderQualite } from '$lib/config/roles';
 	import { usePageSearch } from '$lib/context/pageSearch.svelte';
 	import { filterRowsByText } from '$lib/utils/pageSearch/filterByText';
 	import type { ActionData, PageData } from './$types';
@@ -50,25 +52,29 @@
 		parties et notifie automatiquement l'équipe et les clients livrés.
 	</p>
 
-	<form method="POST" action="?/recall">
-		<label>
-			<span>Lot concerné</span>
-			<SearchSelect name="lotId" options={lotOptions} placeholder="— choisir un lot —" />
-		</label>
+	{#if peutDeciderQualite(data.user.role)}
+		<form method="POST" action="?/recall">
+			<label>
+				<span>Lot concerné</span>
+				<SearchSelect name="lotId" options={lotOptions} placeholder="— choisir un lot —" />
+			</label>
 
-		<label>
-			<span>Motif du rappel</span>
-			<input
-				type="text"
-				name="reason"
-				placeholder="Ex. : suspicion de contamination Listeria"
-				value={form?.reason ?? ''}
-				required
-			/>
-		</label>
+			<label>
+				<span>Motif du rappel</span>
+				<input
+					type="text"
+					name="reason"
+					placeholder="Ex. : suspicion de contamination Listeria"
+					value={form?.reason ?? ''}
+					required
+				/>
+			</label>
 
-		<button type="submit">Déclencher le rappel</button>
-	</form>
+			<button type="submit">Déclencher le rappel</button>
+		</form>
+	{:else}
+		<ActionReservee action="Le déclenchement d'un rappel produit" role={data.user.role} />
+	{/if}
 
 	{#if form?.error}
 		<p class="error">{form.error}</p>

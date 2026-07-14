@@ -11,18 +11,28 @@
 	}
 
 	import type { LotStatus } from '$lib/types/lot';
+	import { peutDeciderQualite, type KnownRole } from '$lib/config/roles';
+	import ActionReservee from '$lib/components/ui/ActionReservee.svelte';
 
 	let {
 		lotId,
 		statut,
-		form
+		form,
+		role
 	}: {
 		lotId: string;
 		// Statut métier du lot : conforme (EN_STOCK), quarantaine (BLOQUE), surveillance (ALERTE = déjà rappelé),
 		// et périmé / expédié / inconnu — tous rappelables (un lot déjà parti est justement celui qu'on rappelle).
 		statut: LotStatus;
 		form: ActionFeedback | null;
+		/** REQUIS : optionnel = `undefined` = aucune restriction. Un oubli ouvrirait tout en silence. */
+		role: KnownRole;
 	} = $props();
+
+	// Lever une quarantaine et déclencher un rappel sont des décisions qualité : l'opérateur en est
+	// exclu. Le CONTEXTE reste affiché — il doit comprendre l'état du lot, pas seulement subir un
+	// bouton manquant.
+	const peutDecider = $derived(peutDeciderQualite(role));
 </script>
 
 <section class="panel">
@@ -33,16 +43,20 @@
 		<div class="action">
 			<p class="action-title">Lever la quarantaine</p>
 			<p class="action-hint">Décision qualité — motif obligatoire, tracé dans l'audit WORM.</p>
-			<form method="POST" action="?/release">
-				<input
-					type="text"
-					name="motif"
-					placeholder="Motif (ex. 2ᵉ contrôle conforme)"
-					required
-					minlength="3"
-				/>
-				<button type="submit" class="ok">Lever la quarantaine</button>
-			</form>
+			{#if peutDecider}
+				<form method="POST" action="?/release">
+					<input
+						type="text"
+						name="motif"
+						placeholder="Motif (ex. 2ᵉ contrôle conforme)"
+						required
+						minlength="3"
+					/>
+					<button type="submit" class="ok">Lever la quarantaine</button>
+				</form>
+			{:else}
+				<ActionReservee action="La levée de quarantaine" {role} />
+			{/if}
 			{#if form?.released}
 				<p class="feedback ok" role="status">✅ Quarantaine levée — lot remis en stock.</p>
 			{:else if form?.releaseError}
@@ -66,16 +80,20 @@
 				Place le lot et toute sa descendance sous rappel (alerte) et notifie les expéditions
 				parties.
 			</p>
-			<form method="POST" action="?/recall">
-				<input
-					type="text"
-					name="reason"
-					placeholder="Motif (ex. contamination suspectée)"
-					required
-					minlength="3"
-				/>
-				<button type="submit" class="danger">Déclencher le rappel</button>
-			</form>
+			{#if peutDecider}
+				<form method="POST" action="?/recall">
+					<input
+						type="text"
+						name="reason"
+						placeholder="Motif (ex. contamination suspectée)"
+						required
+						minlength="3"
+					/>
+					<button type="submit" class="danger">Déclencher le rappel</button>
+				</form>
+			{:else}
+				<ActionReservee action="Le déclenchement d'un rappel produit" {role} />
+			{/if}
 			{#if form?.recallError}
 				<p class="feedback err" role="status">❌ {form.recallError}</p>
 			{/if}

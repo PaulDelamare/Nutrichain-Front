@@ -1,13 +1,22 @@
 <script lang="ts">
 	import { resolve } from '$app/paths';
 	import type { QuarantineLot } from '$lib/types/nc';
+	import { peutDeciderQualite, type KnownRole } from '$lib/config/roles';
+	import ActionReservee from '$lib/components/ui/ActionReservee.svelte';
 
 	type Props = {
 		lots: QuarantineLot[];
 		onexport?: () => void;
+		// REQUIS : une prop optionnelle vaudrait `undefined` = « n'interdis rien ». Oublier de la
+		// câbler donnerait les pleins droits, sans erreur de typage ni test rouge.
+		role: KnownRole;
 	};
 
-	let { lots, onexport }: Props = $props();
+	let { lots, onexport, role }: Props = $props();
+
+	// La LISTE reste visible pour tous : un opérateur doit savoir quels lots sont bloqués.
+	// Seule la LEVÉE — une décision qualité — lui est refusée.
+	const peutLever = $derived(peutDeciderQualite(role));
 </script>
 
 <section class="panel">
@@ -25,21 +34,27 @@
 						</a>
 						— {item.detail}
 					</p>
-					<!-- Levée = décision qualité : motif obligatoire (tracé dans l'audit WORM). -->
-					<form method="POST" action="?/release" class="release">
-						<input type="hidden" name="lotId" value={item.lot} />
-						<input
-							type="text"
-							name="motif"
-							placeholder="Motif de levée (ex. 2ᵉ contrôle conforme)"
-							required
-							minlength="3"
-						/>
-						<button type="submit">Lever la quarantaine</button>
-					</form>
+					{#if peutLever}
+						<!-- Levée = décision qualité : motif obligatoire (tracé dans l'audit WORM). -->
+						<form method="POST" action="?/release" class="release">
+							<input type="hidden" name="lotId" value={item.lot} />
+							<input
+								type="text"
+								name="motif"
+								placeholder="Motif de levée (ex. 2ᵉ contrôle conforme)"
+								required
+								minlength="3"
+							/>
+							<button type="submit">Lever la quarantaine</button>
+						</form>
+					{/if}
 				</li>
 			{/each}
 		</ul>
+	{/if}
+
+	{#if !peutLever && lots.length > 0}
+		<ActionReservee action="La levée de quarantaine" {role} />
 	{/if}
 
 	<button type="button" class="export" onclick={onexport}>Exporter la liste</button>

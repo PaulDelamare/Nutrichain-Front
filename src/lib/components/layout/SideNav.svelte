@@ -2,14 +2,16 @@
 	import { resolve } from '$app/paths';
 	import { page } from '$app/stores';
 	import { APP_FOOTER, APP_NAME, APP_TAGLINE } from '$lib/config/app';
-	import { navGroups } from '$lib/config/nav';
+	import { type NavGroup } from '$lib/config/nav';
 
 	type Props = {
 		collapsed?: boolean;
 		onMenuToggle?: () => void;
+		/** Navigation déjà filtrée selon le rôle. REQUIS : un défaut « tout » masquerait un oubli. */
+		groups: NavGroup[];
 	};
 
-	let { collapsed = false, onMenuToggle }: Props = $props();
+	let { collapsed = false, onMenuToggle, groups }: Props = $props();
 
 	// resolve() n'accepte qu'un littéral de route : on rétrécit l'union Pathname via « as '/' »
 
@@ -51,7 +53,7 @@
 		</div>
 
 		<nav class="sidenav-nav">
-			{#each navGroups as group (group.label)}
+			{#each groups as group (group.label)}
 				<p class="group-label">{group.label}</p>
 				<ul class="group-list">
 					{#each group.items as item (item.href)}

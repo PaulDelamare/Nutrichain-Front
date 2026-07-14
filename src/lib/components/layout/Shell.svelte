@@ -1,12 +1,19 @@
 <script lang="ts">
 	import type { Snippet } from 'svelte';
 	import { page } from '$app/stores';
-	import { headerTitle } from '$lib/config/nav';
+	import { headerTitle, navPourRole } from '$lib/config/nav';
+	import type { KnownRole } from '$lib/config/roles';
 	import { initPageSearchContext } from '$lib/context/pageSearch.svelte';
 	import SideNav from './SideNav.svelte';
 	import TopBar from './TopBar.svelte';
 
-	let { children, coldAlerts }: { children: Snippet; coldAlerts: number | null } = $props();
+	let {
+		children,
+		coldAlerts,
+		role
+	}: { children: Snippet; coldAlerts: number | null; role: KnownRole } = $props();
+
+	const groups = $derived(navPourRole(role));
 
 	let collapsed = $state(false);
 	const pageSearch = initPageSearchContext();
@@ -21,7 +28,7 @@
 </script>
 
 <div class="shell">
-	<SideNav {collapsed} onMenuToggle={() => (collapsed = !collapsed)} />
+	<SideNav {collapsed} {groups} onMenuToggle={() => (collapsed = !collapsed)} />
 
 	<div class="shell-main">
 		<TopBar

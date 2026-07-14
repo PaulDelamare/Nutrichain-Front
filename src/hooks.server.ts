@@ -1,7 +1,31 @@
 // ! IMPORTS
 import { env } from '$env/dynamic/private';
-import { getMe, hasAuthSessionCookie } from '$lib/Api/auth.server';
+import { getMe, hasAuthSessionCookie, type MePayload } from '$lib/Api/auth.server';
+import { estRole, type KnownRole } from '$lib/config/roles';
 import type { Handle, HandleFetch } from '@sveltejs/kit';
+
+let rbacEteintSignale = false;
+
+/**
+ * `undefined` si l'API n'expose pas le champ (déploiement antérieur) — on ne masquera alors rien.
+ * `null` si elle l'expose sans rôle exploitable, ou avec un rôle hors référentiel.
+ */
+function lireRole(data: MePayload): KnownRole {
+	if (!('role' in data)) {
+		// Sans ce cri, un front déployé avant l'API se comporterait comme un RBAC qui marche : tout
+		// s'affiche, aucun test ne rougit, personne ne sait que le cloisonnement est éteint.
+		if (!rbacEteintSignale) {
+			rbacEteintSignale = true;
+			console.warn(
+				"[RBAC] /api/me ne renvoie pas `role` : l'API est antérieure à cette fonctionnalité. " +
+					"Le cloisonnement d'interface est DÉSACTIVÉ (seul le 403 de l'API protège encore)."
+			);
+		}
+		return undefined;
+	}
+
+	return estRole(data.role) ? data.role : null;
+}
 
 export const handle = (async ({ event, resolve }) => {
 	if (!hasAuthSessionCookie(event.cookies)) {
@@ -16,7 +40,8 @@ export const handle = (async ({ event, resolve }) => {
 			event.locals.user = {
 				id: me.data.user.id,
 				name: me.data.user.name,
-				email: me.data.user.email
+				email: me.data.user.email,
+				role: lireRole(me.data)
 			};
 		} else {
 			event.locals.user = undefined;
