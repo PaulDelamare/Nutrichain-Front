@@ -16,7 +16,7 @@
 	});
 
 	const users = $derived(
-		filterRowsByText(data.users, pageSearch.query, (u) => [u.email, u.role, u.lastLogin])
+		filterRowsByText(data.users, pageSearch.query, (u) => [u.email, u.role])
 	);
 </script>
 
@@ -25,15 +25,31 @@
 	description="Gestion des accès — RBAC, MFA, politique de mot de passe."
 />
 
-{#if data.source === 'mock' && data.error}
+{#if data.error}
 	<p class="banner">API indisponible — {data.error}</p>
+{/if}
+
+{#if form?.error}
+	<p class="banner err">{form.error}</p>
+{:else if form?.success}
+	<p class="banner ok">{form.message}</p>
 {/if}
 
 <InviteUserForm {form} canInvite={data.canInvite} />
 
-<UserTable rows={users} />
+<UserTable rows={users} canManage={data.canManage} currentUserId={data.currentUserId} />
 
 <style>
+	.banner.err {
+		background: #fef2f2;
+		color: #991b1b;
+	}
+
+	.banner.ok {
+		background: #f0fdf4;
+		color: #166534;
+	}
+
 	.banner {
 		margin: 0 0 0.75rem;
 		padding: 0.5rem 0.75rem;

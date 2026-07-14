@@ -1,11 +1,14 @@
 import type { LotStatus } from '$lib/types/lot';
 import type { LotMapPin } from '$lib/types/lot-map';
 
+export type LotEventTone = 'ok' | 'neutral' | 'warn' | 'danger';
+
 export type LotEvent = {
 	time: string;
 	day?: string;
 	title: string;
 	detail: string;
+	tone: LotEventTone;
 };
 
 export type LotSheet = {
@@ -21,7 +24,7 @@ export type LotSheet = {
 	events: LotEvent[];
 	site: string;
 	zone: string;
-	wmsSync: string;
+	createdAtLabel: string;
 	/** Position carte — alimentée par site ou GPS futur */
 	mapPin: LotMapPin | null;
 };

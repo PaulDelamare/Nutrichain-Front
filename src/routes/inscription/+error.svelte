@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { resolve } from '$app/paths';
 	import { page } from '$app/stores';
 
 	const message = $derived($page.error?.message ?? 'Cette invitation est invalide ou a expiré.');
@@ -7,7 +8,7 @@
 <main class="wrap">
 	<h1>Invitation invalide</h1>
 	<p>{message}</p>
-	<a href="/connexion">Retour à la connexion</a>
+	<a href={resolve('/connexion')}>Retour à la connexion</a>
 </main>
 
 <style>

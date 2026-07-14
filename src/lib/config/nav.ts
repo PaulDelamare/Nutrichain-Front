@@ -1,11 +1,15 @@
+import type { Pathname } from '$app/types';
+import { ADMIN_ROLES, type KnownRole, type Role } from './roles';
+
 export type NavItem = {
-	href: string;
+	href: Pathname;
 	label: string;
 	/** Titre affiché dans le header fixe */
 	title: string;
 	/** Titre principal dans la zone de contenu */
 	heading: string;
 	description?: string;
+	roles?: Role[];
 };
 
 export type NavGroup = {
@@ -21,7 +25,7 @@ export const navGroups: NavGroup[] = [
 				href: '/tableau-de-bord',
 				label: 'Tableau de bord',
 				title: 'Tableau de bord',
-				heading: 'Vue d\'ensemble',
+				heading: "Vue d'ensemble",
 				description: 'KPI temps réel — lots suivis, alertes, rappels et synchronisations.'
 			},
 			{
@@ -29,16 +33,14 @@ export const navGroups: NavGroup[] = [
 				label: 'Recherche lots',
 				title: 'Recherche de lots',
 				heading: 'Recherche de lots',
-				description:
-					'Filtres avancés — GTIN, lot, SSCC, produit, site, dates, statut.'
+				description: 'Filtres — GTIN, numéro de lot, produit, site et statut.'
 			},
 			{
 				href: '/tracabilite',
 				label: 'Traçabilité',
 				title: 'Traçabilité',
 				heading: 'Arbre de traçabilité',
-				description:
-					'Vue amont / aval — matières premières vers produits finis et expéditions.'
+				description: 'Vue amont / aval — matières premières vers produits finis et expéditions.'
 			},
 			{
 				href: '/scan-code-barres',
@@ -58,24 +60,21 @@ export const navGroups: NavGroup[] = [
 				label: 'Chaîne du froid',
 				title: 'Chaîne du froid',
 				heading: 'Alertes chaîne du froid',
-				description:
-					'Surveillance temps réel — seuils, capteurs, escalade qualité.'
+				description: 'Surveillance temps réel — seuils, capteurs, escalade qualité.'
 			},
 			{
 				href: '/non-conformites',
 				label: 'Non-conformités',
 				title: 'Non-conformités',
 				heading: 'Non-conformités & quarantaine',
-				description:
-					'Suivi des écarts, causes, actions correctives et lots bloqués.'
+				description: 'Suivi des écarts, causes, actions correctives et lots bloqués.'
 			},
 			{
 				href: '/rappels-produits',
 				label: 'Rappels produits',
 				title: 'Rappels produits',
 				heading: 'Rappels produits',
-				description:
-					'Workflow — lots concernés, sites impactés, progression des retraits.'
+				description: 'Workflow — lots concernés, sites impactés, progression des retraits.'
 			},
 			{
 				href: '/simulation-rappel',
@@ -83,13 +82,27 @@ export const navGroups: NavGroup[] = [
 				title: 'Simulation de rappel',
 				heading: 'Simulation de rappel',
 				description:
-					'Estimez l\'impact d\'un rappel (lots et expéditions touchés) sans rien bloquer en base.'
+					"Estimez l'impact d'un rappel (lots et expéditions touchés) sans rien bloquer en base."
 			}
 		]
 	},
 	{
 		label: 'Réseau',
 		items: [
+			{
+				href: '/receptions',
+				label: 'Réceptions',
+				title: 'Réceptions',
+				heading: 'Réceptions terrain',
+				description: 'Flux entrants — fournisseur, contrôle à réception, lots créés.'
+			},
+			{
+				href: '/expeditions',
+				label: 'Expéditions',
+				title: 'Expéditions',
+				heading: 'Expéditions',
+				description: 'Flux sortants — destination, statut de livraison, lots embarqués.'
+			},
 			{
 				href: '/portail-magasins',
 				label: 'Portail magasins',
@@ -103,7 +116,8 @@ export const navGroups: NavGroup[] = [
 				label: 'Intégrations',
 				title: 'Intégrations',
 				heading: 'Intégrations ERP / WMS / TMS',
-				description: 'Connecteurs, états de synchronisation et files d\'attente.'
+				description: "Connecteurs, états de synchronisation et files d'attente.",
+				roles: ADMIN_ROLES
 			}
 		]
 	},
@@ -111,22 +125,44 @@ export const navGroups: NavGroup[] = [
 		label: 'Système',
 		items: [
 			{
+				href: '/configuration',
+				label: 'Configuration',
+				title: 'Configuration',
+				heading: "Configuration de l'usine",
+				description:
+					'Emplacements et fournisseurs — les données de référence de votre organisation.',
+				roles: ADMIN_ROLES
+			},
+			{
 				href: '/utilisateurs',
 				label: 'Utilisateurs',
 				title: 'Utilisateurs',
 				heading: 'Utilisateurs, rôles & sécurité',
-				description: 'Gestion des accès — RBAC, MFA, politique de mot de passe.'
+				description: 'Gestion des accès — RBAC, MFA, politique de mot de passe.',
+				roles: ADMIN_ROLES
 			},
 			{
 				href: '/audit-logs',
 				label: 'Audit & logs',
 				title: 'Audit & logs',
 				heading: 'Audit & logs',
-				description: 'Journal d\'audit et événements système.'
+				description: "Journal d'audit et événements système.",
+				roles: ADMIN_ROLES
 			}
 		]
 	}
 ];
+
+export function navPourRole(role: KnownRole): NavGroup[] {
+	return navGroups
+		.map((groupe) => ({
+			...groupe,
+			items: groupe.items.filter(
+				(item) => !item.roles || role === undefined || (role !== null && item.roles.includes(role))
+			)
+		}))
+		.filter((groupe) => groupe.items.length > 0);
+}
 
 const flatNav = navGroups.flatMap((g) => g.items);
 
@@ -134,9 +170,7 @@ export function findNavItem(pathname: string): NavItem | undefined {
 	if (pathname.startsWith('/fiche-lot/')) {
 		return flatNav.find((item) => item.href === '/recherche-lots');
 	}
-	return flatNav.find(
-		(item) => pathname === item.href || pathname.startsWith(`${item.href}/`)
-	);
+	return flatNav.find((item) => pathname === item.href || pathname.startsWith(`${item.href}/`));
 }
 
 const fallbackTitle = 'NutriChain';

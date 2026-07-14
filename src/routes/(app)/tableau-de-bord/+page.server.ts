@@ -1,15 +1,14 @@
 import type { PageServerLoad } from './$types';
 import { getBatches } from '$lib/Api/traceability.server';
-import { getAlerts, getQualityControls, getQuarantineBatches, getMovements } from '$lib/Api/organization.server';
 import {
-	buildDashboardKpis,
-	buildDashboardTasks,
-	movementsToEvents,
-	mockEvents,
-	mockKpis,
-	mockTasks
-} from '$lib/utils/org/mappers';
+	getAlerts,
+	getQualityControls,
+	getQuarantineBatches,
+	getMovements
+} from '$lib/Api/organization.server';
+import { buildDashboardKpis, buildDashboardTasks, movementsToEvents } from '$lib/utils/org/mappers';
 import { buildDashboardCharts } from '$lib/utils/org/dashboardCharts';
+import { openQualityIssues } from '$lib/utils/org/quality';
 
 export const load: PageServerLoad = async ({ fetch, cookies }) => {
 	const [batches, alerts, quality, quarantine, movements] = await Promise.all([
@@ -21,28 +20,27 @@ export const load: PageServerLoad = async ({ fetch, cookies }) => {
 	]);
 
 	const batchList = batches.ok ? batches.data : [];
+	const cappedAt100 = batches.ok && batchList.length >= 100;
 	const alertList = alerts.ok ? alerts.data : [];
 	const qualityList = quality.ok ? quality.data : [];
 	const quarantineList = quarantine.ok ? quarantine.data : [];
 	const movementList = movements.ok ? movements.data : [];
 
-	const source =
-		batches.ok && alerts.ok ? ('api' as const) : ('mock' as const);
+	const error = [batches, alerts, quality, quarantine, movements].find((r) => !r.ok)?.message;
+
+	const openIssues = openQualityIssues(qualityList).length;
 
 	return {
-		source,
-		kpis:
-			batches.ok && alerts.ok
-				? buildDashboardKpis(batchList.length, alertList, qualityList.length, quarantineList.length)
-				: mockKpis,
-		charts: buildDashboardCharts(
-			batchList,
+		kpis: buildDashboardKpis(
+			batchList.length,
 			alertList,
-			movementList,
-			qualityList,
-			!(batches.ok && alerts.ok)
+			openIssues,
+			quarantineList.length,
+			cappedAt100
 		),
-		recentEvents: movementList.length > 0 ? movementsToEvents(movementList.slice(0, 5)) : mockEvents,
-		tasks: alerts.ok ? buildDashboardTasks(alertList, qualityList.length) : mockTasks
+		charts: buildDashboardCharts(batchList, alertList, movementList, qualityList),
+		recentEvents: movementsToEvents(movementList.slice(0, 5)),
+		tasks: buildDashboardTasks(alertList, openIssues),
+		error
 	};
 };

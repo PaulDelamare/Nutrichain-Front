@@ -12,3 +12,9 @@ export type TraceStep = {
 	badge?: TraceBadge;
 	icon: TraceIcon;
 };
+
+export type TraceGraph = {
+	upstream: TraceStep[];
+	selected: TraceStep;
+	downstream: TraceStep[];
+};

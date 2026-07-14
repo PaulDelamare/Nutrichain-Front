@@ -5,9 +5,14 @@ function match(value: string, query: string): boolean {
 	return value.toLowerCase().includes(query.trim().toLowerCase());
 }
 
+function matchProduit(produit: string, filter: string): boolean {
+	if (filter === 'tous') return true;
+	return produit === filter;
+}
+
 function matchSite(site: string, filter: string): boolean {
 	if (filter === 'tous') return true;
-	return site.toLowerCase() === filter.toLowerCase();
+	return site === filter;
 }
 
 function matchStatut(statut: LotRow['statut'], filter: string): boolean {
@@ -19,8 +24,8 @@ export function filterLots(rows: LotRow[], filters: LotFilters): LotRow[] {
 	return rows.filter(
 		(row) =>
 			match(row.gtin, filters.gtin) &&
-			match(row.id, filters.lot) &&
-			match(row.sscc, filters.sscc) &&
+			match(row.lotNumber ?? row.id, filters.lot) &&
+			matchProduit(row.produit, filters.produit) &&
 			matchSite(row.site, filters.site) &&
 			matchStatut(row.statut, filters.statut)
 	);

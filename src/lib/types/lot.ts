@@ -1,10 +1,17 @@
-export type LotStatus = 'conforme' | 'surveillance' | 'quarantaine';
+export type LotStatus =
+	| 'conforme'
+	| 'attente_qc'
+	| 'surveillance'
+	| 'quarantaine'
+	| 'perime'
+	| 'expedie'
+	| 'inconnu';
 
 export type LotRow = {
 	id: string;
+	lotNumber?: string;
 	produit: string;
 	gtin: string;
-	sscc: string;
 	site: string;
 	statut: LotStatus;
 	temperature: string;
@@ -13,7 +20,7 @@ export type LotRow = {
 export type LotFilters = {
 	gtin: string;
 	lot: string;
-	sscc: string;
+	produit: string;
 	site: string;
 	statut: string;
 };
@@ -21,7 +28,7 @@ export type LotFilters = {
 export const emptyLotFilters = (): LotFilters => ({
 	gtin: '',
 	lot: '',
-	sscc: '',
+	produit: 'tous',
 	site: 'tous',
 	statut: 'tous'
 });

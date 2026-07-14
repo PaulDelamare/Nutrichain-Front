@@ -1,13 +1,15 @@
 <script lang="ts">
+	import { resolve } from '$app/paths';
 	import IdentityCard from '$lib/components/lot-sheet/IdentityCard.svelte';
 	import HistoryPanel from '$lib/components/lot-sheet/HistoryPanel.svelte';
 	import LocationPanel from '$lib/components/lot-sheet/LocationPanel.svelte';
+	import LotActionsPanel from '$lib/components/lot-sheet/LotActionsPanel.svelte';
 	import PageHead from '$lib/components/page/PageHead.svelte';
 	import { usePageSearch } from '$lib/context/pageSearch.svelte';
 	import { filterRowsByText } from '$lib/utils/pageSearch/filterByText';
-	import type { PageData } from './$types';
+	import type { ActionData, PageData } from './$types';
 
-	let { data }: { data: PageData } = $props();
+	let { data, form }: { data: PageData; form: ActionData } = $props();
 
 	const pageSearch = usePageSearch();
 
@@ -17,17 +19,12 @@
 	});
 
 	const events = $derived(
-		filterRowsByText(data.sheet.events, pageSearch.query, (e) => [
-			e.time,
-			e.day,
-			e.title,
-			e.detail
-		])
+		filterRowsByText(data.sheet.events, pageSearch.query, (e) => [e.time, e.day, e.title, e.detail])
 	);
 </script>
 
 <header class="page-top">
-	<a href="/recherche-lots" class="back-link">
+	<a href={resolve('/recherche-lots')} class="back-link">
 		<svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
 			<path
 				d="M15 6l-6 6 6 6"
@@ -53,7 +50,15 @@
 		<IdentityCard sheet={data.sheet} />
 		<HistoryPanel {events} temperature={data.sheet.temperature} />
 	</div>
-	<LocationPanel sheet={data.sheet} />
+	<div class="side">
+		<LotActionsPanel
+			lotId={data.sheet.id}
+			statut={data.sheet.statut}
+			{form}
+			role={data.user.role}
+		/>
+		<LocationPanel sheet={data.sheet} />
+	</div>
 </div>
 
 <style>
@@ -100,6 +105,12 @@
 		flex-direction: column;
 		gap: 1rem;
 		min-width: 0;
+	}
+
+	.side {
+		display: flex;
+		flex-direction: column;
+		gap: 1rem;
 	}
 
 	@media (max-width: 900px) {

@@ -1,14 +1,17 @@
 <script lang="ts">
+	import { resolve } from '$app/paths';
 	import { page } from '$app/stores';
 	import { APP_FOOTER, APP_NAME, APP_TAGLINE } from '$lib/config/app';
-	import { navGroups } from '$lib/config/nav';
+	import { type NavGroup } from '$lib/config/nav';
 
 	type Props = {
 		collapsed?: boolean;
 		onMenuToggle?: () => void;
+		groups: NavGroup[];
 	};
 
-	let { collapsed = false, onMenuToggle }: Props = $props();
+	let { collapsed = false, onMenuToggle, groups }: Props = $props();
+
 
 	function isActive(href: string, pathname: string): boolean {
 		if (href === '/recherche-lots' && pathname.startsWith('/fiche-lot/')) {
@@ -48,13 +51,13 @@
 		</div>
 
 		<nav class="sidenav-nav">
-			{#each navGroups as group}
+			{#each groups as group (group.label)}
 				<p class="group-label">{group.label}</p>
 				<ul class="group-list">
-					{#each group.items as item}
+					{#each group.items as item (item.href)}
 						<li>
 							<a
-								href={item.href}
+								href={resolve(item.href as '/')}
 								class="nav-link"
 								class:active={isActive(item.href, $page.url.pathname)}
 							>
@@ -93,7 +96,8 @@
 		height: 100%;
 		background: #1a2332;
 		color: #cbd5e1;
-		transition: transform var(--shell-duration, 0.28s) var(--shell-ease, cubic-bezier(0.4, 0, 0.2, 1));
+		transition: transform var(--shell-duration, 0.28s)
+			var(--shell-ease, cubic-bezier(0.4, 0, 0.2, 1));
 		will-change: transform;
 	}
 
@@ -200,7 +204,9 @@
 		font-size: 0.875rem;
 		color: #cbd5e1;
 		text-decoration: none;
-		transition: background 0.15s, color 0.15s;
+		transition:
+			background 0.15s,
+			color 0.15s;
 	}
 
 	.nav-link:hover {

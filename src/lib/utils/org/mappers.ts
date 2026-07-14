@@ -1,29 +1,29 @@
-import type { ApiAlert, ApiAuditLog, ApiEquipment, ApiMember, ApiMovement, ApiQualityControl } from '$lib/Api/organization.server';
-import type { ApiBatch } from '$lib/Api/traceability.server';
-import type { Kpi, EpcisEvent, TaskItem } from '$lib/data/dashboard';
-import { kpis as mockKpis, recentEvents as mockEvents, tasks as mockTasks } from '$lib/data/dashboard';
-import type { ColdAlertRow, ColdIncident } from '$lib/types/cold';
-import { coldAlerts as mockColdAlerts, coldIncident as mockColdIncident } from '$lib/data/cold-alerts';
+import type {
+	ApiAlert,
+	ApiAuditLog,
+	ApiEquipment,
+	ApiMember,
+	ApiMovement,
+	ApiQualityControl,
+	ApiQuarantineBatch
+} from '$lib/Api/organization.server';
+import type { ApiBatch, ApiGenealogy } from '$lib/Api/traceability.server';
+import type { Kpi, EpcisEvent, TaskItem } from '$lib/types/dashboard';
+import type { ColdAlertLot, ColdAlertRow, ColdIncident } from '$lib/types/cold';
 import type { NcRow, QuarantineLot } from '$lib/types/nc';
-import { openNc as mockNc, quarantineLots as mockQuarantine } from '$lib/data/non-conformites';
 import type { Recall } from '$lib/types/recall';
-import { rappels as mockRappels } from '$lib/data/rappels';
 import type { AppUser } from '$lib/types/user';
-import { users as mockUsers } from '$lib/data/utilisateurs';
-import type { TraceStep } from '$lib/types/trace';
-import { traceSteps as mockTraceSteps } from '$lib/data/trace-tree';
-import type { LotEvent } from '$lib/types/lot-sheet';
-import type { Connector } from '$lib/types/integration';
-import { connectors as mockConnectors } from '$lib/data/integrations';
-import type { StoreStat } from '$lib/data/portail-magasins';
-import { storeStats as mockStoreStats, activeBrief as mockBrief } from '$lib/data/portail-magasins';
+import type { TraceGraph } from '$lib/types/trace';
+import type { StoreStat, StoreBrief } from '$lib/types/portail';
+import { movementEventLabel } from '$lib/utils/movements/labels';
+import { normalizeQualityResult, openQualityIssues } from './quality';
 
 const ROLE_LABELS: Record<string, string> = {
 	owner: 'Propriétaire',
 	admin: 'Administrateur',
-	manager: 'Manager',
+	quality: 'Qualité',
 	operator: 'Opérateur',
-	member: 'Membre'
+	viewer: 'Lecteur'
 };
 
 function fmtRelative(iso: string): string {
@@ -50,53 +50,81 @@ function fmtWhen(iso: string): string {
 
 export function membersToUsers(members: ApiMember[]): AppUser[] {
 	return members.map((m) => ({
+		id: m.id,
+		userId: m.user.id,
 		email: m.user.email,
 		role: ROLE_LABELS[m.role] ?? m.role,
-		lastLogin: '—',
+		roleCode: m.role,
 		mfa: Boolean(m.user.twoFactorEnabled)
 	}));
 }
 
+const COLD_ALERT_TYPES = ['TEMP_EXCURSION', 'FROID'];
+
+const RECALL_ALERT_TYPES = ['PRODUCT_RECALL', 'RAPPEL', 'RECALL_DEPTH_SATURATION'];
+
+function mapColdSeverity(niveau: string): 'critique' | 'investigation' {
+	const n = niveau.toUpperCase();
+	if (n === 'CRITIQUE' || n === 'PANIC' || n === 'HAUTE') return 'critique';
+	return 'investigation';
+}
+
 export function alertsToCold(
 	alerts: ApiAlert[],
-	equipment: ApiEquipment[]
+	equipment: ApiEquipment[],
+	quarantineBatches: ApiQuarantineBatch[] = []
 ): { incident: ColdIncident | null; rows: ColdAlertRow[] } {
-	const cold = alerts.filter((a) => a.type === 'FROID' && a.statut === 'ACTIVE');
+	const cold = alerts.filter((a) => COLD_ALERT_TYPES.includes(a.type) && a.statut === 'ACTIVE');
 	if (cold.length === 0) return { incident: null, rows: [] };
 
 	const incident: ColdIncident = {
-		id: cold[0].id.slice(0, 12).toUpperCase(),
+		id: shortRef(cold[0].id),
 		message: cold[0].message
 	};
 
 	const rows: ColdAlertRow[] = cold.map((a) => {
 		const equip = equipment.find((e) => e.id === a.id_materiel);
 		const temp = equip?.temp_actuelle != null ? `${equip.temp_actuelle} °C` : '—';
-		const statut =
-			a.niveau_gravite === 'CRITIQUE'
-				? 'critique'
-				: a.niveau_gravite === 'MOYENNE'
-					? 'investigation'
-					: 'investigation';
+		const statut = mapColdSeverity(a.niveau_gravite);
+
+		const lotsImpactes: ColdAlertLot[] = a.id_materiel
+			? quarantineBatches
+					.filter((b) => b.id_materiel_actuel === a.id_materiel)
+					.map((b) => ({ id: b.id, produit: b.produit?.nom ?? '—' }))
+			: [];
+
 		return {
-			id: a.id.replace('seed-alert-', 'COLD-').slice(0, 12).toUpperCase(),
-			site: equip?.lieu?.nom ?? 'Site',
-			zone: equip?.nom ?? 'Zone',
-			tempMax: temp,
+			id: shortRef(a.id),
+			site: equip?.lieu?.nom ?? '—',
+			zone: equip?.nom ?? '—',
+			tempActuelle: temp,
 			depuis: fmtRelative(a.created_at),
-			statut
+			statut,
+			lotsImpactes
 		};
 	});
 
 	return { incident, rows };
 }
 
+function shortRef(id: string): string {
+	return id.split('-')[0].slice(0, 8).toUpperCase();
+}
+
+export function countActiveColdAlerts(alerts: ApiAlert[]): number {
+	return alerts.filter((a) => COLD_ALERT_TYPES.includes(a.type) && a.statut === 'ACTIVE').length;
+}
+
 export function qualityToNc(rows: ApiQualityControl[]): NcRow[] {
-	return rows.map((q) => ({
-		id: q.id.slice(0, 8).toUpperCase(),
-		type: q.type_test,
-		statut: q.resultat.includes('QUARANT') ? 'quarantaine' : 'en_cours'
-	}));
+	return openQualityIssues(rows).map((q) => {
+		const normalized = normalizeQualityResult(q.resultat);
+		return {
+			id: q.id.slice(0, 8).toUpperCase(),
+			type: q.type_test,
+			lot: q.lot?.produit?.nom ?? q.lot?.id?.slice(0, 8) ?? '—',
+			statut: normalized === 'NON_CONFORME' ? 'quarantaine' : 'en_cours'
+		};
+	});
 }
 
 export function batchesToQuarantine(
@@ -110,46 +138,42 @@ export function batchesToQuarantine(
 
 export function alertsToRappels(alerts: ApiAlert[]): Recall[] {
 	return alerts
-		.filter((a) => a.type === 'RAPPEL')
-		.map((a) => ({
-			id: a.id.replace('seed-alert-', 'RAP-').slice(0, 14).toUpperCase(),
-			produit: a.message.replace(/^Rappel produit — /, '') || 'Produit',
-			statut: a.statut === 'ACTIVE' ? 'en_cours' : 'cloture',
-			lots: a.related_id ?? '—',
-			sites: 'Magasins & RDC',
-			progressLabel: 'Retrait rayon',
-			progress: a.statut === 'ACTIVE' ? 78 : 100,
-			etape: 'Étape 3/5',
-			etapeTitre: 'Confirmation magasins',
-			etapeDetail: 'Suivi en cours'
-		}));
+		.filter((a) => RECALL_ALERT_TYPES.includes(a.type))
+		.map((a) => {
+			const isSaturation = a.type === 'RECALL_DEPTH_SATURATION';
+			const lotsImpacted = a.message.match(/Total lots impactés: (\d+)/)?.[1];
+			const shipments = a.message.match(/Expéditions à notifier: (\d+)/)?.[1];
+			const motif = isSaturation
+				? 'Saturation de profondeur — descendance peut être incomplète'
+				: a.message
+						.replace(/^Rappel produit — /, '')
+						.replace(/^RAPPEL DÉCLENCHÉ : /, '')
+						.split('. Source:')[0];
+
+			return {
+				id: shortRef(a.id),
+				produit: motif || 'Produit',
+				statut: a.statut === 'ACTIVE' ? ('en_cours' as const) : ('cloture' as const),
+				lots: lotsImpacted ? `${lotsImpacted} lot(s) bloqué(s)` : (a.related_id ?? '—'),
+				sites: shipments != null ? `${shipments} expédition(s) à notifier` : '—',
+				etape: isSaturation
+					? 'Vérification requise'
+					: a.statut === 'ACTIVE'
+						? 'En cours'
+						: 'Clôturé',
+				etapeTitre: isSaturation ? 'Descendance incomplète' : a.statut === 'ACTIVE' ? 'Blocage & notification' : 'Rappel terminé',
+				etapeDetail: isSaturation
+					? a.message
+					: `Lot source : ${a.related_id ?? '—'}`
+			};
+		});
 }
 
 export function movementsToEvents(movements: ApiMovement[]): EpcisEvent[] {
-	return movements.map((m) => {
-		const titleMap: Record<string, string> = {
-			RECEPTION: 'ObjectEvent — réception',
-			EXPEDITION: 'TransactionEvent — expédition',
-			QUARANTAINE: 'ObjectEvent — quarantaine',
-			TRANSFORMATION: 'TransformationEvent — production'
-		};
-		return {
-			when: fmtWhen(m.created_at),
-			title: titleMap[m.type_action] ?? `ObjectEvent — ${m.type_action}`,
-			meta: `Lot ${m.lot?.id ?? '—'} · ${m.lot?.produit?.nom ?? ''}`.trim()
-		};
-	});
-}
-
-export function movementsToLotEvents(movements: ApiMovement[]): LotEvent[] {
 	return movements.map((m) => ({
-		time: new Date(m.created_at).toLocaleTimeString('fr-FR', {
-			hour: '2-digit',
-			minute: '2-digit'
-		}),
-		day: new Date(m.created_at).toLocaleDateString('fr-FR'),
-		title: m.type_action,
-		detail: `${m.quantite} ${m.unite}${m.user?.name ? ` · ${m.user.name}` : ''}`
+		when: fmtWhen(m.created_at),
+		title: movementEventLabel(m.type_action),
+		meta: `Lot ${m.lot?.id ?? '—'} · ${m.lot?.produit?.nom ?? ''}`.trim()
 	}));
 }
 
@@ -157,15 +181,22 @@ export function buildDashboardKpis(
 	batchCount: number,
 	alerts: ApiAlert[],
 	qualityCount: number,
-	quarantineCount: number
+	quarantineCount: number,
+	capped = false
 ): Kpi[] {
-	const cold = alerts.filter((a) => a.type === 'FROID' && a.statut === 'ACTIVE').length;
-	const rappels = alerts.filter((a) => a.type === 'RAPPEL' && a.statut === 'ACTIVE').length;
+	const cold = alerts.filter(
+		(a) => COLD_ALERT_TYPES.includes(a.type) && a.statut === 'ACTIVE'
+	).length;
+	const rappels = alerts.filter(
+		(a) => RECALL_ALERT_TYPES.includes(a.type) && a.statut === 'ACTIVE'
+	).length;
 	return [
 		{
 			label: 'Lots suivis',
-			value: String(batchCount),
-			detail: 'Catalogue organisation active'
+			value: capped ? `${batchCount}+` : String(batchCount),
+			detail: capped
+				? '100 lots les plus récents — recherchez un lot pour aller plus loin'
+				: 'Catalogue organisation active'
 		},
 		{
 			label: 'Alertes chaîne du froid',
@@ -181,8 +212,7 @@ export function buildDashboardKpis(
 			label: 'Anomalies ouvertes',
 			value: String(qualityCount),
 			detail: `${quarantineCount} lot(s) en quarantaine`
-		},
-		{ ...mockKpis[4] }
+		}
 	];
 }
 
@@ -194,51 +224,73 @@ export function buildDashboardTasks(alerts: ApiAlert[], qualityCount: number): T
 			text: `Validation qualité — ${qualityCount} contrôle(s) à traiter.`
 		});
 	}
-	const rappel = alerts.find((a) => a.type === 'RAPPEL' && a.statut === 'ACTIVE');
+	const rappel = alerts.find((a) => RECALL_ALERT_TYPES.includes(a.type) && a.statut === 'ACTIVE');
 	if (rappel) {
 		tasks.push({
-			variant: 'warn',
-			text: `Rappel actif — ${rappel.message.slice(0, 60)}…`,
+			variant: rappel.type === 'RECALL_DEPTH_SATURATION' ? 'warn' : 'warn',
+			text:
+				rappel.type === 'RECALL_DEPTH_SATURATION'
+					? `Rappel incomplet — ${rappel.message.slice(0, 80)}…`
+					: `Rappel actif — ${rappel.message.slice(0, 60)}…`,
 			link: { href: '/rappels-produits', label: 'voir le suivi' }
 		});
 	}
-	return tasks.length > 0 ? tasks : mockTasks;
+	return tasks;
 }
 
-export function buildTraceSteps(
-	suppliers: { nom_ferme: string; id: string }[],
-	batches: ApiBatch[],
-	lotId?: string | null
-): TraceStep[] {
-	if (suppliers.length === 0 && batches.length === 0) return mockTraceSteps;
+export function genealogyToGraph(
+	genealogy: ApiGenealogy,
+	selected: ApiBatch | undefined
+): TraceGraph {
+	return {
+		upstream: genealogy.upstream.map((b) => ({
+			phase: 'Lot parent',
+			title: `${b.nom_produit} — ${b.lot_number ?? b.id}`,
+			detail: `Statut ${b.statut}`,
+			icon: 'amont' as const
+		})),
+		selected: {
+			phase: 'Lot analysé',
+			title: selected
+				? `${selected.produit?.nom ?? 'Produit'} — ${selected.lot_number ?? selected.id}`
+				: genealogy.batchId,
+			badge: selected ? { label: selected.statut, variant: 'green' } : undefined,
+			icon: 'transform'
+		},
+		downstream: genealogy.downstream.map((b) => ({
+			phase: 'Lot issu',
+			title: `${b.nom_produit} — ${b.lot_number ?? b.id}`,
+			detail: `Statut ${b.statut}`,
+			badge: { label: b.statut, variant: 'blue' },
+			icon: 'aval' as const
+		}))
+	};
+}
 
-	const supplier = suppliers[0];
-	const batch = (lotId && batches.find((b) => b.id === lotId)) || batches[0];
+const AUDIT_ACTION_LABELS: Record<string, string> = {
+	ADD: 'Ajout',
+	CREATE: 'Création',
+	OBSERVE: 'Observation',
+	CREATE_EQUIPMENT: 'Matériel créé',
+	CREATE_RECEIPT: 'Réception enregistrée',
+	CREATE_RECEIPT_VIA_SYNC: 'Réception (mobile)',
+	LIFT_BATCH_QUARANTINE: 'Levée de quarantaine',
+	BATCH_RECALL_TRIGGERED: 'Rappel déclenché',
+	ALERT_RESOLVED: 'Alerte résolue',
+	EXPEDITION: 'Expédition',
+	TEMP_EXCURSION_DETECTED: 'Excursion de température',
+	TRANSFORM_CONSUME: 'Transformation — consommation',
+	TRANSFORM_CREATE: 'Transformation — production',
+	TRANSFORMATION_ENTREE: 'Transformation — entrée',
+	TRANSFORMATION_SORTIE: 'Transformation — sortie'
+};
 
-	const steps: TraceStep[] = [];
-	if (supplier) {
-		steps.push({
-			phase: 'Amont — matière',
-			title: supplier.nom_ferme,
-			detail: `Fournisseur ${supplier.id}`,
-			icon: 'amont'
-		});
-	}
-	steps.push({
-		phase: 'Transformation',
-		title: 'Conditionnement & contrôle',
-		badge: { label: 'Traçabilité NutriChain', variant: 'green' },
-		icon: 'transform'
-	});
-	if (batch) {
-		steps.push({
-			phase: 'Aval — produit fini',
-			title: `${batch.id} — ${batch.produit?.nom ?? 'Produit'}`,
-			badge: { label: batch.statut, variant: 'blue' },
-			icon: 'aval'
-		});
-	}
-	return steps;
+function auditDetail(l: ApiAuditLog): string {
+	const nv = l.nouvelle_valeur;
+	const ov = l.ancienne_valeur;
+	if (nv && typeof nv.motif === 'string' && nv.motif.trim()) return nv.motif.trim();
+	if (ov?.statut && nv?.statut && ov.statut !== nv.statut) return `${ov.statut} → ${nv.statut}`;
+	return '';
 }
 
 export function auditLogsToRows(logs: ApiAuditLog[]) {
@@ -246,6 +298,8 @@ export function auditLogsToRows(logs: ApiAuditLog[]) {
 		id: l.id,
 		when: fmtWhen(l.horodatage),
 		action: l.action,
+		actionLabel: AUDIT_ACTION_LABELS[l.action] ?? l.action,
+		detail: auditDetail(l),
 		entity: l.entity,
 		entityId: l.entity_id
 	}));
@@ -266,40 +320,12 @@ export function buildPortailStats(
 	];
 }
 
-export function buildPortailBrief(alerts: ApiAlert[]) {
-	const rappel = alerts.find((a) => a.type === 'RAPPEL' && a.statut === 'ACTIVE');
-	if (!rappel) return mockBrief;
+export function buildPortailBrief(alerts: ApiAlert[]): StoreBrief | null {
+	const rappel = alerts.find((a) => RECALL_ALERT_TYPES.includes(a.type) && a.statut === 'ACTIVE');
+	if (!rappel) return null;
 	return {
 		title: 'Consigne active',
 		text: rappel.message
 	};
 }
 
-export function auditToConnectors(logs: ApiAuditLog[]): Connector[] {
-	const syncLogs = logs.filter((l) => l.entity === 'integration' || l.action === 'SYNC');
-	if (syncLogs.length === 0) return mockConnectors;
-	return [
-		{
-			name: 'WMS / ERP (audit)',
-			statut: 'ok',
-			lines: syncLogs.slice(0, 2).map((l) => `${l.action} — ${fmtWhen(l.horodatage)}`)
-		},
-		...mockConnectors.slice(1)
-	];
-}
-
-export {
-	mockKpis,
-	mockEvents,
-	mockTasks,
-	mockColdAlerts,
-	mockColdIncident,
-	mockNc,
-	mockQuarantine,
-	mockRappels,
-	mockUsers,
-	mockTraceSteps,
-	mockConnectors,
-	mockStoreStats,
-	mockBrief
-};

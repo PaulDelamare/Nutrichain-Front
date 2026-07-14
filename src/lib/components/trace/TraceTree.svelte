@@ -10,7 +10,7 @@
 </script>
 
 <div class="tree">
-	{#each steps as step, i}
+	{#each steps as step, i (step)}
 		<TraceStep {...step} />
 		{#if i < steps.length - 1}
 			<div class="link" aria-hidden="true"></div>

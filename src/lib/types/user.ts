@@ -1,6 +1,8 @@
 export type AppUser = {
+	id: string;
+	userId: string;
 	email: string;
 	role: string;
-	lastLogin: string;
+	roleCode: string;
 	mfa: boolean;
 };

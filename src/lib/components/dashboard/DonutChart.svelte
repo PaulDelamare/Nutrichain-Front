@@ -4,11 +4,18 @@
 	type Props = {
 		segments: ChartSegment[];
 		centerLabel?: string;
+		emptyMessage?: string;
 		size?: number;
 		stroke?: number;
 	};
 
-	let { segments, centerLabel, size = 168, stroke = 22 }: Props = $props();
+	let {
+		segments,
+		centerLabel,
+		emptyMessage = 'Aucune donnée.',
+		size = 168,
+		stroke = 22
+	}: Props = $props();
 
 	const total = $derived(segments.reduce((sum, s) => sum + s.value, 0));
 	const radius = $derived((size - stroke) / 2);
@@ -28,52 +35,64 @@
 	});
 </script>
 
-<div class="donut-wrap">
-	<div class="donut-ring" style="width: {size}px; height: {size}px;">
-		<svg width={size} height={size} viewBox="0 0 {size} {size}" role="img" aria-hidden="true">
-			<circle
-				cx={size / 2}
-				cy={size / 2}
-				r={radius}
-				fill="none"
-				stroke="#f1f5f9"
-				stroke-width={stroke}
-			/>
-			{#each arcs as arc (arc.label)}
+{#if segments.length === 0}
+	<p class="chart-empty">{emptyMessage}</p>
+{:else}
+	<div class="donut-wrap">
+		<div class="donut-ring" style="width: {size}px; height: {size}px;">
+			<svg width={size} height={size} viewBox="0 0 {size} {size}" role="img" aria-hidden="true">
 				<circle
 					cx={size / 2}
 					cy={size / 2}
 					r={radius}
 					fill="none"
-					stroke={arc.color}
+					stroke="#f1f5f9"
 					stroke-width={stroke}
-					stroke-dasharray="{arc.dash} {circumference - arc.dash}"
-					stroke-dashoffset={-arc.offset}
-					stroke-linecap="round"
-					transform="rotate(-90 {size / 2} {size / 2})"
 				/>
-			{/each}
-		</svg>
-		<div class="center">
-			<span class="center-value">{total}</span>
-			{#if centerLabel}
-				<span class="center-label">{centerLabel}</span>
-			{/if}
+				{#each arcs as arc (arc.label)}
+					<circle
+						cx={size / 2}
+						cy={size / 2}
+						r={radius}
+						fill="none"
+						stroke={arc.color}
+						stroke-width={stroke}
+						stroke-dasharray="{arc.dash} {circumference - arc.dash}"
+						stroke-dashoffset={-arc.offset}
+						stroke-linecap="round"
+						transform="rotate(-90 {size / 2} {size / 2})"
+					/>
+				{/each}
+			</svg>
+			<div class="center">
+				<span class="center-value">{total}</span>
+				{#if centerLabel}
+					<span class="center-label">{centerLabel}</span>
+				{/if}
+			</div>
 		</div>
-	</div>
 
-	<ul class="legend">
-		{#each segments as segment (segment.label)}
-			<li>
-				<span class="swatch" style="background: {segment.color}"></span>
-				<span class="legend-label">{segment.label}</span>
-				<span class="legend-value">{segment.value}</span>
-			</li>
-		{/each}
-	</ul>
-</div>
+		<ul class="legend">
+			{#each segments as segment (segment.label)}
+				<li>
+					<span class="swatch" style="background: {segment.color}"></span>
+					<span class="legend-label">{segment.label}</span>
+					<span class="legend-value">{segment.value}</span>
+				</li>
+			{/each}
+		</ul>
+	</div>
+{/if}
 
 <style>
+	.chart-empty {
+		margin: 0;
+		padding: 2rem 0;
+		text-align: center;
+		font-size: 0.875rem;
+		color: var(--nc-text-muted);
+	}
+
 	.donut-wrap {
 		display: flex;
 		flex-wrap: wrap;

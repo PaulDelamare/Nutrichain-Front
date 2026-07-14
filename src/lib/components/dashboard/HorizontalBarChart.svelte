@@ -3,12 +3,17 @@
 
 	type Props = {
 		segments: ChartSegment[];
+		emptyMessage?: string;
 	};
 
-	let { segments }: Props = $props();
+	let { segments, emptyMessage = 'Aucune donnée.' }: Props = $props();
 
 	const max = $derived(Math.max(...segments.map((s) => s.value), 1));
 </script>
+
+{#if segments.length === 0}
+	<p class="chart-empty">{emptyMessage}</p>
+{/if}
 
 <ul class="h-bars" role="list">
 	{#each segments as segment (segment.label)}
@@ -28,6 +33,14 @@
 </ul>
 
 <style>
+	.chart-empty {
+		margin: 0;
+		padding: 2rem 0;
+		text-align: center;
+		font-size: 0.875rem;
+		color: var(--nc-text-muted);
+	}
+
 	.h-bars {
 		list-style: none;
 		margin: 0;

@@ -1,51 +1,78 @@
 import { fail } from '@sveltejs/kit';
 import type { Actions, PageServerLoad } from './$types';
 import { getMe } from '$lib/Api/auth.server';
-import { getMembers } from '$lib/Api/organization.server';
-import {
-	canInviteMembers,
-	INVITE_ROLES,
-	type InviteRole
-} from '$lib/config/invite-roles';
+import { getMembers, revokeMember, updateMemberRole } from '$lib/Api/organization.server';
+import { canInviteMembers, INVITE_ROLES, type InviteRole } from '$lib/config/invite-roles';
 import { sendInvitation } from '$lib/Api/identity.server';
-import { membersToUsers, mockUsers } from '$lib/utils/org/mappers';
+import { membersToUsers } from '$lib/utils/org/mappers';
+import { exigerAdministrateur, refusAdministration } from '$lib/server/guards';
 
 export const load: PageServerLoad = async ({ fetch, cookies, locals }) => {
-	const [membersRes, meRes] = await Promise.all([
-		getMembers(fetch, cookies),
-		getMe(fetch, cookies)
-	]);
+	exigerAdministrateur(locals.user, "L'administration des utilisateurs");
 
-	let canInvite = false;
-	let currentRole: string | undefined;
+	const canInvite = canInviteMembers(locals.user?.role);
 
-	if (membersRes.ok && locals.user) {
-		const member = membersRes.data.find((m) => m.user.email === locals.user!.email);
-		currentRole = member?.role;
-		canInvite = canInviteMembers(currentRole);
-	}
+	const membersRes = await getMembers(fetch, cookies);
 
-	if (membersRes.ok) {
+	if (!membersRes.ok) {
 		return {
-			users: membersToUsers(membersRes.data),
-			source: 'api' as const,
-			canInvite,
-			currentRole
+			users: [],
+			error: membersRes.message,
+			canInvite: false,
+			canManage: false,
+			currentUserId: locals.user?.id ?? ''
 		};
 	}
 
 	return {
-		users: mockUsers,
-		source: 'mock' as const,
-		error: membersRes.message,
-		canInvite: false,
-		currentRole
+		users: membersToUsers(membersRes.data),
+		canInvite,
+		canManage: canInvite,
+		currentUserId: locals.user?.id ?? ''
 	};
 };
 
 export const actions = {
-	invite: async ({ request, fetch, cookies }) => {
+	role: async ({ request, fetch, cookies, locals }) => {
+		const refus = refusAdministration(locals.user);
+		if (refus) return fail(403, { error: refus });
+
 		const form = await request.formData();
+		const memberId = String(form.get('memberId') ?? '');
+		const role = String(form.get('role') ?? '');
+
+		if (!memberId || !INVITE_ROLES.includes(role as InviteRole)) {
+			return fail(400, { error: 'Paramètres invalides.' });
+		}
+
+		const res = await updateMemberRole(fetch, cookies, memberId, role);
+		if (!res.ok) {
+			return fail(res.status, { error: res.message });
+		}
+
+		return { success: true, message: 'Rôle mis à jour.' };
+	},
+
+	revoke: async ({ request, fetch, cookies, locals }) => {
+		const refus = refusAdministration(locals.user);
+		if (refus) return fail(403, { error: refus });
+
+		const memberId = String((await request.formData()).get('memberId') ?? '');
+		if (!memberId) return fail(400, { error: 'Membre introuvable.' });
+
+		const res = await revokeMember(fetch, cookies, memberId);
+		if (!res.ok) {
+			return fail(res.status, { error: res.message });
+		}
+
+		return { success: true, message: 'Accès révoqué.' };
+	},
+
+	invite: async ({ request, fetch, cookies, locals }) => {
+		const form = await request.formData();
+
+		const refus = refusAdministration(locals.user);
+		if (refus) return fail(403, { error: refus });
 		const email = String(form.get('email') ?? '').trim();
 		const role = String(form.get('role') ?? '') as InviteRole;
 

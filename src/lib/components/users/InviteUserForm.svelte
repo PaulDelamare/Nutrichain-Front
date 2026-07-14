@@ -34,19 +34,13 @@
 
 			<label>
 				<span>Adresse e-mail</span>
-				<input
-					type="email"
-					name="email"
-					value={form?.email ?? ''}
-					required
-					autocomplete="email"
-				/>
+				<input type="email" name="email" value={form?.email ?? ''} required autocomplete="email" />
 			</label>
 
 			<label>
 				<span>Rôle</span>
 				<select name="role" required>
-					{#each INVITE_ROLE_OPTIONS as opt}
+					{#each INVITE_ROLE_OPTIONS as opt (opt.value)}
 						<option value={opt.value} selected={opt.value === (form?.role ?? 'operator')}>
 							{opt.label}
 						</option>

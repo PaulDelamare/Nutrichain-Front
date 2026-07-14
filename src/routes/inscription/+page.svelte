@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { resolve } from '$app/paths';
 	import { APP_NAME, APP_TAGLINE } from '$lib/config/app';
 	import type { ActionData, PageData } from './$types';
 
@@ -16,7 +17,9 @@
 		{#if data.invitation}
 			<div class="invite-banner">
 				<p>Invitation pour <strong>{data.invitation.email}</strong></p>
-				<p class="meta">Rôle : {data.invitation.role} · Valide jusqu'au {data.invitation.expiresAt}</p>
+				<p class="meta">
+					Rôle : {data.invitation.role} · Valide jusqu'au {data.invitation.expiresAt}
+				</p>
 			</div>
 		{:else}
 			<p class="intro">Création de compte réservée aux utilisateurs invités.</p>
@@ -58,7 +61,7 @@
 
 		<p class="hint">
 			Déjà un compte ?
-			<a href="/connexion">Se connecter</a>
+			<a href={resolve('/connexion')}>Se connecter</a>
 		</p>
 	</section>
 </main>

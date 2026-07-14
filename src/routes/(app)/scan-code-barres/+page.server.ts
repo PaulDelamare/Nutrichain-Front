@@ -1,21 +1,26 @@
 import type { PageServerLoad } from './$types';
 import { getBatches } from '$lib/Api/traceability.server';
+import { getEquipment } from '$lib/Api/organization.server';
 import { batchToRow } from '$lib/utils/lots/mapBatch';
-import { lots as mockLots } from '$lib/data/lot-search';
 
 export const load: PageServerLoad = async ({ fetch, cookies }) => {
-	const res = await getBatches(fetch, cookies);
+	const [res, equipment] = await Promise.all([
+		getBatches(fetch, cookies),
+		getEquipment(fetch, cookies)
+	]);
 
-	if (res.ok) {
-		return {
-			lots: res.data.map(batchToRow),
-			source: 'api' as const
-		};
+	if (!res.ok) {
+		return { lots: [], error: res.message };
+	}
+
+	const tempByEquipment = new Map<string, string | number | null>();
+	if (equipment.ok) {
+		for (const e of equipment.data) {
+			tempByEquipment.set(e.id, e.temp_actuelle);
+		}
 	}
 
 	return {
-		lots: mockLots,
-		source: 'mock' as const,
-		error: res.message
+		lots: res.data.map((b) => batchToRow(b, tempByEquipment))
 	};
 };

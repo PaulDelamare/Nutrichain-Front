@@ -22,6 +22,12 @@ export type ApiErr = {
 
 export type ApiResult<T> = ApiOk<T> | ApiErr;
 
+const UNREACHABLE: ApiErr = {
+	ok: false,
+	status: 503,
+	message: 'API injoignable — réessayez plus tard.'
+};
+
 function baseUrl(): string {
 	return (env.API_URL ?? 'http://localhost:3000').replace(/\/$/, '');
 }
@@ -51,10 +57,7 @@ async function parseJson<T>(res: Response): Promise<ApiResult<T>> {
 		};
 	}
 
-	const msg =
-		payload.error?.map((e) => e.message).join(' ') ||
-		payload.message ||
-		'Erreur API';
+	const msg = payload.error?.map((e) => e.message).join(' ') || payload.message || 'Erreur API';
 
 	return { ok: false, status: res.status, message: msg };
 }
@@ -113,18 +116,42 @@ export class ApiClient {
 	}
 
 	get<T>(path: string): Promise<ApiResult<T>> {
-		return this.fetch(this.url(path), { headers: this.headers() }).then(parseJson<T>);
+		return this.fetch(this.url(path), { headers: this.headers() })
+			.then(parseJson<T>)
+			.catch(() => UNREACHABLE);
 	}
 
-	async post<T>(path: string, body?: unknown): Promise<ApiResult<T> & { response: Response }> {
-		const res = await this.fetch(this.url(path), {
-			method: 'POST',
-			headers: this.headers({ 'Content-Type': 'application/json' }),
-			body: body ? JSON.stringify(body) : undefined
-		});
+	async post<T>(
+		path: string,
+		body?: unknown
+	): Promise<(ApiOk<T> & { response: Response }) | (ApiErr & { response?: Response })> {
+		return this.write<T>('POST', path, body);
+	}
 
-		const parsed = await parseJson<T>(res);
-		return { ...parsed, response: res };
+	patch<T>(
+		path: string,
+		body?: unknown
+	): Promise<(ApiOk<T> & { response: Response }) | (ApiErr & { response?: Response })> {
+		return this.write<T>('PATCH', path, body);
+	}
+
+	private async write<T>(
+		method: 'POST' | 'PATCH',
+		path: string,
+		body?: unknown
+	): Promise<(ApiOk<T> & { response: Response }) | (ApiErr & { response?: Response })> {
+		try {
+			const res = await this.fetch(this.url(path), {
+				method,
+				headers: this.headers({ 'Content-Type': 'application/json' }),
+				body: body ? JSON.stringify(body) : undefined
+			});
+
+			const parsed = await parseJson<T>(res);
+			return { ...parsed, response: res };
+		} catch {
+			return { ...UNREACHABLE };
+		}
 	}
 }
 

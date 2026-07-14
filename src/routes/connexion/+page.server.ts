@@ -1,11 +1,12 @@
 import { fail, redirect } from '@sveltejs/kit';
 import { signIn } from '$lib/Api/auth.server';
+import { safeRedirect } from '$lib/utils/safeRedirect';
 import type { Actions, PageServerLoad } from './$types';
 
 export const load: PageServerLoad = async ({ locals, url }) => {
 	if (locals.user) {
-		const target = url.searchParams.get('redirect') || '/tableau-de-bord';
-		redirect(303, target);
+		const defaut = locals.user.isPlatformAdmin ? '/plateforme' : '/tableau-de-bord';
+		redirect(303, safeRedirect(url.searchParams.get('redirect'), defaut));
 	}
 };
 
@@ -29,7 +30,7 @@ export const actions = {
 			return fail(res.status === 429 ? 429 : res.status, { error: message, email });
 		}
 
-		const target = url.searchParams.get('redirect') || '/tableau-de-bord';
+		const target = safeRedirect(url.searchParams.get('redirect'), '/tableau-de-bord');
 		redirect(303, target);
 	}
 } satisfies Actions;

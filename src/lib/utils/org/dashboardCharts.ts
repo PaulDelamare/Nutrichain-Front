@@ -1,10 +1,11 @@
 import type { ApiAlert, ApiMovement, ApiQualityControl } from '$lib/Api/organization.server';
 import type { ApiBatch } from '$lib/Api/traceability.server';
-import { mockDashboardCharts } from '$lib/data/dashboard-charts';
 import type { ChartSegment, DashboardCharts } from '$lib/types/dashboard-charts';
+import { normalizeQualityResult } from './quality';
 
 const LOT_STATUS_LABELS: Record<string, string> = {
 	EN_STOCK: 'En stock',
+	EN_ATTENTE_QC: 'En attente de contrôle',
 	SURVEILLANCE: 'Surveillance',
 	QUARANTAINE: 'Quarantaine',
 	QUARANTINE: 'Quarantaine',
@@ -16,6 +17,7 @@ const LOT_STATUS_LABELS: Record<string, string> = {
 
 const LOT_STATUS_COLORS: Record<string, string> = {
 	EN_STOCK: '#1b6b5c',
+	EN_ATTENTE_QC: '#6366f1',
 	SURVEILLANCE: '#5aafa0',
 	QUARANTAINE: '#f59e0b',
 	QUARANTINE: '#f59e0b',
@@ -25,22 +27,17 @@ const LOT_STATUS_COLORS: Record<string, string> = {
 	PERIME: '#94a3b8'
 };
 
-const MOVEMENT_LABELS: Record<string, string> = {
-	RECEPTION: 'Réceptions',
-	EXPEDITION: 'Expéditions',
-	QUARANTAINE: 'Quarantaines',
-	TRANSFORMATION: 'Transformations'
-};
-
-const MOVEMENT_COLORS: Record<string, string> = {
-	RECEPTION: '#1b6b5c',
-	EXPEDITION: '#5aafa0',
-	QUARANTAINE: '#f59e0b',
-	TRANSFORMATION: '#8fd4c5'
-};
+import {
+	MOVEMENT_CHART_COLORS,
+	MOVEMENT_CHART_LABELS,
+	MOVEMENT_CHART_TYPES,
+	normalizeMovementType,
+	type MovementChartType
+} from '$lib/utils/movements/labels';
 
 const SEVERITY_LABELS: Record<string, string> = {
 	CRITIQUE: 'Critique',
+	PANIC: 'Critique',
 	HAUTE: 'Haute',
 	MOYENNE: 'Moyenne',
 	FAIBLE: 'Faible'
@@ -48,6 +45,7 @@ const SEVERITY_LABELS: Record<string, string> = {
 
 const SEVERITY_COLORS: Record<string, string> = {
 	CRITIQUE: '#ef4444',
+	PANIC: '#ef4444',
 	HAUTE: '#f59e0b',
 	MOYENNE: '#5aafa0',
 	FAIBLE: '#94a3b8'
@@ -82,8 +80,6 @@ function countBy<T>(items: T[], keyFn: (item: T) => string): ChartSegment[] {
 }
 
 function lotStatusChart(batches: ApiBatch[]): ChartSegment[] {
-	if (batches.length === 0) return mockDashboardCharts.lotStatus;
-
 	const segments = countBy(batches, (b) => b.statut);
 	return segments.map((s) => ({
 		label: LOT_STATUS_LABELS[s.label] ?? s.label.replace(/_/g, ' ').toLowerCase(),
@@ -117,38 +113,29 @@ function weeklyMovementsChart(movements: ApiMovement[]): DashboardCharts['weekly
 		return d.toLocaleDateString('fr-FR');
 	});
 
-	const types = ['RECEPTION', 'EXPEDITION', 'QUARANTAINE', 'TRANSFORMATION'] as const;
-	const buckets = new Map<string, Map<string, number>>();
-	for (const type of types) {
+	const buckets = new Map<MovementChartType, Map<string, number>>();
+	for (const type of MOVEMENT_CHART_TYPES) {
 		buckets.set(type, new Map(dayKeys.map((k) => [k, 0])));
 	}
 
 	for (const m of movements) {
-		const type = m.type_action as (typeof types)[number];
-		if (!buckets.has(type)) continue;
+		const type = normalizeMovementType(m.type_action);
 		const key = dayKey(m.created_at);
 		const bucket = buckets.get(type)!;
 		if (bucket.has(key)) bucket.set(key, (bucket.get(key) ?? 0) + 1);
 	}
 
-	const series = types
-		.map((type) => ({
-			name: MOVEMENT_LABELS[type] ?? type,
-			color: MOVEMENT_COLORS[type] ?? '#94a3b8',
-			data: dayKeys.map((k) => buckets.get(type)?.get(k) ?? 0)
-		}))
-		.filter((s) => s.data.some((v) => v > 0));
-
-	if (series.length === 0) return mockDashboardCharts.weeklyMovements;
+	const series = MOVEMENT_CHART_TYPES.map((type) => ({
+		name: MOVEMENT_CHART_LABELS[type],
+		color: MOVEMENT_CHART_COLORS[type],
+		data: dayKeys.map((k) => buckets.get(type)?.get(k) ?? 0)
+	})).filter((s) => s.data.some((v) => v > 0));
 
 	return { labels, series };
 }
 
 function alertSeverityChart(alerts: ApiAlert[]): ChartSegment[] {
 	const active = alerts.filter((a) => a.statut === 'ACTIVE');
-	if (active.length === 0) {
-		return [{ label: 'Aucune alerte', value: 1, color: '#e2e8f0' }];
-	}
 
 	return countBy(active, (a) => a.niveau_gravite).map((s) => ({
 		label: SEVERITY_LABELS[s.label] ?? s.label,
@@ -157,59 +144,24 @@ function alertSeverityChart(alerts: ApiAlert[]): ChartSegment[] {
 	}));
 }
 
-function qualityResultsChart(
-	qualityRows: ApiQualityControl[],
-	batchCount: number
-): ChartSegment[] {
-	const nonConforme = qualityRows.filter((q) => q.resultat === 'NON_CONFORME').length;
-	const enCours = qualityRows.filter((q) => q.resultat === 'EN_COURS').length;
-	const conforme = Math.max(batchCount - nonConforme - enCours, 0);
-
-	const segments: ChartSegment[] = [];
-	if (conforme > 0) {
-		segments.push({
-			label: QUALITY_LABELS.CONFORME,
-			value: conforme,
-			color: QUALITY_COLORS.CONFORME
-		});
-	}
-	if (enCours > 0) {
-		segments.push({
-			label: QUALITY_LABELS.EN_COURS,
-			value: enCours,
-			color: QUALITY_COLORS.EN_COURS
-		});
-	}
-	if (nonConforme > 0) {
-		segments.push({
-			label: QUALITY_LABELS.NON_CONFORME,
-			value: nonConforme,
-			color: QUALITY_COLORS.NON_CONFORME
-		});
-	}
-
-	if (segments.length === 0) {
-		return batchCount > 0
-			? [{ label: 'Conforme', value: batchCount, color: '#1b6b5c' }]
-			: mockDashboardCharts.qualityResults;
-	}
-
-	return segments;
+function qualityResultsChart(qualityRows: ApiQualityControl[]): ChartSegment[] {
+	return countBy(qualityRows, (q) => normalizeQualityResult(q.resultat)).map((s) => ({
+		label: QUALITY_LABELS[s.label] ?? s.label,
+		value: s.value,
+		color: QUALITY_COLORS[s.label] ?? '#94a3b8'
+	}));
 }
 
 export function buildDashboardCharts(
 	batches: ApiBatch[],
 	alerts: ApiAlert[],
 	movements: ApiMovement[],
-	qualityRows: ApiQualityControl[],
-	useMockFallback: boolean
+	qualityRows: ApiQualityControl[]
 ): DashboardCharts {
-	if (useMockFallback) return mockDashboardCharts;
-
 	return {
 		lotStatus: lotStatusChart(batches),
 		weeklyMovements: weeklyMovementsChart(movements),
 		alertSeverity: alertSeverityChart(alerts),
-		qualityResults: qualityResultsChart(qualityRows, batches.length)
+		qualityResults: qualityResultsChart(qualityRows)
 	};
 }

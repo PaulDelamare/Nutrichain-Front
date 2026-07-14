@@ -45,8 +45,8 @@
 	description="Scannez un GTIN ou un identifiant de lot pour accéder instantanément à sa fiche."
 />
 
-{#if data.source === 'mock' && data.error}
-	<p class="warn">API indisponible — données de démonstration ({data.error})</p>
+{#if data.error}
+	<p class="warn">API indisponible — {data.error}</p>
 {/if}
 
 <div class="layout">

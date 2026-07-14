@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { APP_NAME, APP_TAGLINE } from '$lib/config/app';
+	import { APP_NAME } from '$lib/config/app';
 	import type { ActionData } from './$types';
 
 	let { form }: { form: ActionData } = $props();
@@ -23,7 +23,7 @@
 				<input
 					type="email"
 					name="email"
-					value={form?.email ?? 'nutrichain@test.fr'}
+					value={form?.email ?? ''}
 					autocomplete="username"
 					required
 				/>

@@ -20,8 +20,8 @@
 	description="Estimez l'impact d'un rappel (lots et expéditions touchés) sans rien bloquer en base."
 />
 
-{#if data.source === 'mock' && data.error}
-	<p class="warn">API indisponible — liste de lots de démonstration ({data.error})</p>
+{#if data.error}
+	<p class="warn">API indisponible — {data.error}</p>
 {/if}
 
 <div class="layout">
@@ -64,13 +64,6 @@
 		{:else if !form?.simulated}
 			<p class="empty">Lancez une simulation pour estimer la propagation du rappel.</p>
 		{:else}
-			{#if form.source === 'mock'}
-				<p class="warn">
-					Généalogie API indisponible — impact estimé à titre indicatif
-					{#if form.error}({form.error}){/if}
-				</p>
-			{/if}
-
 			<div class="kpis">
 				<div class="kpi">
 					<span class="kpi-value">{impactedCount}</span>

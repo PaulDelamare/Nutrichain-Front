@@ -1,18 +1,22 @@
 <script lang="ts">
+	import { resolve } from '$app/paths';
+	import type { Pathname } from '$app/types';
+
 	type Props = {
 		variant: 'info' | 'warn';
 		text: string;
-		link?: { href: string; label: string };
+		link?: { href: Pathname; label: string };
 	};
 
 	let { variant, text, link }: Props = $props();
+
 </script>
 
 <div class="alert" class:info={variant === 'info'} class:warn={variant === 'warn'}>
 	<p>
 		{text}
 		{#if link}
-			— <a href={link.href}>{link.label}</a>
+			— <a href={resolve(link.href as '/')}>{link.label}</a>
 		{/if}
 	</p>
 </div>

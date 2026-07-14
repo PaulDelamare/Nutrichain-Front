@@ -14,10 +14,6 @@ function matchSite(site: string) {
 	return SITE_COORDINATES.find(({ match }) => match.test(site));
 }
 
-/**
- * Dérive une position carte à partir du site / zone équipement.
- * Accepte plus tard des coordonnées explicites depuis l'API.
- */
 export function resolveLotMapLocation(
 	site?: string | null,
 	zone?: string | null,
@@ -45,7 +41,7 @@ export function resolveLotMapLocation(
 			lng: hit.lng,
 			label,
 			sublabel,
-			precise: true
+			precise: false
 		};
 	}
 

@@ -1,5 +1,6 @@
 import type { Cookies } from '@sveltejs/kit';
 import { api, applySetCookies, type ApiResult } from './client.server';
+import type { Role } from '$lib/config/roles';
 
 export type MePayload = {
 	user: {
@@ -9,6 +10,8 @@ export type MePayload = {
 	};
 	session: Record<string, unknown>;
 	activeOrgId?: string;
+	role?: Role | null;
+	isPlatformAdmin?: boolean;
 };
 
 /** Évite un appel /api/me inutile quand aucun cookie de session n'est présent. */
@@ -37,10 +40,11 @@ export async function signUp(
 	cookies: Cookies,
 	name: string,
 	email: string,
-	password: string
+	password: string,
+	token?: string
 ): Promise<ApiResult<unknown> & { response?: Response }> {
 	const client = api(fetch, cookies);
-	const res = await client.post('/api/auth/sign-up/email', { name, email, password });
+	const res = await client.post('/api/auth/sign-up/email', { name, email, password, token });
 
 	if (res.ok) {
 		applySetCookies(res.response, cookies);

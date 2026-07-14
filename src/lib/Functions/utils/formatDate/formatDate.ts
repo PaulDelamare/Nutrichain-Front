@@ -4,9 +4,9 @@ export const formatDate = (date: Date) => {
 		month: '2-digit',
 		year: 'numeric'
 	});
-}
+};
 
 export const formatTime = (date: Date) => {
 	const options: Intl.DateTimeFormatOptions = { hour: '2-digit', minute: '2-digit' };
 	return new Date(date).toLocaleTimeString('fr-FR', options);
-}
+};
