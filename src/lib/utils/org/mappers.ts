@@ -50,8 +50,11 @@ function fmtWhen(iso: string): string {
 
 export function membersToUsers(members: ApiMember[]): AppUser[] {
 	return members.map((m) => ({
+		memberId: m.id,
+		userId: m.user.id,
 		email: m.user.email,
 		role: ROLE_LABELS[m.role] ?? m.role,
+		rawRole: m.role,
 		lastLogin: '—',
 		mfa: Boolean(m.user.twoFactorEnabled)
 	}));

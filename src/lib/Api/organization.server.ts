@@ -103,6 +103,26 @@ function orgApi(fetch: typeof globalThis.fetch, cookies: Cookies) {
 export const getMembers = (fetch: typeof globalThis.fetch, cookies: Cookies) =>
 	orgApi(fetch, cookies).get<ApiMember[]>('/api/organization/members');
 
+// Gestion des membres : changer un rôle, révoquer un accès. Ces actions engagent une PERSONNE,
+// donc elles passent par la session (`useApiKey: false`), jamais par la clé API — comme les
+// décisions qualité. L'API garde ces routes (ADMIN_ROLES) et refuse de cibler le propriétaire
+// ou soi-même : ici on se contente de transmettre et de remonter son message d'erreur.
+export const changeMemberRole = (
+	fetch: typeof globalThis.fetch,
+	cookies: Cookies,
+	memberId: string,
+	role: string
+) =>
+	api(fetch, cookies, { useApiKey: false }).patch(`/api/organization/members/${memberId}/role`, {
+		role
+	});
+
+export const revokeMember = (fetch: typeof globalThis.fetch, cookies: Cookies, memberId: string) =>
+	api(fetch, cookies, { useApiKey: false }).post(
+		`/api/organization/members/${memberId}/revoke`,
+		{}
+	);
+
 export const getAlerts = (fetch: typeof globalThis.fetch, cookies: Cookies) =>
 	orgApi(fetch, cookies).get<ApiAlert[]>('/api/organization/alerts');
 

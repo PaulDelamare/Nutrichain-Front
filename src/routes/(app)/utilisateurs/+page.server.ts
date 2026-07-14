@@ -1,7 +1,7 @@
 import { fail } from '@sveltejs/kit';
 import type { Actions, PageServerLoad } from './$types';
 import { getMe } from '$lib/Api/auth.server';
-import { getMembers } from '$lib/Api/organization.server';
+import { changeMemberRole, getMembers, revokeMember } from '$lib/Api/organization.server';
 import { canInviteMembers, INVITE_ROLES, type InviteRole } from '$lib/config/invite-roles';
 import { sendInvitation } from '$lib/Api/identity.server';
 import { membersToUsers } from '$lib/utils/org/mappers';
@@ -18,13 +18,16 @@ export const load: PageServerLoad = async ({ fetch, cookies, locals }) => {
 		return {
 			users: [],
 			error: membersRes.message,
-			canInvite: false
+			canInvite: false,
+			currentUserId: locals.user?.id
 		};
 	}
 
 	return {
 		users: membersToUsers(membersRes.data),
-		canInvite
+		canInvite,
+		// Sert à masquer les actions sur sa propre ligne : on ne modifie pas son propre accès.
+		currentUserId: locals.user?.id
 	};
 };
 
@@ -69,10 +72,44 @@ export const actions = {
 		}
 
 		return {
+			scope: 'invite' as const,
 			success: true,
 			message: `Invitation envoyée à ${email}.`,
 			email: '',
 			role: 'operator' as InviteRole
 		};
+	},
+
+	changeRole: async ({ request, fetch, cookies, locals }) => {
+		const refus = refusAdministration(locals.user);
+		if (refus) return fail(403, { scope: 'member' as const, error: refus });
+
+		const form = await request.formData();
+		const memberId = String(form.get('memberId') ?? '');
+		const role = String(form.get('role') ?? '') as InviteRole;
+
+		if (!memberId) return fail(400, { scope: 'member' as const, error: 'Membre introuvable.' });
+		if (!INVITE_ROLES.includes(role)) {
+			return fail(400, { scope: 'member' as const, error: 'Rôle invalide.' });
+		}
+
+		const res = await changeMemberRole(fetch, cookies, memberId, role);
+		if (!res.ok) return fail(res.status, { scope: 'member' as const, error: res.message });
+
+		return { scope: 'member' as const, success: true, message: 'Rôle mis à jour.' };
+	},
+
+	revoke: async ({ request, fetch, cookies, locals }) => {
+		const refus = refusAdministration(locals.user);
+		if (refus) return fail(403, { scope: 'member' as const, error: refus });
+
+		const form = await request.formData();
+		const memberId = String(form.get('memberId') ?? '');
+		if (!memberId) return fail(400, { scope: 'member' as const, error: 'Membre introuvable.' });
+
+		const res = await revokeMember(fetch, cookies, memberId);
+		if (!res.ok) return fail(res.status, { scope: 'member' as const, error: res.message });
+
+		return { scope: 'member' as const, success: true, message: 'Accès révoqué.' };
 	}
 } satisfies Actions;
