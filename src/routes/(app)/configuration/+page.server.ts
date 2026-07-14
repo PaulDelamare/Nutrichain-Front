@@ -16,6 +16,7 @@ import {
 	setProductActive,
 	createEquipment
 } from '$lib/Api/organization.server';
+import { importProductsCsv, importCustomersCsv } from '$lib/Api/connectors.server';
 import { exigerAdministrateur, refusAdministration } from '$lib/server/guards';
 import { estTypeMateriel } from '$lib/config/equipment';
 
@@ -236,5 +237,45 @@ export const actions = {
 		});
 		if (!res.ok) return fail(res.status, { equipmentError: res.message, nom });
 		return { equipmentCreated: res.data };
+	},
+
+	importProducts: async ({ request, fetch, cookies, locals }) => {
+		const refus = refusAdministration(locals.user);
+		if (refus) return fail(403, { importKind: 'products' as const, importError: refus });
+
+		const csv = await lireCsv(await request.formData());
+		if (csv === null) {
+			return fail(400, { importKind: 'products' as const, importError: 'Fichier CSV requis.' });
+		}
+
+		const res = await importProductsCsv(fetch, cookies, csv);
+		if (!res.ok) {
+			return fail(res.status, { importKind: 'products' as const, importError: res.message });
+		}
+		return { importKind: 'products' as const, importReport: res.data };
+	},
+
+	importCustomers: async ({ request, fetch, cookies, locals }) => {
+		const refus = refusAdministration(locals.user);
+		if (refus) return fail(403, { importKind: 'customers' as const, importError: refus });
+
+		const csv = await lireCsv(await request.formData());
+		if (csv === null) {
+			return fail(400, { importKind: 'customers' as const, importError: 'Fichier CSV requis.' });
+		}
+
+		const res = await importCustomersCsv(fetch, cookies, csv);
+		if (!res.ok) {
+			return fail(res.status, { importKind: 'customers' as const, importError: res.message });
+		}
+		return { importKind: 'customers' as const, importReport: res.data };
 	}
 } satisfies Actions;
+
+// Lit le fichier CSV uploadé et renvoie son texte, ou null si absent/vide.
+async function lireCsv(form: FormData): Promise<string | null> {
+	const file = form.get('file');
+	if (!(file instanceof File) || file.size === 0) return null;
+	const text = (await file.text()).trim();
+	return text.length > 0 ? text : null;
+}

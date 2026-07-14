@@ -137,6 +137,20 @@ export class ApiClient {
 		return this.write<T>('PATCH', path, body);
 	}
 
+	// Corps texte brut (ex. import CSV : l'API attend text/csv, pas du JSON).
+	async postText<T>(path: string, text: string, contentType = 'text/csv'): Promise<ApiResult<T>> {
+		try {
+			const res = await this.fetch(this.url(path), {
+				method: 'POST',
+				headers: this.headers({ 'Content-Type': contentType }),
+				body: text
+			});
+			return parseJson<T>(res);
+		} catch {
+			return UNREACHABLE;
+		}
+	}
+
 	private async write<T>(
 		method: 'POST' | 'PATCH',
 		path: string,
