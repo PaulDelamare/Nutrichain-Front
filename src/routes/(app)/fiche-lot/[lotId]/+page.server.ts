@@ -3,9 +3,19 @@ import { refusDecisionQualite } from '$lib/server/guards';
 import type { Actions, PageServerLoad } from './$types';
 import { getBatchById, releaseQuarantine } from '$lib/Api/logistics.server';
 import { getMovements } from '$lib/Api/organization.server';
-import { getBatches, triggerRecall } from '$lib/Api/traceability.server';
-import type { ApiBatch } from '$lib/Api/traceability.server';
+import { getBatches, getGenealogy, triggerRecall } from '$lib/Api/traceability.server';
+import type { ApiBatch, ApiOrigin } from '$lib/Api/traceability.server';
 import { batchToSheet } from '$lib/utils/lots/mapBatch';
+
+// L'amont (fournisseurs d'origine) ne doit jamais faire échouer la fiche : dégradation silencieuse.
+async function loadOrigins(
+	fetch: typeof globalThis.fetch,
+	cookies: import('@sveltejs/kit').Cookies,
+	lotId: string
+): Promise<ApiOrigin[]> {
+	const gen = await getGenealogy(fetch, cookies, lotId);
+	return gen.ok ? (gen.data.origines ?? []) : [];
+}
 
 async function loadFromCatalog(
 	fetch: typeof globalThis.fetch,
@@ -29,15 +39,18 @@ async function loadFromCatalog(
 }
 
 export const load: PageServerLoad = async ({ fetch, cookies, params }) => {
-	const res = await getBatchById(fetch, cookies, params.lotId);
+	const [res, origines] = await Promise.all([
+		getBatchById(fetch, cookies, params.lotId),
+		loadOrigins(fetch, cookies, params.lotId)
+	]);
 
 	if (res.ok) {
-		return { sheet: batchToSheet(res.data), source: 'api' as const };
+		return { sheet: batchToSheet(res.data), origines, source: 'api' as const };
 	}
 
 	const fromCatalog = await loadFromCatalog(fetch, cookies, params.lotId);
 	if (fromCatalog) {
-		return { sheet: batchToSheet(fromCatalog), source: 'api' as const };
+		return { sheet: batchToSheet(fromCatalog), origines, source: 'api' as const };
 	}
 
 	if (res.status === 404) {
