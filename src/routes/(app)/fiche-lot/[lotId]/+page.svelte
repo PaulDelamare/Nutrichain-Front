@@ -3,6 +3,7 @@
 	import IdentityCard from '$lib/components/lot-sheet/IdentityCard.svelte';
 	import HistoryPanel from '$lib/components/lot-sheet/HistoryPanel.svelte';
 	import LocationPanel from '$lib/components/lot-sheet/LocationPanel.svelte';
+	import OriginPanel from '$lib/components/lot-sheet/OriginPanel.svelte';
 	import LotActionsPanel from '$lib/components/lot-sheet/LotActionsPanel.svelte';
 	import PageHead from '$lib/components/page/PageHead.svelte';
 	import { usePageSearch } from '$lib/context/pageSearch.svelte';
@@ -48,6 +49,7 @@
 <div class="layout">
 	<div class="main">
 		<IdentityCard sheet={data.sheet} />
+		<OriginPanel origines={data.origines} />
 		<HistoryPanel {events} temperature={data.sheet.temperature} />
 	</div>
 	<div class="side">
