@@ -39,6 +39,14 @@ export const navGroups: NavGroup[] = [
 				heading: 'Arbre de traçabilité',
 				description:
 					'Vue amont / aval — matières premières vers produits finis et expéditions.'
+			},
+			{
+				href: '/scan-code-barres',
+				label: 'Scan code-barres',
+				title: 'Scan code-barres',
+				heading: 'Scan de code-barres',
+				description:
+					'Scannez un GTIN ou un identifiant de lot pour accéder instantanément à sa fiche.'
 			}
 		]
 	},
@@ -68,6 +76,14 @@ export const navGroups: NavGroup[] = [
 				heading: 'Rappels produits',
 				description:
 					'Workflow — lots concernés, sites impactés, progression des retraits.'
+			},
+			{
+				href: '/simulation-rappel',
+				label: 'Simulation de rappel',
+				title: 'Simulation de rappel',
+				heading: 'Simulation de rappel',
+				description:
+					'Estimez l\'impact d\'un rappel (lots et expéditions touchés) sans rien bloquer en base.'
 			}
 		]
 	},
