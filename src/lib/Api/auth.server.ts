@@ -15,6 +15,8 @@ export type MePayload = {
 	 * `null` (aucun rôle). Cf. `$lib/config/roles` — on ne masque rien tant qu'on ne sait pas.
 	 */
 	role?: Role | null;
+	/** Administrateur de la plateforme (personnel NutriChain), au-dessus des organisations. */
+	isPlatformAdmin?: boolean;
 };
 
 /** Évite un appel /api/me inutile quand aucun cookie de session n'est présent. */

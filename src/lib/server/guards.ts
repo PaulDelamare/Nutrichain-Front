@@ -44,3 +44,16 @@ export function refusDecisionQualite(user: SessionUser | undefined): string | nu
 export function refusAdministration(user: SessionUser | undefined): string | null {
 	return user && peutAdministrer(user.role) ? null : MESSAGE_ADMIN;
 }
+
+/**
+ * Réserve une PAGE ou une ACTION de la console plateforme au personnel NutriChain.
+ *
+ * Indispensable dans les ACTIONS, pas seulement le `load` : en SvelteKit, le `load` d'un
+ * `+layout.server.ts` ne s'exécute PAS avant l'action d'une page enfant. Le garde de layout protège
+ * donc la lecture, mais un non-admin pourrait POSTer `?/create` directement sans ce contrôle.
+ */
+export function exigerAdminPlateforme(user: SessionUser | undefined): void {
+	if (user?.isPlatformAdmin) return;
+
+	error(403, 'Action réservée aux administrateurs de la plateforme.');
+}

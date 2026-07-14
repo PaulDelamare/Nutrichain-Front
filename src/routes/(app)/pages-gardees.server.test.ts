@@ -26,7 +26,7 @@ const PAGES = [
 const evenement = (role: KnownRole) => ({
 	fetch: vi.fn(),
 	cookies: {},
-	locals: { user: { id: 'u1', name: 'T', email: 't@x.fr', role } }
+	locals: { user: { id: 'u1', name: 'T', email: 't@x.fr', role, isPlatformAdmin: false } }
 });
 
 async function statutDuLoad(charger: () => Promise<unknown>, role: KnownRole) {

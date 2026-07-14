@@ -8,7 +8,8 @@ const utilisateur = (role: KnownRole): SessionUser => ({
 	id: 'u1',
 	name: 'Test',
 	email: 't@x.fr',
-	role
+	role,
+	isPlatformAdmin: false
 });
 
 const refusDe = (fn: () => void) => {
