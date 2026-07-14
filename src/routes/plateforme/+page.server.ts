@@ -61,7 +61,7 @@ export const actions = {
 		});
 
 		if (!res.ok) {
-			return fail(res.status, { createError: res.message, name, slug });
+			return fail(res.status, { createError: res.message, name });
 		}
 
 		return { created: res.data };

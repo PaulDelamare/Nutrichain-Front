@@ -51,7 +51,7 @@
 			</label>
 			<label>
 				<span>Identifiant court (optionnel)</span>
-				<input name="slug" placeholder="déduit du nom si vide" value={form?.slug ?? ''} />
+				<input name="slug" placeholder="déduit du nom si vide" />
 			</label>
 			<label>
 				<span>Préfixe GS1 (optionnel)</span>
