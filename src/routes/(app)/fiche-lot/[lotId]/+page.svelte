@@ -51,7 +51,12 @@
 		<HistoryPanel {events} temperature={data.sheet.temperature} />
 	</div>
 	<div class="side">
-		<LotActionsPanel lotId={data.sheet.id} statut={data.sheet.statut} {form} />
+		<LotActionsPanel
+			lotId={data.sheet.id}
+			statut={data.sheet.statut}
+			{form}
+			role={data.user.role}
+		/>
 		<LocationPanel sheet={data.sheet} />
 	</div>
 </div>

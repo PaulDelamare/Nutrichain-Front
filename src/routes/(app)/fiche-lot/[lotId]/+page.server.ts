@@ -1,4 +1,5 @@
 import { error, fail } from '@sveltejs/kit';
+import { refusDecisionQualite } from '$lib/server/guards';
 import type { Actions, PageServerLoad } from './$types';
 import { getBatchById, releaseQuarantine } from '$lib/Api/logistics.server';
 import { getMovements } from '$lib/Api/organization.server';
@@ -50,7 +51,10 @@ export const load: PageServerLoad = async ({ fetch, cookies, params }) => {
 
 export const actions = {
 	// Lever la quarantaine du lot (décision qualité) directement depuis sa fiche.
-	release: async ({ request, fetch, cookies, params }) => {
+	release: async ({ request, fetch, cookies, params, locals }) => {
+		const refus = refusDecisionQualite(locals.user);
+		if (refus) return fail(403, { releaseError: refus });
+
 		const motif = String((await request.formData()).get('motif') ?? '').trim();
 		if (motif.length < 3) {
 			return fail(400, { releaseError: 'Motif de levée requis (au moins 3 caractères).' });
@@ -61,7 +65,10 @@ export const actions = {
 	},
 
 	// Déclencher un rappel produit à partir du lot (bloque le lot et sa descendance).
-	recall: async ({ request, fetch, cookies, params }) => {
+	recall: async ({ request, fetch, cookies, params, locals }) => {
+		const refus = refusDecisionQualite(locals.user);
+		if (refus) return fail(403, { recallError: refus });
+
 		const reason = String((await request.formData()).get('reason') ?? '').trim();
 		if (reason.length < 3) {
 			return fail(400, { recallError: 'Motif de rappel requis (au moins 3 caractères).' });

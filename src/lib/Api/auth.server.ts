@@ -1,5 +1,6 @@
 import type { Cookies } from '@sveltejs/kit';
 import { api, applySetCookies, type ApiResult } from './client.server';
+import type { Role } from '$lib/config/roles';
 
 export type MePayload = {
 	user: {
@@ -9,6 +10,11 @@ export type MePayload = {
 	};
 	session: Record<string, unknown>;
 	activeOrgId?: string;
+	/**
+	 * Absent si l'API est antérieure à l'exposition du rôle : ce n'est PAS la même chose que
+	 * `null` (aucun rôle). Cf. `$lib/config/roles` — on ne masque rien tant qu'on ne sait pas.
+	 */
+	role?: Role | null;
 };
 
 /** Évite un appel /api/me inutile quand aucun cookie de session n'est présent. */

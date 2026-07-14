@@ -1,4 +1,5 @@
 import { fail } from '@sveltejs/kit';
+import { refusDecisionQualite } from '$lib/server/guards';
 import type { Actions, PageServerLoad } from './$types';
 import {
 	createQualityControl,
@@ -31,10 +32,13 @@ export const load: PageServerLoad = async ({ fetch, cookies }) => {
 };
 
 export const actions = {
-	release: async ({ request, fetch, cookies }) => {
+	release: async ({ request, fetch, cookies, locals }) => {
 		const form = await request.formData();
 		const lotId = String(form.get('lotId') ?? '').trim();
 		const motif = String(form.get('motif') ?? '').trim();
+
+		const refus = refusDecisionQualite(locals.user);
+		if (refus) return fail(403, { releaseError: refus, lotId });
 
 		if (!lotId || motif.length < 3) {
 			return fail(400, {
@@ -52,12 +56,15 @@ export const actions = {
 	},
 
 	// Barrière qualité : le contrôle libère le lot (conforme) ou le met en quarantaine (non conforme).
-	control: async ({ request, fetch, cookies }) => {
+	control: async ({ request, fetch, cookies, locals }) => {
 		const form = await request.formData();
 		const lotId = String(form.get('lotId') ?? '').trim();
 		const typeTest = String(form.get('typeTest') ?? '').trim();
 		const resultat = String(form.get('resultat') ?? '');
 		const notes = String(form.get('notes') ?? '').trim();
+
+		const refus = refusDecisionQualite(locals.user);
+		if (refus) return fail(403, { controlError: refus, controlLotId: lotId });
 
 		if (typeTest.length < 3) {
 			return fail(400, {

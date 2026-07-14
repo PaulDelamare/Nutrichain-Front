@@ -17,6 +17,15 @@
 	<p class="banner">API indisponible — {data.error}</p>
 {/if}
 
+{#if data.statsError}
+	<p class="banner">Compteurs indisponibles — {data.statsError}</p>
+{:else if data.statsRefuses}
+	<p class="note">
+		Les compteurs magasins s'appuient sur le fichier clients, réservé aux administrateurs. La
+		consigne de retrait ci-dessous, elle, vous concerne.
+	</p>
+{/if}
+
 <div class="stats">
 	{#each data.storeStats as stat (stat.label)}
 		<StatCard label={stat.label} value={stat.value} accent={stat.accent} />
@@ -37,6 +46,12 @@
 		background: #fffbeb;
 		color: #92400e;
 		font-size: 0.8125rem;
+	}
+
+	.note {
+		margin: 0 0 0.75rem;
+		font-size: 0.8125rem;
+		color: var(--nc-text-muted);
 	}
 
 	.stats {

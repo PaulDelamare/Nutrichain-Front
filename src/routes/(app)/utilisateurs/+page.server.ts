@@ -5,38 +5,35 @@ import { getMembers } from '$lib/Api/organization.server';
 import { canInviteMembers, INVITE_ROLES, type InviteRole } from '$lib/config/invite-roles';
 import { sendInvitation } from '$lib/Api/identity.server';
 import { membersToUsers } from '$lib/utils/org/mappers';
+import { exigerAdministrateur, refusAdministration } from '$lib/server/guards';
 
 export const load: PageServerLoad = async ({ fetch, cookies, locals }) => {
+	exigerAdministrateur(locals.user, "L'administration des utilisateurs");
+
+	const canInvite = canInviteMembers(locals.user?.role);
+
 	const membersRes = await getMembers(fetch, cookies);
-
-	let canInvite = false;
-	let currentRole: string | undefined;
-
-	if (membersRes.ok && locals.user) {
-		const member = membersRes.data.find((m) => m.user.email === locals.user!.email);
-		currentRole = member?.role;
-		canInvite = canInviteMembers(currentRole);
-	}
 
 	if (!membersRes.ok) {
 		return {
 			users: [],
 			error: membersRes.message,
-			canInvite: false,
-			currentRole
+			canInvite: false
 		};
 	}
 
 	return {
 		users: membersToUsers(membersRes.data),
-		canInvite,
-		currentRole
+		canInvite
 	};
 };
 
 export const actions = {
-	invite: async ({ request, fetch, cookies }) => {
+	invite: async ({ request, fetch, cookies, locals }) => {
 		const form = await request.formData();
+
+		const refus = refusAdministration(locals.user);
+		if (refus) return fail(403, { error: refus });
 		const email = String(form.get('email') ?? '').trim();
 		const role = String(form.get('role') ?? '') as InviteRole;
 

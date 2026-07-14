@@ -1,14 +1,22 @@
 <script lang="ts">
 	import type { PendingQcLot } from '$lib/types/quality';
+	import { peutDeciderQualite, type KnownRole } from '$lib/config/roles';
+	import ActionReservee from '$lib/components/ui/ActionReservee.svelte';
 
 	type Props = {
 		lots: PendingQcLot[];
 		/** Lot dont la saisie vient d'échouer, avec le message de l'API. */
 		errorLotId?: string;
 		errorMessage?: string;
+		/** REQUIS : optionnel = `undefined` = aucune restriction. Un oubli ouvrirait tout en silence. */
+		role: KnownRole;
 	};
 
-	let { lots, errorLotId, errorMessage }: Props = $props();
+	let { lots, errorLotId, errorMessage, role }: Props = $props();
+
+	// La liste des lots bloqués reste visible : c'est une information de production, utile à
+	// l'opérateur. Seule la SAISIE du contrôle est une décision qualité.
+	const peutControler = $derived(peutDeciderQualite(role));
 
 	// Un seul formulaire ouvert à la fois : la page ne doit pas devenir un mur de champs.
 	let openLot = $state<string | null>(null);
@@ -31,20 +39,22 @@
 							<p class="lot">{lot.lot}</p>
 							<p class="detail">{lot.produit} · {lot.quantite} · {lot.depuis}</p>
 						</div>
-						<button
-							type="button"
-							class="open"
-							onclick={() => (openLot = openLot === lot.id ? null : lot.id)}
-						>
-							{openLot === lot.id ? 'Annuler' : 'Saisir le contrôle'}
-						</button>
+						{#if peutControler}
+							<button
+								type="button"
+								class="open"
+								onclick={() => (openLot = openLot === lot.id ? null : lot.id)}
+							>
+								{openLot === lot.id ? 'Annuler' : 'Saisir le contrôle'}
+							</button>
+						{/if}
 					</div>
 
 					{#if errorLotId === lot.id && errorMessage}
 						<p class="err" role="status">❌ {errorMessage}</p>
 					{/if}
 
-					{#if openLot === lot.id}
+					{#if openLot === lot.id && peutControler}
 						<form method="POST" action="?/control" class="form">
 							<input type="hidden" name="lotId" value={lot.id} />
 
@@ -77,6 +87,10 @@
 				</li>
 			{/each}
 		</ul>
+	{/if}
+
+	{#if !peutControler && lots.length > 0}
+		<ActionReservee action="La saisie d'un contrôle qualité" {role} />
 	{/if}
 </section>
 

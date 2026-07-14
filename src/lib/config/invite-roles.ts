@@ -1,3 +1,5 @@
+import { peutAdministrer, type KnownRole } from './roles';
+
 // Rôles réellement attribuables via invitation, alignés sur l'API (INVITABLE_ROLES) :
 // owner n'est pas invitable (c'est le créateur de l'organisation).
 export type InviteRole = 'admin' | 'quality' | 'operator' | 'viewer';
@@ -15,6 +17,6 @@ export function inviteRoleLabel(role: string | null | undefined): string {
 	return INVITE_ROLE_OPTIONS.find((r) => r.value === role)?.label ?? role ?? 'Membre';
 }
 
-export function canInviteMembers(role: string | undefined): boolean {
-	return role === 'owner' || role === 'admin';
+export function canInviteMembers(role: KnownRole): boolean {
+	return peutAdministrer(role);
 }

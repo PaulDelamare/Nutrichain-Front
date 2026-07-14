@@ -3,8 +3,11 @@ import type { Actions, PageServerLoad } from './$types';
 import { getAuditLogs } from '$lib/Api/organization.server';
 import { verifyAudit } from '$lib/Api/audit.server';
 import { auditLogsToRows } from '$lib/utils/org/mappers';
+import { exigerAdministrateur, refusAdministration } from '$lib/server/guards';
 
-export const load: PageServerLoad = async ({ fetch, cookies }) => {
+export const load: PageServerLoad = async ({ fetch, cookies, locals }) => {
+	exigerAdministrateur(locals.user, "Le journal d'audit");
+
 	const logs = await getAuditLogs(fetch, cookies, 50);
 
 	if (!logs.ok) {
@@ -15,7 +18,10 @@ export const load: PageServerLoad = async ({ fetch, cookies }) => {
 };
 
 export const actions = {
-	verify: async ({ fetch, cookies }) => {
+	verify: async ({ fetch, cookies, locals }) => {
+		const refus = refusAdministration(locals.user);
+		if (refus) return fail(403, { verifyError: refus });
+
 		const res = await verifyAudit(fetch, cookies);
 		if (!res.ok) {
 			return fail(res.status, { verifyError: res.message });
