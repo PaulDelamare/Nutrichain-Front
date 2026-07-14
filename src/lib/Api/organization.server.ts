@@ -97,10 +97,16 @@ export const getAuditLogs = (fetch: typeof globalThis.fetch, cookies: Cookies, l
 export const getQualityControls = (fetch: typeof globalThis.fetch, cookies: Cookies) =>
 	orgApi(fetch, cookies).get<ApiQualityControl[]>('/api/organization/quality-controls');
 
+export type ApiQuarantineBatch = {
+	id: string;
+	produit?: { nom: string };
+	statut: string;
+	// Emplacement (matériel) où le lot est stocké — sert à relier un lot à l'alerte froid de son frigo.
+	id_materiel_actuel?: string | null;
+};
+
 export const getQuarantineBatches = (fetch: typeof globalThis.fetch, cookies: Cookies) =>
-	orgApi(fetch, cookies).get<{ id: string; produit?: { nom: string }; statut: string }[]>(
-		'/api/organization/quarantine-batches'
-	);
+	orgApi(fetch, cookies).get<ApiQuarantineBatch[]>('/api/organization/quarantine-batches');
 
 export const getEquipment = (fetch: typeof globalThis.fetch, cookies: Cookies) =>
 	orgApi(fetch, cookies).get<ApiEquipment[]>('/api/organization/equipment');
