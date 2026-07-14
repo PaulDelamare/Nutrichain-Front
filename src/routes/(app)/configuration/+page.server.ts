@@ -5,6 +5,7 @@ import {
 	getLocations,
 	getCustomers,
 	getProductsForConfig,
+	getEquipment,
 	createSupplier,
 	setSupplierActive,
 	createLocation,
@@ -12,29 +13,33 @@ import {
 	createCustomer,
 	setCustomerActive,
 	createProduct,
-	setProductActive
+	setProductActive,
+	createEquipment
 } from '$lib/Api/organization.server';
 import { exigerAdministrateur, refusAdministration } from '$lib/server/guards';
+import { estTypeMateriel } from '$lib/config/equipment';
 
 export const load: PageServerLoad = async ({ fetch, cookies, locals }) => {
 	// Le garde de layout ne couvre pas les actions : on garde aussi ce load.
 	exigerAdministrateur(locals.user, "La configuration de l'usine");
 
 	// includeArchived : l'écran d'administration montre TOUT, y compris les archivés, pour réactiver.
-	const [suppliers, locations, customers, products] = await Promise.all([
+	const [suppliers, locations, customers, products, equipment] = await Promise.all([
 		getSuppliers(fetch, cookies, true),
 		getLocations(fetch, cookies, true),
 		getCustomers(fetch, cookies, true),
-		getProductsForConfig(fetch, cookies, true)
+		getProductsForConfig(fetch, cookies, true),
+		getEquipment(fetch, cookies)
 	]);
 
-	const first = [suppliers, locations, customers, products].find((r) => !r.ok);
+	const first = [suppliers, locations, customers, products, equipment].find((r) => !r.ok);
 
 	return {
 		suppliers: suppliers.ok ? suppliers.data : [],
 		locations: locations.ok ? locations.data : [],
 		customers: customers.ok ? customers.data : [],
 		products: products.ok ? products.data : [],
+		equipment: equipment.ok ? equipment.data : [],
 		error: first && !first.ok ? first.message : undefined
 	};
 };
@@ -200,5 +205,36 @@ export const actions = {
 		);
 		if (!res.ok) return fail(res.status, { productError: res.message });
 		return { productToggled: res.data };
+	},
+
+	createEquipment: async ({ request, fetch, cookies, locals }) => {
+		const form = await request.formData();
+		const nom = champ(form, 'nom');
+		const type = champ(form, 'type');
+		const id_lieu = champ(form, 'id_lieu');
+		const tempRaw = champ(form, 'temp_seuil_max');
+		const sensor_id = champ(form, 'sensor_id');
+
+		const refus = refusAdministration(locals.user);
+		if (refus) return fail(403, { equipmentError: refus, nom });
+		if (nom.length < 3 || !estTypeMateriel(type) || !id_lieu) {
+			return fail(400, { equipmentError: 'Nom (3 caractères), type et emplacement requis.', nom });
+		}
+
+		// Le seuil n'a de sens que pour un matériel réfrigéré ; il reste facultatif.
+		const temp_seuil_max = tempRaw === '' ? undefined : Number(tempRaw);
+		if (temp_seuil_max !== undefined && !Number.isFinite(temp_seuil_max)) {
+			return fail(400, { equipmentError: 'Seuil de température invalide.', nom });
+		}
+
+		const res = await createEquipment(fetch, cookies, {
+			nom,
+			type,
+			id_lieu,
+			...(temp_seuil_max !== undefined ? { temp_seuil_max } : {}),
+			...(sensor_id ? { sensor_id } : {})
+		});
+		if (!res.ok) return fail(res.status, { equipmentError: res.message, nom });
+		return { equipmentCreated: res.data };
 	}
 } satisfies Actions;

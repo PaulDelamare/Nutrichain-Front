@@ -2,9 +2,13 @@
 	import { enhance } from '$app/forms';
 	import PageHead from '$lib/components/page/PageHead.svelte';
 	import ConfigList from '$lib/components/config/ConfigList.svelte';
+	import { EQUIPMENT_TYPE_OPTIONS, equipmentTypeLabel } from '$lib/config/equipment';
 	import type { ActionData, PageData } from './$types';
 
 	let { data, form }: { data: PageData; form: ActionData } = $props();
+
+	// Un matériel se rattache à un emplacement ACTIF : l'API refuse un lieu archivé (409).
+	const activeLocations = $derived(data.locations.filter((l) => l.is_active));
 
 	let envoi = $state(false);
 	const pendant = () => {
@@ -166,6 +170,58 @@
 			{pendant}
 		/>
 	</section>
+
+	<section>
+		<h2>Matériel</h2>
+		<p class="hint">
+			Frigos, congélateurs, cuves… rattachés à un emplacement. C'est ce que l'opérateur scanne pour
+			situer un lot ; un frigo surveillé déclenche l'alerte froid.
+		</p>
+		{#if activeLocations.length === 0}
+			<p class="hint">Créez d'abord un emplacement actif pour pouvoir ajouter du matériel.</p>
+		{:else}
+			<form method="POST" action="?/createEquipment" use:enhance={pendant}>
+				<input
+					name="nom"
+					placeholder="Nom (ex. Frigo A)"
+					required
+					minlength="3"
+					value={form?.nom ?? ''}
+				/>
+				<select name="type" required>
+					{#each EQUIPMENT_TYPE_OPTIONS as opt (opt.value)}
+						<option value={opt.value}>{opt.label}</option>
+					{/each}
+				</select>
+				<select name="id_lieu" required>
+					{#each activeLocations as lieu (lieu.id)}
+						<option value={lieu.id}>{lieu.nom}</option>
+					{/each}
+				</select>
+				<input
+					name="temp_seuil_max"
+					type="number"
+					step="0.1"
+					placeholder="Seuil °C (frigo/congélateur)"
+				/>
+				<input name="sensor_id" placeholder="Capteur IoT (optionnel)" />
+				<button type="submit" disabled={envoi}>Ajouter</button>
+			</form>
+		{/if}
+		{#if form?.equipmentError}<p class="error" role="alert">{form.equipmentError}</p>{/if}
+		<ul class="equip-list">
+			{#each data.equipment as m (m.id)}
+				<li>
+					<span class="title">{m.nom}</span>
+					<span class="sub"
+						>{equipmentTypeLabel(m.type)}{m.lieu ? ` · ${m.lieu.nom}` : ''} · {m.statut}</span
+					>
+				</li>
+			{:else}
+				<li class="empty">Aucun matériel. Ajoutez-en un et imprimez son étiquette à scanner.</li>
+			{/each}
+		</ul>
+	</section>
 </div>
 
 <style>
@@ -202,13 +258,15 @@
 		gap: 0.5rem;
 	}
 
-	input {
+	input,
+	select {
 		flex: 1 1 8rem;
 		min-width: 0;
 		padding: 0.45rem 0.6rem;
 		border: 1px solid #cbd5e1;
 		border-radius: 0.375rem;
 		font-size: 0.875rem;
+		background: #fff;
 	}
 
 	button {
@@ -235,5 +293,36 @@
 		margin: 0.5rem 0 0;
 		font-size: 0.8125rem;
 		color: #991b1b;
+	}
+
+	.equip-list {
+		list-style: none;
+		margin: 0.75rem 0 0;
+		padding: 0;
+	}
+
+	.equip-list li {
+		padding: 0.6rem 0;
+		border-bottom: 1px solid #f1f5f9;
+	}
+
+	.equip-list li:last-child {
+		border-bottom: none;
+	}
+
+	.title {
+		font-weight: 500;
+		color: var(--nc-text);
+	}
+
+	.sub {
+		margin-left: 0.5rem;
+		font-size: 0.8125rem;
+		color: var(--nc-text-subtle);
+	}
+
+	.empty {
+		color: var(--nc-text-subtle);
+		font-size: 0.875rem;
 	}
 </style>

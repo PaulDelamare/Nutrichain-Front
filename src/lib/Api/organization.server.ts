@@ -146,6 +146,12 @@ export const getQuarantineBatches = (fetch: typeof globalThis.fetch, cookies: Co
 export const getEquipment = (fetch: typeof globalThis.fetch, cookies: Cookies) =>
 	orgApi(fetch, cookies).get<ApiEquipment[]>('/api/organization/equipment');
 
+export const createEquipment = (
+	fetch: typeof globalThis.fetch,
+	cookies: Cookies,
+	body: { nom: string; type: string; id_lieu: string; temp_seuil_max?: number; sensor_id?: string }
+) => orgApi(fetch, cookies).post<ApiEquipment>('/api/organization/equipment', body);
+
 export const getMovements = (
 	fetch: typeof globalThis.fetch,
 	cookies: Cookies,
