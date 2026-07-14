@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { enhance } from '$app/forms';
 	import PageHead from '$lib/components/page/PageHead.svelte';
+	import ConfigList from '$lib/components/config/ConfigList.svelte';
 	import type { ActionData, PageData } from './$types';
 
 	let { data, form }: { data: PageData; form: ActionData } = $props();
@@ -17,7 +18,7 @@
 
 <PageHead
 	heading="Configuration de l'usine"
-	description="Emplacements et fournisseurs — les données de référence sans lesquelles aucune réception n'est possible."
+	description="Les données de référence de votre organisation : emplacements, fournisseurs, clients, produits. Sans elles, aucune réception ni expédition n'est possible."
 />
 
 {#if data.error}
@@ -25,11 +26,9 @@
 {/if}
 
 <div class="grid">
-	<!-- Emplacements -->
 	<section>
 		<h2>Emplacements</h2>
 		<p class="hint">Quais, chambres froides, zones de production. Requis pour créer un matériel.</p>
-
 		<form method="POST" action="?/createLocation" use:enhance={pendant}>
 			<input
 				name="nom"
@@ -42,37 +41,24 @@
 			<input name="description" placeholder="Description (optionnel)" />
 			<button type="submit" disabled={envoi}>Ajouter</button>
 		</form>
-		{#if form?.locationError}
-			<p class="error" role="alert">{form.locationError}</p>
-		{/if}
-
-		<ul>
-			{#each data.locations as loc (loc.id)}
-				<li class:archived={!loc.is_active}>
-					<div>
-						<span class="nom">{loc.nom}</span>
-						<span class="meta">{loc.type}</span>
-						{#if !loc.is_active}<span class="tag">Archivé</span>{/if}
-					</div>
-					<form method="POST" action="?/toggleLocation" use:enhance={pendant}>
-						<input type="hidden" name="id" value={loc.id} />
-						<input type="hidden" name="active" value={String(!loc.is_active)} />
-						<button type="submit" class="link" disabled={envoi}>
-							{loc.is_active ? 'Archiver' : 'Réactiver'}
-						</button>
-					</form>
-				</li>
-			{:else}
-				<li class="empty">Aucun emplacement. Ajoutez-en un pour créer du matériel.</li>
-			{/each}
-		</ul>
+		{#if form?.locationError}<p class="error" role="alert">{form.locationError}</p>{/if}
+		<ConfigList
+			items={data.locations.map((l) => ({
+				id: l.id,
+				title: l.nom,
+				subtitle: l.type,
+				is_active: l.is_active
+			}))}
+			toggleAction="?/toggleLocation"
+			emptyLabel="Aucun emplacement. Ajoutez-en un pour créer du matériel."
+			{envoi}
+			{pendant}
+		/>
 	</section>
 
-	<!-- Fournisseurs -->
 	<section>
 		<h2>Fournisseurs</h2>
 		<p class="hint">L'amont de la traçabilité. Requis pour enregistrer une réception.</p>
-
 		<form method="POST" action="?/createSupplier" use:enhance={pendant}>
 			<input
 				name="nom_ferme"
@@ -85,37 +71,107 @@
 			<input name="type_produit" placeholder="Type de produit (optionnel)" />
 			<button type="submit" disabled={envoi}>Ajouter</button>
 		</form>
-		{#if form?.supplierError}
-			<p class="error" role="alert">{form.supplierError}</p>
-		{/if}
+		{#if form?.supplierError}<p class="error" role="alert">{form.supplierError}</p>{/if}
+		<ConfigList
+			items={data.suppliers.map((s) => ({
+				id: s.id,
+				title: s.nom_ferme,
+				subtitle: s.adresse_siege,
+				is_active: s.is_active
+			}))}
+			toggleAction="?/toggleSupplier"
+			emptyLabel="Aucun fournisseur. Ajoutez-en un pour réceptionner."
+			{envoi}
+			{pendant}
+		/>
+	</section>
 
-		<ul>
-			{#each data.suppliers as sup (sup.id)}
-				<li class:archived={!sup.is_active}>
-					<div>
-						<span class="nom">{sup.nom_ferme}</span>
-						<span class="meta">{sup.adresse_siege}</span>
-						{#if !sup.is_active}<span class="tag">Archivé</span>{/if}
-					</div>
-					<form method="POST" action="?/toggleSupplier" use:enhance={pendant}>
-						<input type="hidden" name="id" value={sup.id} />
-						<input type="hidden" name="active" value={String(!sup.is_active)} />
-						<button type="submit" class="link" disabled={envoi}>
-							{sup.is_active ? 'Archiver' : 'Réactiver'}
-						</button>
-					</form>
-				</li>
-			{:else}
-				<li class="empty">Aucun fournisseur. Ajoutez-en un pour réceptionner.</li>
-			{/each}
-		</ul>
+	<section>
+		<h2>Clients</h2>
+		<p class="hint">L'aval de la traçabilité. Requis pour enregistrer une expédition.</p>
+		<form method="POST" action="?/createCustomer" use:enhance={pendant}>
+			<input
+				name="nom_enseigne"
+				placeholder="Enseigne (ex. Super U Rennes)"
+				required
+				minlength="2"
+				value={form?.nom_enseigne ?? ''}
+			/>
+			<input name="adresse_livraison" placeholder="Adresse de livraison" required minlength="2" />
+			<input name="email" type="email" placeholder="E-mail (optionnel)" />
+			<button type="submit" disabled={envoi}>Ajouter</button>
+		</form>
+		{#if form?.customerError}<p class="error" role="alert">{form.customerError}</p>{/if}
+		<ConfigList
+			items={data.customers.map((c) => ({
+				id: c.id,
+				title: c.nom_enseigne,
+				subtitle: c.adresse_livraison,
+				is_active: c.is_active
+			}))}
+			toggleAction="?/toggleCustomer"
+			emptyLabel="Aucun client. Ajoutez-en un pour expédier."
+			{envoi}
+			{pendant}
+		/>
+	</section>
+
+	<section>
+		<h2>Produits</h2>
+		<p class="hint">Le catalogue. Requis pour réceptionner et pour produire (transformation).</p>
+		<form method="POST" action="?/createProduct" use:enhance={pendant} class="produit">
+			<input
+				name="nom"
+				placeholder="Nom (ex. Yaourt nature 125g)"
+				required
+				minlength="2"
+				value={form?.nom ?? ''}
+			/>
+			<input
+				name="code_gtin"
+				placeholder="Code GTIN (8 à 14 chiffres)"
+				required
+				inputmode="numeric"
+			/>
+			<input name="categorie" placeholder="Catégorie (ex. Frais)" required minlength="2" />
+			<input name="unite_reference" placeholder="Unité (ex. KG)" required />
+			<input
+				name="duree_conservation_defaut"
+				type="number"
+				min="0"
+				placeholder="Conservation (jours)"
+				required
+			/>
+			<input
+				name="seuil_alerte_stock"
+				type="number"
+				min="0"
+				step="0.01"
+				placeholder="Seuil d'alerte stock"
+				required
+			/>
+			<button type="submit" disabled={envoi}>Ajouter</button>
+		</form>
+		{#if form?.productError}<p class="error" role="alert">{form.productError}</p>{/if}
+		<ConfigList
+			items={data.products.map((p) => ({
+				id: p.id,
+				title: p.nom,
+				subtitle: `${p.code_gtin} · ${p.categorie}`,
+				is_active: p.is_active
+			}))}
+			toggleAction="?/toggleProduct"
+			emptyLabel="Aucun produit. Ajoutez-en un pour réceptionner ou produire."
+			{envoi}
+			{pendant}
+		/>
 	</section>
 </div>
 
 <style>
 	.grid {
 		display: grid;
-		grid-template-columns: repeat(auto-fit, minmax(22rem, 1fr));
+		grid-template-columns: repeat(auto-fit, minmax(23rem, 1fr));
 		gap: 1rem;
 		align-items: start;
 	}
@@ -144,7 +200,6 @@
 		display: flex;
 		flex-wrap: wrap;
 		gap: 0.5rem;
-		margin-bottom: 0.5rem;
 	}
 
 	input {
@@ -167,64 +222,6 @@
 		cursor: pointer;
 	}
 
-	button.link {
-		background: none;
-		color: var(--nc-text-muted);
-		padding: 0;
-		font-size: 0.8125rem;
-		text-decoration: underline;
-	}
-
-	ul {
-		list-style: none;
-		margin: 0.75rem 0 0;
-		padding: 0;
-	}
-
-	li {
-		display: flex;
-		align-items: center;
-		justify-content: space-between;
-		gap: 1rem;
-		padding: 0.6rem 0;
-		border-bottom: 1px solid #f1f5f9;
-	}
-
-	li:last-child {
-		border-bottom: none;
-	}
-
-	li.archived .nom {
-		color: var(--nc-text-subtle);
-		text-decoration: line-through;
-	}
-
-	.nom {
-		font-weight: 500;
-		color: var(--nc-text);
-	}
-
-	.meta {
-		margin-left: 0.5rem;
-		font-size: 0.8125rem;
-		color: var(--nc-text-subtle);
-	}
-
-	.tag {
-		margin-left: 0.5rem;
-		padding: 0.1rem 0.45rem;
-		border-radius: 9999px;
-		background: #f1f5f9;
-		color: var(--nc-text-muted);
-		font-size: 0.7rem;
-	}
-
-	.empty {
-		color: var(--nc-text-subtle);
-		font-size: 0.875rem;
-		justify-content: flex-start;
-	}
-
 	.banner {
 		margin: 0 0 0.75rem;
 		padding: 0.5rem 0.75rem;
@@ -235,7 +232,7 @@
 	}
 
 	.error {
-		margin: 0 0 0.5rem;
+		margin: 0.5rem 0 0;
 		font-size: 0.8125rem;
 		color: #991b1b;
 	}

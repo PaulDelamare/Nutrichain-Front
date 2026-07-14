@@ -81,6 +81,10 @@ export type ApiCustomer = {
 	id: string;
 	nom_enseigne: string;
 	adresse_livraison: string;
+	contact_urgence?: string | null;
+	email?: string | null;
+	notes?: string | null;
+	is_active: boolean;
 };
 
 export type ApiShipment = {
@@ -206,8 +210,68 @@ export const setLocationActive = (
 ) =>
 	orgApi(fetch, cookies).patch<ApiLocation>(`/api/organization/locations/${id}/active`, { active });
 
-export const getCustomers = (fetch: typeof globalThis.fetch, cookies: Cookies) =>
-	orgApi(fetch, cookies).get<ApiCustomer[]>('/api/organization/customers');
+export const getCustomers = (
+	fetch: typeof globalThis.fetch,
+	cookies: Cookies,
+	includeArchived = false
+) =>
+	orgApi(fetch, cookies).get<ApiCustomer[]>(
+		`/api/organization/customers${includeArchived ? '?includeArchived=true' : ''}`
+	);
+
+export const createCustomer = (
+	fetch: typeof globalThis.fetch,
+	cookies: Cookies,
+	body: { nom_enseigne: string; adresse_livraison: string; email?: string }
+) => orgApi(fetch, cookies).post<ApiCustomer>('/api/organization/customers', body);
+
+export const setCustomerActive = (
+	fetch: typeof globalThis.fetch,
+	cookies: Cookies,
+	id: string,
+	active: boolean
+) =>
+	orgApi(fetch, cookies).patch<ApiCustomer>(`/api/organization/customers/${id}/active`, { active });
+
+export type ApiProductFull = {
+	id: string;
+	nom: string;
+	code_gtin: string;
+	categorie: string;
+	is_active: boolean;
+};
+
+export const getProductsForConfig = (
+	fetch: typeof globalThis.fetch,
+	cookies: Cookies,
+	includeArchived = false
+) =>
+	orgApi(fetch, cookies).get<ApiProductFull[]>(
+		`/api/traceability/products${includeArchived ? '?includeArchived=true' : ''}`
+	);
+
+export const createProduct = (
+	fetch: typeof globalThis.fetch,
+	cookies: Cookies,
+	body: {
+		nom: string;
+		code_gtin: string;
+		categorie: string;
+		duree_conservation_defaut: number;
+		seuil_alerte_stock: number;
+		unite_reference: string;
+	}
+) => orgApi(fetch, cookies).post<ApiProductFull>('/api/organization/products', body);
+
+export const setProductActive = (
+	fetch: typeof globalThis.fetch,
+	cookies: Cookies,
+	id: string,
+	active: boolean
+) =>
+	orgApi(fetch, cookies).patch<ApiProductFull>(`/api/organization/products/${id}/active`, {
+		active
+	});
 
 export const getShipments = (fetch: typeof globalThis.fetch, cookies: Cookies) =>
 	orgApi(fetch, cookies).get<ApiShipment[]>('/api/organization/shipments');

@@ -4,10 +4,16 @@ import { isHttpError } from '@sveltejs/kit';
 const api = {
 	getSuppliers: vi.fn(),
 	getLocations: vi.fn(),
+	getCustomers: vi.fn(),
+	getProductsForConfig: vi.fn(),
 	createSupplier: vi.fn(),
 	setSupplierActive: vi.fn(),
 	createLocation: vi.fn(),
-	setLocationActive: vi.fn()
+	setLocationActive: vi.fn(),
+	createCustomer: vi.fn(),
+	setCustomerActive: vi.fn(),
+	createProduct: vi.fn(),
+	setProductActive: vi.fn()
 };
 
 vi.mock('$lib/Api/organization.server', () => api);
@@ -51,8 +57,12 @@ beforeEach(() => {
 	Object.values(api).forEach((m) => m.mockReset());
 	api.getSuppliers.mockResolvedValue({ ok: true, data: [] });
 	api.getLocations.mockResolvedValue({ ok: true, data: [] });
+	api.getCustomers.mockResolvedValue({ ok: true, data: [] });
+	api.getProductsForConfig.mockResolvedValue({ ok: true, data: [] });
 	api.createSupplier.mockResolvedValue({ ok: true, data: { id: 's' } });
 	api.createLocation.mockResolvedValue({ ok: true, data: { id: 'l' } });
+	api.createCustomer.mockResolvedValue({ ok: true, data: { id: 'c' } });
+	api.createProduct.mockResolvedValue({ ok: true, data: { id: 'p' } });
 });
 
 describe('configuration — réservée aux administrateurs', () => {
@@ -82,6 +92,69 @@ describe('configuration — réservée aux administrateurs', () => {
 		});
 		expect(s).toBe(403);
 		expect(api.createLocation).not.toHaveBeenCalled();
+	});
+
+	it('refuse les actions createCustomer et createProduct à un non-admin', async () => {
+		// eslint-disable-next-line @typescript-eslint/no-explicit-any
+		const c = await statutAction((mod as any).actions.createCustomer, {
+			...form({ nom_enseigne: 'X', adresse_livraison: 'Y' }),
+			locals: { user: user(false) }
+		});
+		// eslint-disable-next-line @typescript-eslint/no-explicit-any
+		const p = await statutAction((mod as any).actions.createProduct, {
+			...form({
+				nom: 'X',
+				code_gtin: '12345678',
+				categorie: 'C',
+				unite_reference: 'KG',
+				duree_conservation_defaut: '30',
+				seuil_alerte_stock: '5'
+			}),
+			locals: { user: user(false) }
+		});
+		expect(c).toBe(403);
+		expect(p).toBe(403);
+		expect(api.createCustomer).not.toHaveBeenCalled();
+		expect(api.createProduct).not.toHaveBeenCalled();
+	});
+
+	it('laisse un admin créer un client et un produit', async () => {
+		// eslint-disable-next-line @typescript-eslint/no-explicit-any
+		const c = await (mod as any).actions.createCustomer({
+			...form({ nom_enseigne: 'Super U', adresse_livraison: '1 rue' }),
+			locals: { user: user(true) }
+		});
+		// eslint-disable-next-line @typescript-eslint/no-explicit-any
+		const p = await (mod as any).actions.createProduct({
+			...form({
+				nom: 'Yaourt',
+				code_gtin: '3456789012345',
+				categorie: 'Frais',
+				unite_reference: 'KG',
+				duree_conservation_defaut: '30',
+				seuil_alerte_stock: '10'
+			}),
+			locals: { user: user(true) }
+		});
+		expect(c).toMatchObject({ customerCreated: { id: 'c' } });
+		expect(p).toMatchObject({ productCreated: { id: 'p' } });
+	});
+
+	it('refuse un GTIN mal formé côté serveur avant l’appel API', async () => {
+		// eslint-disable-next-line @typescript-eslint/no-explicit-any
+		const res = await (mod as any).actions.createProduct({
+			...form({
+				nom: 'X',
+				code_gtin: 'ABC',
+				categorie: 'Frais',
+				unite_reference: 'KG',
+				duree_conservation_defaut: '30',
+				seuil_alerte_stock: '10'
+			}),
+			locals: { user: user(true) }
+		});
+		expect(res).toMatchObject({ status: 400 });
+		expect(api.createProduct).not.toHaveBeenCalled();
 	});
 
 	it('laisse un admin créer un fournisseur', async () => {
