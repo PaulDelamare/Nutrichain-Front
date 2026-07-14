@@ -57,13 +57,14 @@ export const actions = {
 
 	// Barrière qualité : le contrôle libère le lot (conforme) ou le met en quarantaine (non conforme).
 	control: async ({ request, fetch, cookies, locals }) => {
-		exigerDecisionQualite(locals.user, "La saisie d'un contrôle qualité");
-
 		const form = await request.formData();
 		const lotId = String(form.get('lotId') ?? '').trim();
 		const typeTest = String(form.get('typeTest') ?? '').trim();
 		const resultat = String(form.get('resultat') ?? '');
 		const notes = String(form.get('notes') ?? '').trim();
+
+		const refus = refusDecisionQualite(locals.user);
+		if (refus) return fail(403, { controlError: refus, controlLotId: lotId });
 
 		if (typeTest.length < 3) {
 			return fail(400, {
