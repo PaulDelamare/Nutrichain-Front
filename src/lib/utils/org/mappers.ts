@@ -4,11 +4,12 @@ import type {
 	ApiEquipment,
 	ApiMember,
 	ApiMovement,
-	ApiQualityControl
+	ApiQualityControl,
+	ApiQuarantineBatch
 } from '$lib/Api/organization.server';
 import type { ApiBatch, ApiGenealogy } from '$lib/Api/traceability.server';
 import type { Kpi, EpcisEvent, TaskItem } from '$lib/types/dashboard';
-import type { ColdAlertRow, ColdIncident } from '$lib/types/cold';
+import type { ColdAlertLot, ColdAlertRow, ColdIncident } from '$lib/types/cold';
 import type { NcRow, QuarantineLot } from '$lib/types/nc';
 import type { Recall } from '$lib/types/recall';
 import type { AppUser } from '$lib/types/user';
@@ -65,7 +66,8 @@ const RECALL_ALERT_TYPES = ['PRODUCT_RECALL', 'RAPPEL'];
 
 export function alertsToCold(
 	alerts: ApiAlert[],
-	equipment: ApiEquipment[]
+	equipment: ApiEquipment[],
+	quarantineBatches: ApiQuarantineBatch[] = []
 ): { incident: ColdIncident | null; rows: ColdAlertRow[] } {
 	const cold = alerts.filter((a) => COLD_ALERT_TYPES.includes(a.type) && a.statut === 'ACTIVE');
 	if (cold.length === 0) return { incident: null, rows: [] };
@@ -78,19 +80,24 @@ export function alertsToCold(
 	const rows: ColdAlertRow[] = cold.map((a) => {
 		const equip = equipment.find((e) => e.id === a.id_materiel);
 		const temp = equip?.temp_actuelle != null ? `${equip.temp_actuelle} °C` : '—';
-		const statut =
-			a.niveau_gravite === 'CRITIQUE'
-				? 'critique'
-				: a.niveau_gravite === 'MOYENNE'
-					? 'investigation'
-					: 'investigation';
+		const statut = a.niveau_gravite === 'CRITIQUE' ? 'critique' : 'investigation';
+
+		// L'alerte porte l'équipement en excursion ; les lots impactés sont ceux mis en quarantaine
+		// SUR CET équipement. C'est ce qui relie l'alerte (l'effet visible) aux lots (le concret).
+		const lotsImpactes: ColdAlertLot[] = a.id_materiel
+			? quarantineBatches
+					.filter((b) => b.id_materiel_actuel === a.id_materiel)
+					.map((b) => ({ id: b.id, produit: b.produit?.nom ?? '—' }))
+			: [];
+
 		return {
 			id: shortRef(a.id),
 			site: equip?.lieu?.nom ?? '—',
 			zone: equip?.nom ?? '—',
-			tempMax: temp,
+			tempActuelle: temp,
 			depuis: fmtRelative(a.created_at),
-			statut
+			statut,
+			lotsImpactes
 		};
 	});
 

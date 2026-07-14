@@ -21,9 +21,10 @@
 			a.id,
 			a.site,
 			a.zone,
-			a.tempMax,
+			a.tempActuelle,
 			a.statut,
-			a.depuis
+			a.depuis,
+			...a.lotsImpactes.map((l) => l.produit)
 		])
 	);
 </script>

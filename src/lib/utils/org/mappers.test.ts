@@ -89,6 +89,25 @@ describe('alertsToCold', () => {
 		expect(rows[0].site).toBe('—');
 		expect(rows[0].zone).toBe('—');
 	});
+
+	it('relie l’alerte aux lots en quarantaine SUR LE MÊME équipement', () => {
+		const { rows } = alertsToCold(
+			[alert({ id_materiel: 'frigo-1' })],
+			[{ id: 'frigo-1', nom: 'Frigo A', lieu: { nom: 'Quai' } } as never],
+			[
+				{ id: 'lot-a', produit: { nom: 'Beurre' }, id_materiel_actuel: 'frigo-1' },
+				{ id: 'lot-b', produit: { nom: 'Lait' }, id_materiel_actuel: 'AUTRE-frigo' }
+			] as never
+		);
+
+		// Seul le lot du frigo en excursion est rattaché — pas celui d'un autre équipement.
+		expect(rows[0].lotsImpactes).toEqual([{ id: 'lot-a', produit: 'Beurre' }]);
+	});
+
+	it('ne rattache aucun lot quand aucun n’est en quarantaine sur cet équipement', () => {
+		const { rows } = alertsToCold([alert({ id_materiel: 'frigo-1' })], [], []);
+		expect(rows[0].lotsImpactes).toEqual([]);
+	});
 });
 
 describe('alertsToRappels', () => {

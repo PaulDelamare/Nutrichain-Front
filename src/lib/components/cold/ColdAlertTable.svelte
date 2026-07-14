@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { resolve } from '$app/paths';
 	import ColdStatusBadge from './ColdStatusBadge.svelte';
 	import type { ColdAlertRow } from '$lib/types/cold';
 
@@ -16,7 +17,8 @@
 				<th>ID</th>
 				<th>Site</th>
 				<th>Zone</th>
-				<th>Temp. max</th>
+				<th>Temp. actuelle</th>
+				<th>Lots impactés</th>
 				<th>Depuis</th>
 				<th>Statut</th>
 			</tr>
@@ -27,7 +29,22 @@
 					<td class="id">{row.id}</td>
 					<td>{row.site}</td>
 					<td>{row.zone}</td>
-					<td>{row.tempMax}</td>
+					<td>{row.tempActuelle}</td>
+					<td class="lots">
+						{#if row.lotsImpactes.length === 0}
+							<span class="none">—</span>
+						{:else}
+							{#each row.lotsImpactes as lot (lot.id)}
+								<a
+									href={resolve('/(app)/fiche-lot/[lotId]', {
+										lotId: encodeURIComponent(lot.id)
+									})}
+								>
+									{lot.produit}
+								</a>
+							{/each}
+						{/if}
+					</td>
 					<td>{row.depuis}</td>
 					<td><ColdStatusBadge statut={row.statut} /></td>
 				</tr>
@@ -75,5 +92,25 @@
 	.id {
 		font-weight: 500;
 		color: var(--nc-text);
+	}
+
+	.lots {
+		display: flex;
+		flex-wrap: wrap;
+		gap: 0.35rem;
+	}
+
+	.lots a {
+		color: var(--nc-brand);
+		text-decoration: none;
+		font-weight: 500;
+	}
+
+	.lots a:hover {
+		text-decoration: underline;
+	}
+
+	.none {
+		color: var(--nc-text-subtle);
 	}
 </style>
