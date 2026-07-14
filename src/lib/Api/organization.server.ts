@@ -64,6 +64,17 @@ export type ApiSupplier = {
 	id: string;
 	nom_ferme: string;
 	adresse_siege: string;
+	type_produit?: string | null;
+	contact_qualite?: string | null;
+	is_active: boolean;
+};
+
+export type ApiLocation = {
+	id: string;
+	nom: string;
+	type: string;
+	description?: string | null;
+	is_active: boolean;
 };
 
 export type ApiCustomer = {
@@ -125,8 +136,75 @@ export const getMovements = (
 	);
 };
 
-export const getSuppliers = (fetch: typeof globalThis.fetch, cookies: Cookies) =>
-	orgApi(fetch, cookies).get<ApiSupplier[]>('/api/organization/suppliers');
+export const getSuppliers = (
+	fetch: typeof globalThis.fetch,
+	cookies: Cookies,
+	includeArchived = false
+) =>
+	orgApi(fetch, cookies).get<ApiSupplier[]>(
+		`/api/organization/suppliers${includeArchived ? '?includeArchived=true' : ''}`
+	);
+
+export const createSupplier = (
+	fetch: typeof globalThis.fetch,
+	cookies: Cookies,
+	body: {
+		nom_ferme: string;
+		adresse_siege: string;
+		type_produit?: string;
+		contact_qualite?: string;
+	}
+) => orgApi(fetch, cookies).post<ApiSupplier>('/api/organization/suppliers', body);
+
+export const updateSupplier = (
+	fetch: typeof globalThis.fetch,
+	cookies: Cookies,
+	id: string,
+	body: Partial<{
+		nom_ferme: string;
+		adresse_siege: string;
+		type_produit: string;
+		contact_qualite: string;
+	}>
+) => orgApi(fetch, cookies).patch<ApiSupplier>(`/api/organization/suppliers/${id}`, body);
+
+export const setSupplierActive = (
+	fetch: typeof globalThis.fetch,
+	cookies: Cookies,
+	id: string,
+	active: boolean
+) =>
+	orgApi(fetch, cookies).patch<ApiSupplier>(`/api/organization/suppliers/${id}/active`, { active });
+
+export const getLocations = (
+	fetch: typeof globalThis.fetch,
+	cookies: Cookies,
+	includeArchived = false
+) =>
+	orgApi(fetch, cookies).get<ApiLocation[]>(
+		`/api/organization/locations${includeArchived ? '?includeArchived=true' : ''}`
+	);
+
+export const createLocation = (
+	fetch: typeof globalThis.fetch,
+	cookies: Cookies,
+	body: { nom: string; type: string; description?: string }
+) => orgApi(fetch, cookies).post<ApiLocation>('/api/organization/locations', body);
+
+export const updateLocation = (
+	fetch: typeof globalThis.fetch,
+	cookies: Cookies,
+	id: string,
+	body: Partial<{ nom: string; type: string; description: string }>
+) => orgApi(fetch, cookies).patch<ApiLocation>(`/api/organization/locations/${id}`, body);
+
+export const setLocationActive = (
+	fetch: typeof globalThis.fetch,
+	cookies: Cookies,
+	id: string,
+	active: boolean
+) =>
+	orgApi(fetch, cookies).patch<ApiLocation>(`/api/organization/locations/${id}/active`, { active });
 
 export const getCustomers = (fetch: typeof globalThis.fetch, cookies: Cookies) =>
 	orgApi(fetch, cookies).get<ApiCustomer[]>('/api/organization/customers');
