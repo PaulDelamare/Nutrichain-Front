@@ -16,8 +16,8 @@
 <p class="reservee">
 	<span class="cadenas" aria-hidden="true">🔒</span>
 	<span>
-		<strong>{action}</strong> est une décision qualité, réservée aux rôles qualité, administrateur et
-		propriétaire. Votre rôle : {roleLabel(role)}.
+		<strong>{action}</strong> est une décision qualité, réservée aux rôles qualité, administrateur
+		et propriétaire. Votre rôle : {roleLabel(role)}.
 		{#if estOperateur}
 			Celui qui réceptionne ou transforme ne valide pas sa propre marchandise — c'est la séparation
 			des tâches HACCP.

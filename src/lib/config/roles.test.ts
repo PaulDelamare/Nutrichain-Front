@@ -1,11 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import {
-	peutDeciderQualite,
-	peutAdministrer,
-	peutEcrire,
-	estRole,
-	roleLabel
-} from './roles';
+import { peutDeciderQualite, peutAdministrer, peutEcrire, estRole, roleLabel } from './roles';
 
 describe('séparation des tâches HACCP', () => {
 	it("exclut l'opérateur des décisions qualité — il ne valide pas sa propre marchandise", () => {

@@ -61,7 +61,7 @@ describe('refusDecisionQualite — garde d’ACTION', () => {
 		expect(refusDecisionQualite(utilisateur(role))).not.toBeNull();
 	});
 
-	it("ne refuse rien quand le rôle est inconnu", () => {
+	it('ne refuse rien quand le rôle est inconnu', () => {
 		expect(refusDecisionQualite(utilisateur(undefined))).toBeNull();
 	});
 });
