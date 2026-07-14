@@ -100,6 +100,15 @@ export const navGroups: NavGroup[] = [
 		label: 'Système',
 		items: [
 			{
+				href: '/configuration',
+				label: 'Configuration',
+				title: 'Configuration',
+				heading: "Configuration de l'usine",
+				description:
+					'Emplacements et fournisseurs — les données de référence de votre organisation.',
+				roles: ADMIN_ROLES
+			},
+			{
 				href: '/utilisateurs',
 				label: 'Utilisateurs',
 				title: 'Utilisateurs',

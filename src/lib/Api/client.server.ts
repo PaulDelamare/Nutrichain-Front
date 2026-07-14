@@ -127,9 +127,24 @@ export class ApiClient {
 		path: string,
 		body?: unknown
 	): Promise<(ApiOk<T> & { response: Response }) | (ApiErr & { response?: Response })> {
+		return this.write<T>('POST', path, body);
+	}
+
+	patch<T>(
+		path: string,
+		body?: unknown
+	): Promise<(ApiOk<T> & { response: Response }) | (ApiErr & { response?: Response })> {
+		return this.write<T>('PATCH', path, body);
+	}
+
+	private async write<T>(
+		method: 'POST' | 'PATCH',
+		path: string,
+		body?: unknown
+	): Promise<(ApiOk<T> & { response: Response }) | (ApiErr & { response?: Response })> {
 		try {
 			const res = await this.fetch(this.url(path), {
-				method: 'POST',
+				method,
 				headers: this.headers({ 'Content-Type': 'application/json' }),
 				body: body ? JSON.stringify(body) : undefined
 			});
