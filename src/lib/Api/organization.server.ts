@@ -104,15 +104,18 @@ function orgApi(fetch: typeof globalThis.fetch, cookies: Cookies) {
 export const getMembers = (fetch: typeof globalThis.fetch, cookies: Cookies) =>
 	orgApi(fetch, cookies).get<ApiMember[]>('/api/organization/members');
 
-export const updateMemberRole = (
+export const changeMemberRole = (
 	fetch: typeof globalThis.fetch,
 	cookies: Cookies,
 	memberId: string,
 	role: string
-) => orgApi(fetch, cookies).patch<ApiMember>(`/api/organization/members/${memberId}/role`, { role });
+) =>
+	api(fetch, cookies, { useApiKey: false }).patch(`/api/organization/members/${memberId}/role`, {
+		role
+	});
 
 export const revokeMember = (fetch: typeof globalThis.fetch, cookies: Cookies, memberId: string) =>
-	orgApi(fetch, cookies).post<{ revoked: boolean }>(
+	api(fetch, cookies, { useApiKey: false }).post(
 		`/api/organization/members/${memberId}/revoke`,
 		{}
 	);
@@ -142,13 +145,7 @@ export const getEquipment = (fetch: typeof globalThis.fetch, cookies: Cookies) =
 export const createEquipment = (
 	fetch: typeof globalThis.fetch,
 	cookies: Cookies,
-	body: {
-		nom: string;
-		type: string;
-		id_lieu: string;
-		temp_seuil_max?: number;
-		sensor_id?: string;
-	}
+	body: { nom: string; type: string; id_lieu: string; temp_seuil_max?: number; sensor_id?: string }
 ) => orgApi(fetch, cookies).post<ApiEquipment>('/api/organization/equipment', body);
 
 export async function fetchEquipmentLabel(

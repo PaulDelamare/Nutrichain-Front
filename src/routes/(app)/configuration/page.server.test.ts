@@ -64,6 +64,8 @@ beforeEach(() => {
 	api.createLocation.mockResolvedValue({ ok: true, data: { id: 'l' } });
 	api.createCustomer.mockResolvedValue({ ok: true, data: { id: 'c' } });
 	api.createProduct.mockResolvedValue({ ok: true, data: { id: 'p' } });
+	api.getEquipment.mockResolvedValue({ ok: true, data: [] });
+	api.createEquipment.mockResolvedValue({ ok: true, data: { id: 'eq' } });
 });
 
 describe('configuration — réservée aux administrateurs', () => {
@@ -164,5 +166,57 @@ describe('configuration — réservée aux administrateurs', () => {
 		});
 		expect(res).toMatchObject({ status: 400 });
 		expect(api.createLocation).not.toHaveBeenCalled();
+	});
+
+	it("refuse l'action createEquipment à un non-admin", async () => {
+		// eslint-disable-next-line @typescript-eslint/no-explicit-any
+		const s = await statutAction((mod as any).actions.createEquipment, {
+			...form({ nom: 'Frigo A', type: 'FRIGO', id_lieu: 'loc-1' }),
+			locals: { user: user(false) }
+		});
+		expect(s).toBe(403);
+		expect(api.createEquipment).not.toHaveBeenCalled();
+	});
+
+	it('refuse un type de matériel hors référentiel avant l’appel API', async () => {
+		// eslint-disable-next-line @typescript-eslint/no-explicit-any
+		const res = await (mod as any).actions.createEquipment({
+			...form({ nom: 'Machine', type: 'ROBOT', id_lieu: 'loc-1' }),
+			locals: { user: user(true) }
+		});
+		expect(res).toMatchObject({ status: 400 });
+		expect(api.createEquipment).not.toHaveBeenCalled();
+	});
+
+	it('refuse un matériel sans emplacement avant l’appel API', async () => {
+		// eslint-disable-next-line @typescript-eslint/no-explicit-any
+		const res = await (mod as any).actions.createEquipment({
+			...form({ nom: 'Frigo A', type: 'FRIGO', id_lieu: '' }),
+			locals: { user: user(true) }
+		});
+		expect(res).toMatchObject({ status: 400 });
+		expect(api.createEquipment).not.toHaveBeenCalled();
+	});
+
+	it('laisse un admin créer un matériel non réfrigéré sans seuil', async () => {
+		// eslint-disable-next-line @typescript-eslint/no-explicit-any
+		const res = await (mod as any).actions.createEquipment({
+			...form({ nom: 'Étagère A', type: 'ETAGERE', id_lieu: 'loc-1', temp_seuil_max: '' }),
+			locals: { user: user(true) }
+		});
+		expect(api.createEquipment).toHaveBeenCalledOnce();
+		const [, , body] = api.createEquipment.mock.calls[0];
+		expect(body).not.toHaveProperty('temp_seuil_max');
+		expect(res).toMatchObject({ equipmentCreated: { id: 'eq' } });
+	});
+
+	it('exige un seuil pour un frigo avant l’appel API', async () => {
+		// eslint-disable-next-line @typescript-eslint/no-explicit-any
+		const res = await (mod as any).actions.createEquipment({
+			...form({ nom: 'Frigo A', type: 'FRIGO', id_lieu: 'loc-1', temp_seuil_max: '' }),
+			locals: { user: user(true) }
+		});
+		expect(res).toMatchObject({ status: 400 });
+		expect(api.createEquipment).not.toHaveBeenCalled();
 	});
 });

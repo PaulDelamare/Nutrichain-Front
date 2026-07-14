@@ -50,10 +50,18 @@ export type ApiGenealogyBatch = {
 	date_peremption?: string | null;
 };
 
+export type ApiOrigin = {
+	lot_number: string;
+	date_reception: string;
+	fournisseur: { id: string; nom_ferme: string };
+};
+
 export type ApiGenealogy = {
 	batchId: string;
 	upstream: ApiGenealogyBatch[];
 	downstream: ApiGenealogyBatch[];
+	// Points d'entrée matière première (la ferme). Optionnel : une API antérieure ne l'expose pas.
+	origines?: ApiOrigin[];
 };
 
 export type ApiRecallShipment = {

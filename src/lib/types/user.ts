@@ -1,8 +1,10 @@
 export type AppUser = {
-	id: string;
+	memberId: string;
 	userId: string;
 	email: string;
+	/** Libellé affiché (« Opérateur »). Pour agir sur le rôle, utiliser `rawRole`. */
 	role: string;
-	roleCode: string;
+	/** Rôle brut de l'API (`operator`…), clé des actions de changement de rôle. */
+	rawRole: string;
 	mfa: boolean;
 };

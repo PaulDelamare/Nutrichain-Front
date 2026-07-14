@@ -18,6 +18,10 @@
 	const users = $derived(
 		filterRowsByText(data.users, pageSearch.query, (u) => [u.email, u.role])
 	);
+
+	const isMemberForm = $derived(form && 'scope' in form && form.scope === 'member');
+	const inviteForm = $derived(isMemberForm ? null : form);
+	const memberForm = $derived(isMemberForm ? form : null);
 </script>
 
 <PageHead
@@ -29,27 +33,17 @@
 	<p class="banner">API indisponible — {data.error}</p>
 {/if}
 
-{#if form?.error}
-	<p class="banner err">{form.error}</p>
-{:else if form?.success}
-	<p class="banner ok">{form.message}</p>
+<InviteUserForm form={inviteForm} canInvite={data.canInvite} />
+
+{#if memberForm?.success}
+	<p class="feedback success">{memberForm.message}</p>
+{:else if memberForm?.error}
+	<p class="feedback error">{memberForm.error}</p>
 {/if}
 
-<InviteUserForm {form} canInvite={data.canInvite} />
-
-<UserTable rows={users} canManage={data.canManage} currentUserId={data.currentUserId} />
+<UserTable rows={users} canManage={data.canInvite} currentUserId={data.currentUserId} />
 
 <style>
-	.banner.err {
-		background: #fef2f2;
-		color: #991b1b;
-	}
-
-	.banner.ok {
-		background: #f0fdf4;
-		color: #166534;
-	}
-
 	.banner {
 		margin: 0 0 0.75rem;
 		padding: 0.5rem 0.75rem;
@@ -57,5 +51,22 @@
 		background: #fffbeb;
 		color: #92400e;
 		font-size: 0.8125rem;
+	}
+
+	.feedback {
+		margin: 0 0 0.75rem;
+		padding: 0.5rem 0.75rem;
+		border-radius: 0.375rem;
+		font-size: 0.8125rem;
+	}
+
+	.feedback.success {
+		background: rgba(27, 107, 92, 0.08);
+		color: var(--nc-brand-dark);
+	}
+
+	.feedback.error {
+		background: #fef2f2;
+		color: #991b1b;
 	}
 </style>

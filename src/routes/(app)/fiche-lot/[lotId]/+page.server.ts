@@ -3,9 +3,22 @@ import { refusDecisionQualite } from '$lib/server/guards';
 import type { Actions, PageServerLoad } from './$types';
 import { getBatchById, releaseQuarantine } from '$lib/Api/logistics.server';
 import { getAuditLogs, getMovements } from '$lib/Api/organization.server';
-import { getBatches, triggerRecall } from '$lib/Api/traceability.server';
-import type { ApiBatch } from '$lib/Api/traceability.server';
-import { auditLogsToBatchMouvements, batchToSheet, movementToBatchMouvement } from '$lib/utils/lots/mapBatch';
+import { getBatches, getGenealogy, triggerRecall } from '$lib/Api/traceability.server';
+import type { ApiBatch, ApiOrigin } from '$lib/Api/traceability.server';
+import {
+	auditLogsToBatchMouvements,
+	batchToSheet,
+	movementToBatchMouvement
+} from '$lib/utils/lots/mapBatch';
+
+async function loadOrigins(
+	fetch: typeof globalThis.fetch,
+	cookies: import('@sveltejs/kit').Cookies,
+	lotId: string
+): Promise<ApiOrigin[]> {
+	const gen = await getGenealogy(fetch, cookies, lotId);
+	return gen.ok ? (gen.data.origines ?? []) : [];
+}
 
 async function loadFromCatalog(
 	fetch: typeof globalThis.fetch,
@@ -51,25 +64,25 @@ async function enrichBatch(
 
 	return {
 		...batch,
-		mouvements:
-			mergedEvents.length > 0
-				? mergedEvents
-				: (batch.mouvements ?? [])
+		mouvements: mergedEvents.length > 0 ? mergedEvents : (batch.mouvements ?? [])
 	};
 }
 
 export const load: PageServerLoad = async ({ fetch, cookies, params }) => {
-	const res = await getBatchById(fetch, cookies, params.lotId);
+	const [res, origines] = await Promise.all([
+		getBatchById(fetch, cookies, params.lotId),
+		loadOrigins(fetch, cookies, params.lotId)
+	]);
 
 	if (res.ok) {
 		const enriched = await enrichBatch(fetch, cookies, res.data, params.lotId);
-		return { sheet: batchToSheet(enriched), source: 'api' as const };
+		return { sheet: batchToSheet(enriched), origines, source: 'api' as const };
 	}
 
 	const fromCatalog = await loadFromCatalog(fetch, cookies, params.lotId);
 	if (fromCatalog) {
 		const enriched = await enrichBatch(fetch, cookies, fromCatalog, params.lotId);
-		return { sheet: batchToSheet(enriched), source: 'api' as const };
+		return { sheet: batchToSheet(enriched), origines, source: 'api' as const };
 	}
 
 	if (res.status === 404) {

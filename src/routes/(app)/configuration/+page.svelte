@@ -5,17 +5,19 @@
 	import {
 		COLD_EQUIPMENT_TYPES,
 		EQUIPMENT_TYPE_OPTIONS,
-		equipmentTypeLabel
-	} from '$lib/config/equipment-types';
+		equipmentTypeLabel,
+		type EquipmentType
+	} from '$lib/config/equipment';
 	import { equipmentLabelPath } from '$lib/utils/equipment/labelPath';
 	import type { ActionData, PageData } from './$types';
 
 	let { data, form }: { data: PageData; form: ActionData } = $props();
 
-	let envoi = $state(false);
-	let typeMateriel = $state('FRIGO');
 	const activeLocations = $derived(data.locations.filter((l) => l.is_active));
-	const seuilRequis = $derived(COLD_EQUIPMENT_TYPES.includes(typeMateriel as (typeof COLD_EQUIPMENT_TYPES)[number]));
+
+	let envoi = $state(false);
+	let typeMateriel = $state<EquipmentType>('FRIGO');
+	const seuilRequis = $derived(COLD_EQUIPMENT_TYPES.includes(typeMateriel));
 	const pendant = () => {
 		envoi = true;
 		return async ({ update }: { update: () => Promise<void> }) => {
@@ -179,42 +181,43 @@
 	<section>
 		<h2>Matériel</h2>
 		<p class="hint">
-			Frigos, congélateurs, cuves… Requis pour réceptionner (emplacement de stockage) et pour la
+			Frigos, congélateurs, cuves… rattachés à un emplacement. Requis pour réceptionner et pour la
 			surveillance IoT. Imprimez l'étiquette QR après création.
 		</p>
-		<form method="POST" action="?/createEquipment" use:enhance={pendant}>
-			<input
-				name="nom"
-				placeholder="Nom (ex. Frigo réception A)"
-				required
-				minlength="3"
-				value={form?.nom ?? ''}
-			/>
-			<select name="type" bind:value={typeMateriel} aria-label="Type de matériel">
-				{#each EQUIPMENT_TYPE_OPTIONS as opt (opt.value)}
-					<option value={opt.value}>{opt.label}</option>
-				{/each}
-			</select>
-			<select name="id_lieu" required aria-label="Emplacement" disabled={activeLocations.length === 0}>
-				<option value="">
-					{activeLocations.length === 0 ? "Créez d'abord un emplacement" : 'Choisir un emplacement'}
-				</option>
-				{#each activeLocations as lieu (lieu.id)}
-					<option value={lieu.id}>{lieu.nom}</option>
-				{/each}
-			</select>
-			<input
-				name="temp_seuil_max"
-				type="number"
-				step="0.1"
-				placeholder={seuilRequis ? 'Seuil max °C (requis)' : 'Seuil max °C (optionnel)'}
-				required={seuilRequis}
-			/>
-			<input name="sensor_id" placeholder="ID capteur IoT (optionnel)" />
-			<button type="submit" disabled={envoi || activeLocations.length === 0}>Ajouter</button>
-		</form>
+		{#if activeLocations.length === 0}
+			<p class="hint">Créez d'abord un emplacement actif pour pouvoir ajouter du matériel.</p>
+		{:else}
+			<form method="POST" action="?/createEquipment" use:enhance={pendant}>
+				<input
+					name="nom"
+					placeholder="Nom (ex. Frigo réception A)"
+					required
+					minlength="3"
+					value={form?.nom ?? ''}
+				/>
+				<select name="type" bind:value={typeMateriel} aria-label="Type de matériel">
+					{#each EQUIPMENT_TYPE_OPTIONS as opt (opt.value)}
+						<option value={opt.value}>{opt.label}</option>
+					{/each}
+				</select>
+				<select name="id_lieu" required aria-label="Emplacement">
+					{#each activeLocations as lieu (lieu.id)}
+						<option value={lieu.id}>{lieu.nom}</option>
+					{/each}
+				</select>
+				<input
+					name="temp_seuil_max"
+					type="number"
+					step="0.1"
+					placeholder={seuilRequis ? 'Seuil max °C (requis)' : 'Seuil max °C (optionnel)'}
+					required={seuilRequis}
+				/>
+				<input name="sensor_id" placeholder="ID capteur IoT (optionnel)" />
+				<button type="submit" disabled={envoi}>Ajouter</button>
+			</form>
+		{/if}
 		{#if form?.equipmentError}<p class="error" role="alert">{form.equipmentError}</p>{/if}
-		<ul class="equipment">
+		<ul class="equip-list">
 			{#each data.equipment as item (item.id)}
 				<li>
 					<div>
@@ -223,6 +226,7 @@
 							{equipmentTypeLabel(item.type)}
 							{#if item.lieu?.nom}· {item.lieu.nom}{/if}
 							{#if item.temp_seuil_max != null}· seuil {item.temp_seuil_max} °C{/if}
+							· {item.statut}
 						</span>
 					</div>
 					<a class="label-link" href={equipmentLabelPath(item.id)} target="_blank" rel="noopener">
@@ -270,13 +274,15 @@
 		gap: 0.5rem;
 	}
 
-	input {
+	input,
+	select {
 		flex: 1 1 8rem;
 		min-width: 0;
 		padding: 0.45rem 0.6rem;
 		border: 1px solid #cbd5e1;
 		border-radius: 0.375rem;
 		font-size: 0.875rem;
+		background: #fff;
 	}
 
 	button {
@@ -305,13 +311,13 @@
 		color: #991b1b;
 	}
 
-	.equipment {
+	.equip-list {
 		list-style: none;
 		margin: 0.75rem 0 0;
 		padding: 0;
 	}
 
-	.equipment li {
+	.equip-list li {
 		display: flex;
 		align-items: center;
 		justify-content: space-between;
@@ -320,22 +326,22 @@
 		border-bottom: 1px solid #f1f5f9;
 	}
 
-	.equipment li:last-child {
+	.equip-list li:last-child {
 		border-bottom: none;
 	}
 
-	.equipment .title {
+	.title {
 		font-weight: 500;
 		color: var(--nc-text);
 	}
 
-	.equipment .sub {
+	.sub {
 		margin-left: 0.5rem;
 		font-size: 0.8125rem;
 		color: var(--nc-text-subtle);
 	}
 
-	.equipment .empty {
+	.empty {
 		justify-content: flex-start;
 		color: var(--nc-text-subtle);
 		font-size: 0.875rem;

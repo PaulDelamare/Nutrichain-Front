@@ -11,13 +11,10 @@
 		currentUserId?: string;
 	};
 
-	let { rows, canManage = false, currentUserId = '' }: Props = $props();
+	let { rows, canManage = false, currentUserId }: Props = $props();
 
-	function peutGerer(row: AppUser): boolean {
-		if (!canManage) return false;
-		if (row.roleCode === 'owner') return false;
-		if (row.userId === currentUserId) return false;
-		return true;
+	function estGerable(row: AppUser): boolean {
+		return canManage && row.rawRole !== 'owner' && row.userId !== currentUserId;
 	}
 
 	const apresAction = () => async ({
@@ -55,39 +52,43 @@
 			</tr>
 		</thead>
 		<tbody>
-			{#each rows as row (row.id)}
+			{#each rows as row (row.memberId)}
 				<tr>
 					<td class="email">{row.email}</td>
 					<td>{row.role}</td>
 					<td><MfaBadge enabled={row.mfa} /></td>
 					{#if canManage}
-						<td class="actions">
-							{#if peutGerer(row)}
-								<form method="POST" action="?/role" class="inline" use:enhance={apresAction}>
-									<input type="hidden" name="memberId" value={row.id} />
-									<select name="role" aria-label="Rôle de {row.email}">
-										{#each INVITE_ROLE_OPTIONS as opt (opt.value)}
-											<option value={opt.value} selected={opt.value === row.roleCode}>
-												{opt.label}
-											</option>
-										{/each}
-									</select>
-									<button type="submit">Mettre à jour</button>
-								</form>
-								<form
-									method="POST"
-									action="?/revoke"
-									class="inline"
-									use:enhance={apresAction}
-									onsubmit={(e) => confirmerRevocation(row.email, e)}
-								>
-									<input type="hidden" name="memberId" value={row.id} />
-									<button type="submit" class="danger">Révoquer</button>
-								</form>
-							{:else if row.roleCode === 'owner'}
-								<span class="hint">Propriétaire — non modifiable</span>
-							{:else if row.userId === currentUserId}
-								<span class="hint">Votre compte — non modifiable</span>
+						<td>
+							{#if estGerable(row)}
+								<div class="actions">
+									<form
+										method="POST"
+										action="?/changeRole"
+										class="role-form"
+										use:enhance={apresAction}
+									>
+										<input type="hidden" name="memberId" value={row.memberId} />
+										<select name="role" aria-label={`Rôle de ${row.email}`}>
+											{#each INVITE_ROLE_OPTIONS as opt (opt.value)}
+												<option value={opt.value} selected={opt.value === row.rawRole}>
+													{opt.label}
+												</option>
+											{/each}
+										</select>
+										<button type="submit" class="apply">Appliquer</button>
+									</form>
+									<form
+										method="POST"
+										action="?/revoke"
+										use:enhance={apresAction}
+										onsubmit={(e) => confirmerRevocation(row.email, e)}
+									>
+										<input type="hidden" name="memberId" value={row.memberId} />
+										<button type="submit" class="danger">Révoquer</button>
+									</form>
+								</div>
+							{:else}
+								<span class="muted">—</span>
 							{/if}
 						</td>
 					{/if}
@@ -144,35 +145,53 @@
 		align-items: center;
 	}
 
-	.inline {
-		display: inline-flex;
+	.role-form {
+		display: flex;
 		gap: 0.35rem;
 		align-items: center;
 	}
 
-	.hint {
-		font-size: 0.8125rem;
-		color: var(--nc-text-subtle);
-		font-style: italic;
-	}
-
-	select,
-	button {
-		font-size: 0.8125rem;
-		padding: 0.35rem 0.5rem;
-		border-radius: 0.375rem;
+	select {
+		height: 2rem;
+		padding: 0 0.5rem;
 		border: 1px solid #e2e8f0;
+		border-radius: 0.375rem;
 		background: #fff;
+		color: var(--nc-text);
+		font-size: 0.8125rem;
 	}
 
 	button {
+		height: 2rem;
+		padding: 0 0.75rem;
+		border: 1px solid transparent;
+		border-radius: 0.375rem;
+		font-size: 0.8125rem;
+		font-weight: 600;
 		cursor: pointer;
-		background: var(--nc-brand-dark);
-		color: #fff;
-		border: none;
+		white-space: nowrap;
 	}
 
-	button.danger {
-		background: #b91c1c;
+	.apply {
+		background: var(--nc-brand);
+		color: #fff;
+	}
+
+	.apply:hover {
+		background: var(--nc-brand-hover);
+	}
+
+	.danger {
+		background: #fff;
+		border-color: #fecaca;
+		color: #991b1b;
+	}
+
+	.danger:hover {
+		background: #fef2f2;
+	}
+
+	.muted {
+		color: var(--nc-text-subtle);
 	}
 </style>
