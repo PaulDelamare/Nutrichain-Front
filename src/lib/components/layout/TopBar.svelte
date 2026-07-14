@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { resolve } from '$app/paths';
+	import { enhance } from '$app/forms';
 	import SearchField from './SearchField.svelte';
 	import { usePageSearch } from '$lib/context/pageSearch.svelte';
 
@@ -53,7 +54,9 @@
 		{#if coldAlerts !== null && coldAlerts > 0}
 			<span class="badge-alert">{coldAlerts} alerte{coldAlerts > 1 ? 's' : ''} froid</span>
 		{/if}
-		<a href={resolve('/deconnexion')} class="logout">Déconnexion</a>
+		<form method="POST" action={resolve('/deconnexion')} use:enhance>
+			<button type="submit" class="logout">Déconnexion</button>
+		</form>
 	</div>
 </header>
 
@@ -173,11 +176,19 @@
 		white-space: nowrap;
 	}
 
+	.topbar-actions form {
+		display: flex;
+	}
+
 	.logout {
+		padding: 0;
+		border: 0;
+		background: none;
+		font: inherit;
 		font-size: 0.875rem;
 		color: var(--nc-text-muted);
-		text-decoration: none;
 		white-space: nowrap;
+		cursor: pointer;
 	}
 
 	.logout:hover {
