@@ -4,8 +4,9 @@ import type { Actions, PageServerLoad } from './$types';
 
 export const load: PageServerLoad = async ({ locals, url }) => {
 	if (locals.user) {
-		const target = url.searchParams.get('redirect') || '/tableau-de-bord';
-		redirect(303, target);
+		// L'admin de plateforme n'a pas d'espace métier : sa console est sa page d'accueil.
+		const defaut = locals.user.isPlatformAdmin ? '/plateforme' : '/tableau-de-bord';
+		redirect(303, url.searchParams.get('redirect') || defaut);
 	}
 };
 

@@ -27,6 +27,25 @@ function lireRole(data: MePayload): KnownRole {
 	return estRole(data.role) ? data.role : null;
 }
 
+let plateformeInconnueSignalee = false;
+
+/**
+ * Fail-CLOSED, à l'inverse du rôle métier (fail-open) : un champ absent ne doit JAMAIS ouvrir la
+ * console plateforme à un membre normal. Le prix est qu'un VRAI admin de plateforme sur une API
+ * antérieure serait traité en membre — d'où l'avertissement, pour rendre le décalage visible.
+ */
+function lireAdminPlateforme(data: MePayload): boolean {
+	if (!('isPlatformAdmin' in data) && !plateformeInconnueSignalee) {
+		plateformeInconnueSignalee = true;
+		console.warn(
+			"[Plateforme] /api/me ne renvoie pas `isPlatformAdmin` : l'API est antérieure. Un admin " +
+				'de plateforme serait traité comme un membre et ne verrait pas sa console.'
+		);
+	}
+
+	return data.isPlatformAdmin === true;
+}
+
 export const handle = (async ({ event, resolve }) => {
 	if (!hasAuthSessionCookie(event.cookies)) {
 		event.locals.user = undefined;
@@ -41,7 +60,8 @@ export const handle = (async ({ event, resolve }) => {
 				id: me.data.user.id,
 				name: me.data.user.name,
 				email: me.data.user.email,
-				role: lireRole(me.data)
+				role: lireRole(me.data),
+				isPlatformAdmin: lireAdminPlateforme(me.data)
 			};
 		} else {
 			event.locals.user = undefined;

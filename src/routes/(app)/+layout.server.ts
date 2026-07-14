@@ -8,6 +8,14 @@ export const load: LayoutServerLoad = async ({ locals, url, fetch, cookies, depe
 		redirect(303, `/connexion?redirect=${encodeURIComponent(url.pathname)}`);
 	}
 
+	// L'admin de plateforme n'a pas d'organisation active : tout l'espace métier (qui suppose une
+	// org) lui afficherait des pages vides ou en erreur. Sa place est la console plateforme.
+	// Par conception il n'est jamais Member (garanti côté API) : le cumul plateforme + métier
+	// n'existe pas, donc cette redirection ne prive personne de son métier légitime.
+	if (locals.user.isPlatformAdmin) {
+		redirect(303, '/plateforme');
+	}
+
 	// SvelteKit ne rejoue un load que si une dépendance suivie a été LUE. Sans ces deux lignes,
 	// le compte d'alertes est calculé une seule fois puis figé pour toute la session : l'en-tête
 	// afficherait « 3 alertes froid » sur la page même qui dit « aucune alerte active ».
