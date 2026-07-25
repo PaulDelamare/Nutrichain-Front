@@ -14,7 +14,7 @@
 	const lotOptions = $derived(
 		data.batches.map((b) => ({
 			value: b.id,
-			label: `${b.produit?.nom ?? 'Produit'} — ${b.id.slice(0, 8)}… (${b.statut})`
+			label: `${b.produit?.nom ?? 'Produit'} — ${b.lot_number ?? b.id.slice(0, 8)} (${b.statut})`
 		}))
 	);
 
