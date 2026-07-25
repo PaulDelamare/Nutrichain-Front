@@ -5,7 +5,6 @@
 	let { data, form }: { data: PageData; form: ActionData } = $props();
 
 	let inviteFor = $state<string | null>(null);
-	// Empêche le double-envoi : le bouton se désactive le temps de la soumission.
 	let envoi = $state(false);
 	const pendant = () => {
 		envoi = true;
@@ -83,8 +82,6 @@
 								<p class="slug">{org.slug}</p>
 							</div>
 							{#if org.membersCount === 0}
-								<!-- Une organisation sans membre n'a pas de pilote : elle est inutilisable tant
-								     que son premier responsable n'a pas accepté son invitation. -->
 								<span class="pending">En attente d'activation</span>
 							{:else}
 								<span class="active"

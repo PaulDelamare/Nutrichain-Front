@@ -7,7 +7,6 @@ function batch(statut: string): ApiBatch {
 }
 
 describe('mapBatch — mapStatut', () => {
-	// Régression : un lot BLOQUE (quarantaine) s'affichait « conforme » faute de mapping.
 	it('mappe BLOQUE sur quarantaine', () => {
 		expect(batchToRow(batch('BLOQUE')).statut).toBe('quarantaine');
 	});

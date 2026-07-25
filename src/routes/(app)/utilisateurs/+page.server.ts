@@ -26,7 +26,6 @@ export const load: PageServerLoad = async ({ fetch, cookies, locals }) => {
 	return {
 		users: membersToUsers(membersRes.data),
 		canInvite,
-		// Sert à masquer les actions sur sa propre ligne : on ne modifie pas son propre accès.
 		currentUserId: locals.user?.id
 	};
 };

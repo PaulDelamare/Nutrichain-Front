@@ -1,7 +1,5 @@
 import { peutAdministrer, type KnownRole } from './roles';
 
-// Rôles réellement attribuables via invitation, alignés sur l'API (INVITABLE_ROLES) :
-// owner n'est pas invitable (c'est le créateur de l'organisation).
 export type InviteRole = 'admin' | 'quality' | 'operator' | 'viewer';
 
 export const INVITE_ROLE_OPTIONS: { value: InviteRole; label: string }[] = [

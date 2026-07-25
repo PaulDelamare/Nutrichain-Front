@@ -1,14 +1,19 @@
 <script lang="ts">
 	import { enhance } from '$app/forms';
+	import { resolve } from '$app/paths';
 	import PageHead from '$lib/components/page/PageHead.svelte';
 	import ConfigList from '$lib/components/config/ConfigList.svelte';
 	import ImportCsv from '$lib/components/config/ImportCsv.svelte';
-	import { EQUIPMENT_TYPE_OPTIONS, equipmentTypeLabel } from '$lib/config/equipment';
+	import {
+		COLD_EQUIPMENT_TYPES,
+		EQUIPMENT_TYPE_OPTIONS,
+		equipmentTypeLabel,
+		type EquipmentType
+	} from '$lib/config/equipment';
 	import type { ActionData, PageData } from './$types';
 
 	let { data, form }: { data: PageData; form: ActionData } = $props();
 
-	// Un matériel se rattache à un emplacement ACTIF : l'API refuse un lieu archivé (409).
 	const activeLocations = $derived(data.locations.filter((l) => l.is_active));
 
 	// Le résultat d'un import CSV est routé vers la section (produits / clients) qui l'a déclenché.
@@ -20,6 +25,8 @@
 			: null) ?? null;
 
 	let envoi = $state(false);
+	let typeMateriel = $state<EquipmentType>('FRIGO');
+	const seuilRequis = $derived(COLD_EQUIPMENT_TYPES.includes(typeMateriel));
 	const pendant = () => {
 		envoi = true;
 		return async ({ update }: { update: () => Promise<void> }) => {
@@ -199,8 +206,8 @@
 	<section>
 		<h2>Matériel</h2>
 		<p class="hint">
-			Frigos, congélateurs, cuves… rattachés à un emplacement. C'est ce que l'opérateur scanne pour
-			situer un lot ; un frigo surveillé déclenche l'alerte froid.
+			Frigos, congélateurs, cuves… rattachés à un emplacement. Requis pour réceptionner et pour la
+			surveillance IoT. Imprimez l'étiquette QR après création.
 		</p>
 		{#if activeLocations.length === 0}
 			<p class="hint">Créez d'abord un emplacement actif pour pouvoir ajouter du matériel.</p>
@@ -208,17 +215,17 @@
 			<form method="POST" action="?/createEquipment" use:enhance={pendant}>
 				<input
 					name="nom"
-					placeholder="Nom (ex. Frigo A)"
+					placeholder="Nom (ex. Frigo réception A)"
 					required
 					minlength="3"
 					value={form?.nom ?? ''}
 				/>
-				<select name="type" required>
+				<select name="type" bind:value={typeMateriel} aria-label="Type de matériel">
 					{#each EQUIPMENT_TYPE_OPTIONS as opt (opt.value)}
 						<option value={opt.value}>{opt.label}</option>
 					{/each}
 				</select>
-				<select name="id_lieu" required>
+				<select name="id_lieu" required aria-label="Emplacement">
 					{#each activeLocations as lieu (lieu.id)}
 						<option value={lieu.id}>{lieu.nom}</option>
 					{/each}
@@ -227,23 +234,39 @@
 					name="temp_seuil_max"
 					type="number"
 					step="0.1"
-					placeholder="Seuil °C (frigo/congélateur)"
+					placeholder={seuilRequis ? 'Seuil max °C (requis)' : 'Seuil max °C (optionnel)'}
+					required={seuilRequis}
 				/>
-				<input name="sensor_id" placeholder="Capteur IoT (optionnel)" />
+				<input name="sensor_id" placeholder="ID capteur IoT (optionnel)" />
 				<button type="submit" disabled={envoi}>Ajouter</button>
 			</form>
 		{/if}
 		{#if form?.equipmentError}<p class="error" role="alert">{form.equipmentError}</p>{/if}
 		<ul class="equip-list">
-			{#each data.equipment as m (m.id)}
+			{#each data.equipment as item (item.id)}
 				<li>
-					<span class="title">{m.nom}</span>
-					<span class="sub"
-						>{equipmentTypeLabel(m.type)}{m.lieu ? ` · ${m.lieu.nom}` : ''} · {m.statut}</span
+					<div>
+						<span class="title">{item.nom}</span>
+						<span class="sub">
+							{equipmentTypeLabel(item.type)}
+							{#if item.lieu?.nom}· {item.lieu.nom}{/if}
+							{#if item.temp_seuil_max != null}· seuil {item.temp_seuil_max} °C{/if}
+							· {item.statut}
+						</span>
+					</div>
+					<a
+						class="label-link"
+						href={resolve('/(app)/configuration/equipment/[id]/label', {
+							id: encodeURIComponent(item.id)
+						})}
+						target="_blank"
+						rel="noopener"
 					>
+						Étiquette QR
+					</a>
 				</li>
 			{:else}
-				<li class="empty">Aucun matériel. Ajoutez-en un et imprimez son étiquette à scanner.</li>
+				<li class="empty">Aucun matériel. Ajoutez-en un pour réceptionner et suivre le froid.</li>
 			{/each}
 		</ul>
 	</section>
@@ -327,6 +350,10 @@
 	}
 
 	.equip-list li {
+		display: flex;
+		align-items: center;
+		justify-content: space-between;
+		gap: 1rem;
 		padding: 0.6rem 0;
 		border-bottom: 1px solid #f1f5f9;
 	}
@@ -347,7 +374,14 @@
 	}
 
 	.empty {
+		justify-content: flex-start;
 		color: var(--nc-text-subtle);
 		font-size: 0.875rem;
+	}
+
+	.label-link {
+		font-size: 0.8125rem;
+		color: var(--nc-text-muted);
+		white-space: nowrap;
 	}
 </style>

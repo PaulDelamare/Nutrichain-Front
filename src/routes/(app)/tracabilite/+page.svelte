@@ -36,13 +36,20 @@
 	/>
 </form>
 
-{#if data.graph}
+{#if data.genealogyError}
+	<p class="banner err">Impossible de charger la généalogie — {data.genealogyError}</p>
+{:else if data.graph}
 	<TraceGenealogy graph={data.graph} />
 {:else}
 	<p class="empty">Sélectionnez un lot ci-dessus pour afficher sa traçabilité amont / aval.</p>
 {/if}
 
 <style>
+	.banner.err {
+		background: #fef2f2;
+		color: #991b1b;
+	}
+
 	.banner {
 		margin: 0 0 0.75rem;
 		padding: 0.5rem 0.75rem;

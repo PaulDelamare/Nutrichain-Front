@@ -11,7 +11,6 @@ function since(iso: string): string {
 export function pendingQcToLots(batches: ApiPendingQcBatch[]): PendingQcLot[] {
 	return batches.map((b) => ({
 		id: b.id,
-		// Le numéro de lot GS1 est ce que l'opérateur lit sur l'étiquette ; l'UUID ne lui parle pas.
 		lot: b.lot_number ?? b.id.slice(0, 8).toUpperCase(),
 		produit: b.produit?.nom ?? '—',
 		quantite: `${b.quantite_actuelle} ${b.unite_code}`,

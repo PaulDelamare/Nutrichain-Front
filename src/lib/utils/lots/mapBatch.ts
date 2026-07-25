@@ -1,17 +1,37 @@
-import type { ApiBatch } from '$lib/Api/traceability.server';
+import type { ApiBatch, ApiBatchMouvement } from '$lib/Api/traceability.server';
+import type { ApiAuditLog, ApiMovement } from '$lib/Api/organization.server';
 import { movementsToLotEvents } from '$lib/utils/lots/lotEvents';
 import { resolveLotMapLocation } from '$lib/utils/lots/resolveLotMapLocation';
 import type { LotSheet } from '$lib/types/lot-sheet';
 import type { LotRow, LotStatus } from '$lib/types/lot';
 
-// « Conforme » est une AFFIRMATION : elle ne doit jamais être le repli par défaut. Un lot
-// PERIME tombait auparavant dans le `return 'conforme'` final et s'affichait en vert.
+const AUDIT_TO_MOVEMENT: Record<string, string> = {
+	CREATE_RECEIPT: 'RECEPTION',
+	CREATE_RECEIPT_VIA_SYNC: 'RECEPTION',
+	LIFT_BATCH_QUARANTINE: 'LEVEE_QUARANTAINE',
+	BATCH_RECALL_TRIGGERED: 'RAPPEL',
+	EXPEDITION: 'EXPEDITION',
+	TRANSFORM_CONSUME: 'TRANSFORMATION_SORTIE',
+	TRANSFORM_CREATE: 'TRANSFORMATION_ENTREE',
+	TRANSFORMATION_ENTREE: 'TRANSFORMATION_ENTREE',
+	TRANSFORMATION_SORTIE: 'TRANSFORMATION_SORTIE',
+	TEMP_EXCURSION_DETECTED: 'QUARANTAINE_FROID'
+};
+
+export function auditLogsToBatchMouvements(logs: ApiAuditLog[]): ApiBatchMouvement[] {
+	return logs.map((l) => ({
+		id: l.id,
+		type_action: AUDIT_TO_MOVEMENT[l.action] ?? l.action,
+		quantite: '—',
+		unite: '',
+		created_at: l.horodatage,
+		user: null,
+		metadata: (l.nouvelle_valeur as Record<string, unknown> | null) ?? null
+	}));
+}
+
 function mapStatut(statut: string): LotStatus {
 	const s = statut.toUpperCase();
-	// BLOQUE = lot bloqué (quarantaine qualité ou rappel) : c'est le statut réellement
-	// filtré par l'API pour la quarantaine.
-	// Correspondance EXACTE : un test par sous-chaîne piégerait un futur statut
-	// (« EN_ATTENTE_ALERTE… » matcherait ALERT).
 	if (s === 'EN_ATTENTE_QC') return 'attente_qc';
 	if (s === 'BLOQUE' || s === 'QUARANTAINE') return 'quarantaine';
 	if (s === 'ALERTE' || s === 'SURVEILLANCE') return 'surveillance';
@@ -26,18 +46,35 @@ function fmtDate(iso: string | null): string {
 	return new Date(iso).toLocaleDateString('fr-FR');
 }
 
-export function batchToRow(batch: ApiBatch): LotRow {
+export function batchToRow(
+	batch: ApiBatch,
+	equipmentTemps?: Map<string, string | number | null>
+): LotRow {
+	const temp =
+		batch.materiel?.temp_actuelle ??
+		(batch.id_materiel_actuel && equipmentTemps?.get(batch.id_materiel_actuel)) ??
+		null;
+
 	return {
 		id: batch.id,
-		// Numéro de lot GS1 lisible ; repli sur un id raccourci si absent (jamais l'UUID entier).
 		lotNumber: batch.lot_number ?? batch.id.slice(0, 8),
 		produit: batch.produit?.nom ?? '—',
 		gtin: batch.produit?.code_gtin ?? '—',
-		sscc: '—',
-		// Emplacement réel du lot (matériel → lieu), renseigné à la réception.
 		site: batch.materiel?.lieu?.nom ?? '—',
 		statut: mapStatut(batch.statut),
-		temperature: '—'
+		temperature: fmtTemp(temp)
+	};
+}
+
+export function movementToBatchMouvement(m: ApiMovement): ApiBatchMouvement {
+	return {
+		id: m.id,
+		type_action: m.type_action,
+		quantite: m.quantite,
+		unite: m.unite,
+		created_at: m.created_at,
+		user: m.user,
+		metadata: null
 	};
 }
 
@@ -62,7 +99,7 @@ export function batchToSheet(batch: ApiBatch): LotSheet {
 		events,
 		site: batch.materiel?.lieu?.nom ?? '—',
 		zone: batch.materiel?.nom ?? '—',
-		wmsSync: batch.date_creation ? `Créé le ${fmtDate(batch.date_creation)}` : '—',
+		createdAtLabel: batch.date_creation ? `Créé le ${fmtDate(batch.date_creation)}` : '—',
 		mapPin: resolveLotMapLocation(batch.materiel?.lieu?.nom, batch.materiel?.nom)
 	};
 }

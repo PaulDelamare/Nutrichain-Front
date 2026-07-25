@@ -9,11 +9,6 @@ export type NavItem = {
 	/** Titre principal dans la zone de contenu */
 	heading: string;
 	description?: string;
-	/**
-	 * Rôles qui voient l'entrée. Absent = visible par tous.
-	 * On ne masque que les pages dont l'API refuserait déjà la donnée : sans ça, le lien mène à
-	 * une page vide portant une erreur brute, indistinguable d'une panne.
-	 */
 	roles?: Role[];
 };
 
@@ -38,7 +33,7 @@ export const navGroups: NavGroup[] = [
 				label: 'Recherche lots',
 				title: 'Recherche de lots',
 				heading: 'Recherche de lots',
-				description: 'Filtres avancés — GTIN, lot, SSCC, produit, site, dates, statut.'
+				description: 'Filtres — GTIN, numéro de lot, produit, site et statut.'
 			},
 			{
 				href: '/tracabilite',
@@ -46,6 +41,14 @@ export const navGroups: NavGroup[] = [
 				title: 'Traçabilité',
 				heading: 'Arbre de traçabilité',
 				description: 'Vue amont / aval — matières premières vers produits finis et expéditions.'
+			},
+			{
+				href: '/scan-code-barres',
+				label: 'Scan code-barres',
+				title: 'Scan code-barres',
+				heading: 'Scan de code-barres',
+				description:
+					'Scannez un GTIN ou un identifiant de lot pour accéder instantanément à sa fiche.'
 			}
 		]
 	},
@@ -72,12 +75,34 @@ export const navGroups: NavGroup[] = [
 				title: 'Rappels produits',
 				heading: 'Rappels produits',
 				description: 'Workflow — lots concernés, sites impactés, progression des retraits.'
+			},
+			{
+				href: '/simulation-rappel',
+				label: 'Simulation de rappel',
+				title: 'Simulation de rappel',
+				heading: 'Simulation de rappel',
+				description:
+					"Estimez l'impact d'un rappel (lots et expéditions touchés) sans rien bloquer en base."
 			}
 		]
 	},
 	{
 		label: 'Réseau',
 		items: [
+			{
+				href: '/receptions',
+				label: 'Réceptions',
+				title: 'Réceptions',
+				heading: 'Réceptions terrain',
+				description: 'Flux entrants — fournisseur, contrôle à réception, lots créés.'
+			},
+			{
+				href: '/expeditions',
+				label: 'Expéditions',
+				title: 'Expéditions',
+				heading: 'Expéditions',
+				description: 'Flux sortants — destination, statut de livraison, lots embarqués.'
+			},
 			{
 				href: '/portail-magasins',
 				label: 'Portail magasins',
@@ -140,11 +165,6 @@ export const navGroups: NavGroup[] = [
 	}
 ];
 
-/**
- * Navigation visible par ce rôle. Un rôle inconnu (API sans le champ) voit TOUT : mieux vaut un
- * lien qui mène à une page refusée qu'une application amputée pour son propriétaire.
- * Les groupes vidés disparaissent — on ne laisse pas un intitulé de section sans entrée.
- */
 export function navPourRole(role: KnownRole): NavGroup[] {
 	return navGroups
 		.map((groupe) => ({
@@ -156,8 +176,6 @@ export function navPourRole(role: KnownRole): NavGroup[] {
 		.filter((groupe) => groupe.items.length > 0);
 }
 
-// findNavItem/headerTitle lisent la nav COMPLÈTE : le titre d'une page reste correct même quand
-// son entrée est masquée (accès par URL directe).
 const flatNav = navGroups.flatMap((g) => g.items);
 
 export function findNavItem(pathname: string): NavItem | undefined {

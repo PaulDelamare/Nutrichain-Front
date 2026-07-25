@@ -13,7 +13,6 @@ export const load: PageServerLoad = async ({ fetch, cookies }) => {
 
 	return {
 		rappels: alerts.ok ? alertsToRappels(alerts.data) : [],
-		// Lots encore rappelables (un lot déjà bloqué/en alerte n'est pas re-rappelable)
 		batches: batches.ok ? batches.data.filter((b) => !['BLOQUE', 'ALERTE'].includes(b.statut)) : [],
 		error: [alerts, batches].find((r) => !r.ok)?.message
 	};
@@ -25,7 +24,6 @@ export const actions = {
 		const lotId = String(form.get('lotId') ?? '').trim();
 		const reason = String(form.get('reason') ?? '').trim();
 
-		// On rend le motif saisi avec le refus : sinon l'utilisateur perd ce qu'il a tapé.
 		const refus = refusDecisionQualite(locals.user);
 		if (refus) return fail(403, { error: refus, lotId, reason });
 

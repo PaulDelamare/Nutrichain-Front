@@ -18,7 +18,7 @@
 		<LotLocationMap pin={sheet.mapPin} lotId={sheet.id} />
 	{/key}
 
-	<p class="sync">Dernière synchro WMS : {sheet.wmsSync}</p>
+	<p class="sync">Enregistré le : {sheet.createdAtLabel}</p>
 </section>
 
 <style>

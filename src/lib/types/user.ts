@@ -6,6 +6,5 @@ export type AppUser = {
 	role: string;
 	/** Rôle brut de l'API (`operator`…), clé des actions de changement de rôle. */
 	rawRole: string;
-	lastLogin: string;
 	mfa: boolean;
 };

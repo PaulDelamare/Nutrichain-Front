@@ -1,7 +1,3 @@
-/**
- * Fonction utilitaire à utiliser dans le catch d'un try/catch pour les requêtes.
- * Elle logge un maximum d'informations pour faciliter le debug.
- */
 type ErrorWithExtra = Error & {
 	response?: unknown;
 	request?: unknown;

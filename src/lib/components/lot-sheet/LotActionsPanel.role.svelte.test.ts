@@ -37,7 +37,6 @@ describe('LotActionsPanel — décisions qualité', () => {
 		renderPanel('quarantaine', 'operator');
 
 		expect(page.getByRole('button', { name: 'Lever la quarantaine' }).all()).toHaveLength(0);
-		// Le titre de l'action reste : l'opérateur comprend l'état du lot.
 		await expect.element(page.getByText('Lever la quarantaine')).toBeInTheDocument();
 	});
 

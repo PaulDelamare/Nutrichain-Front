@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { isHttpError } from '@sveltejs/kit';
 
@@ -6,6 +7,7 @@ const api = {
 	getLocations: vi.fn(),
 	getCustomers: vi.fn(),
 	getProductsForConfig: vi.fn(),
+	getEquipment: vi.fn(),
 	createSupplier: vi.fn(),
 	setSupplierActive: vi.fn(),
 	createLocation: vi.fn(),
@@ -14,7 +16,6 @@ const api = {
 	setCustomerActive: vi.fn(),
 	createProduct: vi.fn(),
 	setProductActive: vi.fn(),
-	getEquipment: vi.fn(),
 	createEquipment: vi.fn()
 };
 
@@ -42,8 +43,6 @@ const form = (entries: Record<string, string>) => ({
 	cookies: {}
 });
 
-// Le load LÈVE (error 403). Les actions RENVOIENT un fail() (objet { status }), pour ne pas
-// naviguer en pleine page et jeter la saisie — même contrat que /utilisateurs et /audit-logs.
 const statutLoad = async (fn: (e: unknown) => Promise<unknown>, e: unknown) => {
 	try {
 		await fn(e);
@@ -67,6 +66,7 @@ beforeEach(() => {
 	api.getLocations.mockResolvedValue({ ok: true, data: [] });
 	api.getCustomers.mockResolvedValue({ ok: true, data: [] });
 	api.getProductsForConfig.mockResolvedValue({ ok: true, data: [] });
+	api.getEquipment.mockResolvedValue({ ok: true, data: [] });
 	api.createSupplier.mockResolvedValue({ ok: true, data: { id: 's' } });
 	api.createLocation.mockResolvedValue({ ok: true, data: { id: 'l' } });
 	api.createCustomer.mockResolvedValue({ ok: true, data: { id: 'c' } });
@@ -80,7 +80,6 @@ beforeEach(() => {
 	connectors.importCustomersCsv.mockResolvedValue({ ok: true, data: report });
 });
 
-// La requête d'import porte un fichier : formData().get('file') renvoie un File réel.
 const formWithFile = (csv: string | null) => ({
 	request: {
 		formData: async () => ({
@@ -93,16 +92,12 @@ const formWithFile = (csv: string | null) => ({
 });
 
 describe('configuration — réservée aux administrateurs', () => {
-	// Le garde de layout ne couvre pas les actions : sans garde dans l'action, un operator
-	// pourrait POSTer ?/createSupplier malgré la redirection.
 	it('refuse le load à un non-admin', async () => {
-		// eslint-disable-next-line @typescript-eslint/no-explicit-any
 		const load = (mod as any).load;
 		expect(await statutLoad(load, { ...form({}), locals: { user: user(false) } })).toBe(403);
 	});
 
 	it("refuse l'action createSupplier à un non-admin", async () => {
-		// eslint-disable-next-line @typescript-eslint/no-explicit-any
 		const s = await statutAction((mod as any).actions.createSupplier, {
 			...form({ nom_ferme: 'X', adresse_siege: 'Y' }),
 			locals: { user: user(false) }
@@ -112,7 +107,6 @@ describe('configuration — réservée aux administrateurs', () => {
 	});
 
 	it("refuse l'action createLocation à un non-admin", async () => {
-		// eslint-disable-next-line @typescript-eslint/no-explicit-any
 		const s = await statutAction((mod as any).actions.createLocation, {
 			...form({ nom: 'Quai', type: 'RECEPTION' }),
 			locals: { user: user(false) }
@@ -122,12 +116,10 @@ describe('configuration — réservée aux administrateurs', () => {
 	});
 
 	it('refuse les actions createCustomer et createProduct à un non-admin', async () => {
-		// eslint-disable-next-line @typescript-eslint/no-explicit-any
 		const c = await statutAction((mod as any).actions.createCustomer, {
 			...form({ nom_enseigne: 'X', adresse_livraison: 'Y' }),
 			locals: { user: user(false) }
 		});
-		// eslint-disable-next-line @typescript-eslint/no-explicit-any
 		const p = await statutAction((mod as any).actions.createProduct, {
 			...form({
 				nom: 'X',
@@ -146,12 +138,10 @@ describe('configuration — réservée aux administrateurs', () => {
 	});
 
 	it('laisse un admin créer un client et un produit', async () => {
-		// eslint-disable-next-line @typescript-eslint/no-explicit-any
 		const c = await (mod as any).actions.createCustomer({
 			...form({ nom_enseigne: 'Super U', adresse_livraison: '1 rue' }),
 			locals: { user: user(true) }
 		});
-		// eslint-disable-next-line @typescript-eslint/no-explicit-any
 		const p = await (mod as any).actions.createProduct({
 			...form({
 				nom: 'Yaourt',
@@ -167,8 +157,7 @@ describe('configuration — réservée aux administrateurs', () => {
 		expect(p).toMatchObject({ productCreated: { id: 'p' } });
 	});
 
-	it('refuse un GTIN mal formé côté serveur avant l’appel API', async () => {
-		// eslint-disable-next-line @typescript-eslint/no-explicit-any
+	it("refuse un GTIN mal formé côté serveur avant l'appel API", async () => {
 		const res = await (mod as any).actions.createProduct({
 			...form({
 				nom: 'X',
@@ -185,7 +174,6 @@ describe('configuration — réservée aux administrateurs', () => {
 	});
 
 	it('laisse un admin créer un fournisseur', async () => {
-		// eslint-disable-next-line @typescript-eslint/no-explicit-any
 		const res = await (mod as any).actions.createSupplier({
 			...form({ nom_ferme: 'Ferme Bio', adresse_siege: '1 rue' }),
 			locals: { user: user(true) }
@@ -194,8 +182,7 @@ describe('configuration — réservée aux administrateurs', () => {
 		expect(res).toMatchObject({ supplierCreated: { id: 's' } });
 	});
 
-	it('valide les champs requis avant d’appeler l’API', async () => {
-		// eslint-disable-next-line @typescript-eslint/no-explicit-any
+	it("valide les champs requis avant d'appeler l'API", async () => {
 		const res = await (mod as any).actions.createLocation({
 			...form({ nom: 'A', type: '' }),
 			locals: { user: user(true) }
@@ -205,7 +192,6 @@ describe('configuration — réservée aux administrateurs', () => {
 	});
 
 	it("refuse l'action createEquipment à un non-admin", async () => {
-		// eslint-disable-next-line @typescript-eslint/no-explicit-any
 		const s = await statutAction((mod as any).actions.createEquipment, {
 			...form({ nom: 'Frigo A', type: 'FRIGO', id_lieu: 'loc-1' }),
 			locals: { user: user(false) }
@@ -214,8 +200,7 @@ describe('configuration — réservée aux administrateurs', () => {
 		expect(api.createEquipment).not.toHaveBeenCalled();
 	});
 
-	it('refuse un type de matériel hors référentiel avant l’appel API', async () => {
-		// eslint-disable-next-line @typescript-eslint/no-explicit-any
+	it("refuse un type de matériel hors référentiel avant l'appel API", async () => {
 		const res = await (mod as any).actions.createEquipment({
 			...form({ nom: 'Machine', type: 'ROBOT', id_lieu: 'loc-1' }),
 			locals: { user: user(true) }
@@ -224,8 +209,7 @@ describe('configuration — réservée aux administrateurs', () => {
 		expect(api.createEquipment).not.toHaveBeenCalled();
 	});
 
-	it('refuse un matériel sans emplacement avant l’appel API', async () => {
-		// eslint-disable-next-line @typescript-eslint/no-explicit-any
+	it("refuse un matériel sans emplacement avant l'appel API", async () => {
 		const res = await (mod as any).actions.createEquipment({
 			...form({ nom: 'Frigo A', type: 'FRIGO', id_lieu: '' }),
 			locals: { user: user(true) }
@@ -235,7 +219,6 @@ describe('configuration — réservée aux administrateurs', () => {
 	});
 
 	it("refuse l'import CSV à un non-admin, sans appeler l'API", async () => {
-		// eslint-disable-next-line @typescript-eslint/no-explicit-any
 		const s = await statutAction((mod as any).actions.importProducts, {
 			...formWithFile('nom,code_gtin\nYaourt,3456789012345'),
 			locals: { user: user(false) }
@@ -244,8 +227,7 @@ describe('configuration — réservée aux administrateurs', () => {
 		expect(connectors.importProductsCsv).not.toHaveBeenCalled();
 	});
 
-	it('refuse un import sans fichier (400) avant l’appel API', async () => {
-		// eslint-disable-next-line @typescript-eslint/no-explicit-any
+	it("refuse un import sans fichier (400) avant l'appel API", async () => {
 		const res = await (mod as any).actions.importCustomers({
 			...formWithFile(null),
 			locals: { user: user(true) }
@@ -255,7 +237,6 @@ describe('configuration — réservée aux administrateurs', () => {
 	});
 
 	it('laisse un admin importer un CSV et renvoie le rapport routé par type', async () => {
-		// eslint-disable-next-line @typescript-eslint/no-explicit-any
 		const res = await (mod as any).actions.importProducts({
 			...formWithFile(
 				'nom,code_gtin,categorie,duree_conservation_defaut,seuil_alerte_stock,unite_reference\nYaourt,3456789012345,Frais,30,5,KG'
@@ -269,15 +250,23 @@ describe('configuration — réservée aux administrateurs', () => {
 		});
 	});
 
-	it('laisse un admin créer un matériel (seuil optionnel omis si vide)', async () => {
-		// eslint-disable-next-line @typescript-eslint/no-explicit-any
+	it('laisse un admin créer un matériel non réfrigéré sans seuil', async () => {
 		const res = await (mod as any).actions.createEquipment({
-			...form({ nom: 'Frigo A', type: 'FRIGO', id_lieu: 'loc-1', temp_seuil_max: '' }),
+			...form({ nom: 'Étagère A', type: 'ETAGERE', id_lieu: 'loc-1', temp_seuil_max: '' }),
 			locals: { user: user(true) }
 		});
 		expect(api.createEquipment).toHaveBeenCalledOnce();
 		const [, , body] = api.createEquipment.mock.calls[0];
 		expect(body).not.toHaveProperty('temp_seuil_max');
 		expect(res).toMatchObject({ equipmentCreated: { id: 'eq' } });
+	});
+
+	it("exige un seuil pour un frigo avant l'appel API", async () => {
+		const res = await (mod as any).actions.createEquipment({
+			...form({ nom: 'Frigo A', type: 'FRIGO', id_lieu: 'loc-1', temp_seuil_max: '' }),
+			locals: { user: user(true) }
+		});
+		expect(res).toMatchObject({ status: 400 });
+		expect(api.createEquipment).not.toHaveBeenCalled();
 	});
 });

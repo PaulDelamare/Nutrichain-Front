@@ -55,7 +55,6 @@ export const actions = {
 		return { released: lotId };
 	},
 
-	// Barrière qualité : le contrôle libère le lot (conforme) ou le met en quarantaine (non conforme).
 	control: async ({ request, fetch, cookies, locals }) => {
 		const form = await request.formData();
 		const lotId = String(form.get('lotId') ?? '').trim();

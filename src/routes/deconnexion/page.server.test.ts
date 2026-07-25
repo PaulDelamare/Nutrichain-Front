@@ -1,9 +1,7 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { isRedirect } from '@sveltejs/kit';
 
-// Une mutation dans un `load` est déclenchée par le PRÉCHARGEMENT au survol
-// (`data-sveltekit-preload-data="hover"` dans app.html) : passer la souris sur le lien
-// suffisait à détruire la session. La déconnexion doit être une action POST.
 const signOut = vi.fn();
 
 vi.mock('$lib/Api/auth.server', () => ({
@@ -32,14 +30,11 @@ describe('déconnexion', () => {
 	});
 
 	it('déconnecte sur POST et redirige vers la connexion', async () => {
-		// eslint-disable-next-line @typescript-eslint/no-explicit-any
 		const run = (mod as any).actions?.default;
 		expect(run, 'la route doit exposer une action POST').toBeTypeOf('function');
 
 		const thrown = await run(event()).catch((e: unknown) => e);
 
-		// Les cookies sont ce qui ferme réellement la session : sans cette assertion,
-		// `signOut(fetch, {})` passerait le test en laissant l'utilisateur connecté.
 		expect(signOut).toHaveBeenCalledExactlyOnceWith(fetch, cookies);
 		expect(isRedirect(thrown)).toBe(true);
 		expect((thrown as { status: number; location: string }).status).toBe(303);

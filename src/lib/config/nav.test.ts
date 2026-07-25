@@ -38,8 +38,6 @@ describe('navigation selon le rôle', () => {
 		expect(liens('owner')).toEqual(attendus);
 	});
 
-	// Le pire cas : l'API ne renvoie pas encore le rôle. Masquer amputerait l'application
-	// de son propriétaire. On préfère un lien qui mène à un refus lisible.
 	it("n'ampute rien quand le rôle est inconnu (API sans le champ)", () => {
 		expect(liens(undefined)).toEqual(navGroups.flatMap((g) => g.items.map((i) => i.href)));
 	});
@@ -55,8 +53,6 @@ describe('navigation selon le rôle', () => {
 		}
 	});
 
-	// Le titre de page est calculé sur la nav COMPLÈTE : une page masquée reste titrée
-	// correctement si on y accède par URL directe.
 	it("garde le titre d'une page masquée", () => {
 		expect(headerTitle('/audit-logs')).toBe('Audit & logs');
 		expect(findNavItem('/utilisateurs')?.label).toBe('Utilisateurs');

@@ -13,7 +13,6 @@ function batch(statut: string): ApiBatch {
 }
 
 describe('batchToRow — le statut affiché', () => {
-	// « Conforme » est une affirmation sanitaire : elle ne doit jamais être un repli par défaut.
 	it('n’affiche PAS « conforme » pour un lot périmé', () => {
 		expect(batchToRow(batch('PERIME')).statut).toBe('perime');
 	});

@@ -17,7 +17,7 @@
 	});
 
 	const openNc = $derived(
-		filterRowsByText(data.openNc, pageSearch.query, (r) => [r.id, r.type, r.statut])
+		filterRowsByText(data.openNc, pageSearch.query, (r) => [r.id, r.type, r.lot, r.statut])
 	);
 	const quarantineLots = $derived(
 		filterRowsByText(data.quarantineLots, pageSearch.query, (l) => [l.lot, l.detail])
@@ -27,7 +27,16 @@
 	);
 
 	function exportList() {
-		// branchement export à prévoir
+		const header = 'Lot;Détail';
+		const lines = data.quarantineLots.map((l) => `${l.lot};${l.detail.replaceAll(';', ',')}`);
+		const csv = [header, ...lines].join('\n');
+		const blob = new Blob([csv], { type: 'text/csv;charset=utf-8' });
+		const url = URL.createObjectURL(blob);
+		const anchor = document.createElement('a');
+		anchor.href = url;
+		anchor.download = `quarantaine-${new Date().toISOString().slice(0, 10)}.csv`;
+		anchor.click();
+		URL.revokeObjectURL(url);
 	}
 </script>
 
@@ -59,8 +68,6 @@
 {/if}
 
 {#if !data.error}
-	<!-- La barrière qualité en premier : c'est ce qui BLOQUE la sortie d'usine, donc ce qui
-	     attend une action. Les non-conformités passées et la quarantaine viennent après. -->
 	<div class="pending">
 		<PendingQcPanel
 			lots={pendingQc}

@@ -27,11 +27,9 @@ export const actions = {
 			return fail(res.status, { verifyError: res.message });
 		}
 		const r = res.data;
-		// Réponse malformée → message neutre plutôt qu'un faux « chaîne compromise ».
 		if (typeof r?.valid !== 'boolean') {
 			return fail(502, { verifyError: 'Réponse de vérification illisible.' });
 		}
-		// On ne renvoie au client que les champs affichés (moindre exposition).
 		return {
 			verify: {
 				valid: r.valid,

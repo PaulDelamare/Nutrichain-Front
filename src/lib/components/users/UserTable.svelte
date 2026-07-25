@@ -1,27 +1,35 @@
 <script lang="ts">
+	import { enhance } from '$app/forms';
+	import { invalidateAll } from '$app/navigation';
 	import MfaBadge from './MfaBadge.svelte';
 	import { INVITE_ROLE_OPTIONS } from '$lib/config/invite-roles';
 	import type { AppUser } from '$lib/types/user';
 
 	type Props = {
 		rows: AppUser[];
-		/** L'utilisateur courant peut-il administrer les membres (owner/admin) ? */
 		canManage?: boolean;
-		/** Pour masquer les actions sur sa propre ligne : on ne modifie pas son propre accès. */
 		currentUserId?: string;
 	};
 
 	let { rows, canManage = false, currentUserId }: Props = $props();
 
-	// Le propriétaire ancre la gouvernance de l'organisation et n'est pas modifiable ; personne ne
-	// gère non plus son propre accès. L'API refuse déjà ces deux cas — on ne montre simplement pas
-	// des commandes vouées à un 403.
 	function estGerable(row: AppUser): boolean {
 		return canManage && row.rawRole !== 'owner' && row.userId !== currentUserId;
 	}
 
-	function confirmerRevocation(event: SubmitEvent) {
-		if (!confirm('Révoquer cet accès ? La personne sera déconnectée immédiatement.')) {
+	const apresAction =
+		() =>
+		async ({ result, update }: { result: { type: string }; update: () => Promise<void> }) => {
+			if (result.type === 'success') await invalidateAll();
+			await update();
+		};
+
+	function confirmerRevocation(email: string, event: SubmitEvent) {
+		if (
+			!confirm(
+				`Révoquer l'accès de ${email} ? Ses sessions seront fermées et ses invitations en attente annulées.`
+			)
+		) {
 			event.preventDefault();
 		}
 	}
@@ -33,7 +41,6 @@
 			<tr>
 				<th>Utilisateur</th>
 				<th>Rôle</th>
-				<th>Dernière connexion</th>
 				<th>MFA</th>
 				{#if canManage}
 					<th>Actions</th>
@@ -41,17 +48,21 @@
 			</tr>
 		</thead>
 		<tbody>
-			{#each rows as row (row.email)}
+			{#each rows as row (row.memberId)}
 				<tr>
 					<td class="email">{row.email}</td>
 					<td>{row.role}</td>
-					<td>{row.lastLogin}</td>
 					<td><MfaBadge enabled={row.mfa} /></td>
 					{#if canManage}
 						<td>
 							{#if estGerable(row)}
 								<div class="actions">
-									<form method="POST" action="?/changeRole" class="role-form">
+									<form
+										method="POST"
+										action="?/changeRole"
+										class="role-form"
+										use:enhance={apresAction}
+									>
 										<input type="hidden" name="memberId" value={row.memberId} />
 										<select name="role" aria-label={`Rôle de ${row.email}`}>
 											{#each INVITE_ROLE_OPTIONS as opt (opt.value)}
@@ -62,7 +73,12 @@
 										</select>
 										<button type="submit" class="apply">Appliquer</button>
 									</form>
-									<form method="POST" action="?/revoke" onsubmit={confirmerRevocation}>
+									<form
+										method="POST"
+										action="?/revoke"
+										use:enhance={apresAction}
+										onsubmit={(e) => confirmerRevocation(row.email, e)}
+									>
 										<input type="hidden" name="memberId" value={row.memberId} />
 										<button type="submit" class="danger">Révoquer</button>
 									</form>
@@ -120,6 +136,7 @@
 
 	.actions {
 		display: flex;
+		flex-wrap: wrap;
 		gap: 0.5rem;
 		align-items: center;
 	}

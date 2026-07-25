@@ -8,8 +8,6 @@ import {
 import { exigerAdminPlateforme } from '$lib/server/guards';
 
 export const load: PageServerLoad = async ({ fetch, cookies, locals }) => {
-	// Le layout garde déjà l'accès, mais le load d'une page est indépendant : on ne charge pas la
-	// liste des organisations pour quelqu'un qui n'y a pas droit.
 	exigerAdminPlateforme(locals.user);
 
 	const orgs = await getOrganizations(fetch, cookies);
@@ -21,7 +19,6 @@ export const load: PageServerLoad = async ({ fetch, cookies, locals }) => {
 	return { organizations: orgs.data };
 };
 
-// Slug lisible : minuscules, chiffres, tirets — aligné sur la validation de l'API.
 function slugify(source: string): string {
 	return source
 		.normalize('NFD')
@@ -44,8 +41,6 @@ export const actions = {
 			return fail(400, { createError: "Le nom de l'organisation est requis.", name });
 		}
 
-		// Le slug est dérivé du nom : un nom d'emoji/ponctuation seule donnerait un slug vide, que
-		// l'API rejette avec un message technique. On l'explique ici, avant l'appel.
 		if (slug.length < 2) {
 			return fail(400, {
 				createError:

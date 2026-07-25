@@ -88,7 +88,7 @@
 	{#if !pin}
 		<div class="lot-map-empty">
 			<p>Emplacement indisponible</p>
-			<span>Les coordonnées seront affichées dès synchronisation WMS / GPS.</span>
+			<span>Les coordonnées GPS seront affichées dès qu'elles seront renseignées.</span>
 		</div>
 	{:else if mapError}
 		<div class="lot-map-empty">

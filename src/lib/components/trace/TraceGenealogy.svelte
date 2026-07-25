@@ -119,7 +119,6 @@
 		gap: 0.75rem;
 	}
 
-	/* Les cartes s'étalent côte à côte dans une bande, mais restent lisibles seules. */
 	.cards :global(.step) {
 		flex: 1 1 18rem;
 	}

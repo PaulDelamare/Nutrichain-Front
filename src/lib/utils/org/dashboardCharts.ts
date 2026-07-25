@@ -27,22 +27,17 @@ const LOT_STATUS_COLORS: Record<string, string> = {
 	PERIME: '#94a3b8'
 };
 
-const MOVEMENT_LABELS: Record<string, string> = {
-	RECEPTION: 'Réceptions',
-	EXPEDITION: 'Expéditions',
-	QUARANTAINE: 'Quarantaines',
-	TRANSFORMATION: 'Transformations'
-};
-
-const MOVEMENT_COLORS: Record<string, string> = {
-	RECEPTION: '#1b6b5c',
-	EXPEDITION: '#5aafa0',
-	QUARANTAINE: '#f59e0b',
-	TRANSFORMATION: '#8fd4c5'
-};
+import {
+	MOVEMENT_CHART_COLORS,
+	MOVEMENT_CHART_LABELS,
+	MOVEMENT_CHART_TYPES,
+	normalizeMovementType,
+	type MovementChartType
+} from '$lib/utils/movements/labels';
 
 const SEVERITY_LABELS: Record<string, string> = {
 	CRITIQUE: 'Critique',
+	PANIC: 'Critique',
 	HAUTE: 'Haute',
 	MOYENNE: 'Moyenne',
 	FAIBLE: 'Faible'
@@ -50,6 +45,7 @@ const SEVERITY_LABELS: Record<string, string> = {
 
 const SEVERITY_COLORS: Record<string, string> = {
 	CRITIQUE: '#ef4444',
+	PANIC: '#ef4444',
 	HAUTE: '#f59e0b',
 	MOYENNE: '#5aafa0',
 	FAIBLE: '#94a3b8'
@@ -117,27 +113,23 @@ function weeklyMovementsChart(movements: ApiMovement[]): DashboardCharts['weekly
 		return d.toLocaleDateString('fr-FR');
 	});
 
-	const types = ['RECEPTION', 'EXPEDITION', 'QUARANTAINE', 'TRANSFORMATION'] as const;
-	const buckets = new Map<string, Map<string, number>>();
-	for (const type of types) {
+	const buckets = new Map<MovementChartType, Map<string, number>>();
+	for (const type of MOVEMENT_CHART_TYPES) {
 		buckets.set(type, new Map(dayKeys.map((k) => [k, 0])));
 	}
 
 	for (const m of movements) {
-		const type = m.type_action as (typeof types)[number];
-		if (!buckets.has(type)) continue;
+		const type = normalizeMovementType(m.type_action);
 		const key = dayKey(m.created_at);
 		const bucket = buckets.get(type)!;
 		if (bucket.has(key)) bucket.set(key, (bucket.get(key) ?? 0) + 1);
 	}
 
-	const series = types
-		.map((type) => ({
-			name: MOVEMENT_LABELS[type] ?? type,
-			color: MOVEMENT_COLORS[type] ?? '#94a3b8',
-			data: dayKeys.map((k) => buckets.get(type)?.get(k) ?? 0)
-		}))
-		.filter((s) => s.data.some((v) => v > 0));
+	const series = MOVEMENT_CHART_TYPES.map((type) => ({
+		name: MOVEMENT_CHART_LABELS[type],
+		color: MOVEMENT_CHART_COLORS[type],
+		data: dayKeys.map((k) => buckets.get(type)?.get(k) ?? 0)
+	})).filter((s) => s.data.some((v) => v > 0));
 
 	return { labels, series };
 }
@@ -152,9 +144,6 @@ function alertSeverityChart(alerts: ApiAlert[]): ChartSegment[] {
 	}));
 }
 
-// Ne compte QUE les contrôles réellement effectués. L'ancienne formule déduisait les conformes
-// (lots − non conformes − en cours) : elle déclarait donc conforme tout lot jamais contrôlé —
-// une conformité sanitaire affirmée que personne n'avait vérifiée.
 function qualityResultsChart(qualityRows: ApiQualityControl[]): ChartSegment[] {
 	return countBy(qualityRows, (q) => normalizeQualityResult(q.resultat)).map((s) => ({
 		label: QUALITY_LABELS[s.label] ?? s.label,

@@ -1,11 +1,13 @@
 <script lang="ts">
+	import { page } from '$app/stores';
+	import { resolve } from '$app/paths';
 	import LotFilters from '$lib/components/lots/LotFilters.svelte';
 	import LotTable from '$lib/components/lots/LotTable.svelte';
 	import PageHead from '$lib/components/page/PageHead.svelte';
 	import { usePageSearch } from '$lib/context/pageSearch.svelte';
 	import { emptyLotFilters } from '$lib/types/lot';
 	import { filterLots } from '$lib/utils/lots/filterLots';
-	import { filterRowsByText } from '$lib/utils/pageSearch/filterByText';
+	import { schedulePageSearchNavigation } from '$lib/utils/pageSearch/syncToUrl';
 	import type { PageData } from './$types';
 
 	let { data }: { data: PageData } = $props();
@@ -17,10 +19,19 @@
 		return () => pageSearch.deactivate();
 	});
 
+	$effect(() => {
+		const urlQ = $page.url.searchParams.get('q') ?? '';
+		if (pageSearch.query !== urlQ) pageSearch.query = urlQ;
+	});
+
+	$effect(() => {
+		const q = pageSearch.query;
+		return schedulePageSearchNavigation(resolve('/recherche-lots'), $page.url.searchParams, 'q', q);
+	});
+
 	let draft = $state(emptyLotFilters());
 	let applied = $state(emptyLotFilters());
 
-	// Options dérivées des lots réellement chargés (pas de valeurs codées en dur).
 	const produitOptions = $derived([
 		{ label: 'Tous les produits', value: 'tous' },
 		...Array.from(new Set(data.lots.map((l) => l.produit)))
@@ -34,15 +45,7 @@
 			.map((s) => ({ label: s, value: s }))
 	]);
 
-	const filteredByForm = $derived(filterLots(data.lots, applied));
-	const results = $derived(
-		filterRowsByText(filteredByForm, pageSearch.query, (row) => [
-			row.lotNumber ?? row.id,
-			row.produit,
-			row.gtin,
-			row.statut
-		])
-	);
+	const results = $derived(filterLots(data.lots, applied));
 
 	function apply() {
 		applied = { ...draft };
@@ -53,6 +56,13 @@
 	heading="Recherche de lots"
 	description="Filtres — GTIN, numéro de lot, produit, site et statut."
 />
+
+{#if data.cappedAt100}
+	<p class="note">
+		Affichage limité aux 100 lots les plus récents. Utilisez la recherche (barre en haut) pour
+		retrouver un lot plus ancien.
+	</p>
+{/if}
 
 {#if data.error}
 	<p class="warn">API indisponible — {data.error}</p>
@@ -67,6 +77,15 @@
 {/if}
 
 <style>
+	.note {
+		margin: 0 0 0.75rem;
+		padding: 0.5rem 0.75rem;
+		border-radius: 0.375rem;
+		background: #f0f9ff;
+		color: #0369a1;
+		font-size: 0.8125rem;
+	}
+
 	.warn {
 		margin: 0 0 0.75rem;
 		padding: 0.5rem 0.75rem;

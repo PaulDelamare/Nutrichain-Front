@@ -6,7 +6,6 @@
 
 	type Props = {
 		filters: LotFilters;
-		// Options dérivées des lots réellement chargés (dynamique).
 		produitOptions?: Option[];
 		siteOptions?: Option[];
 		onapply?: () => void;

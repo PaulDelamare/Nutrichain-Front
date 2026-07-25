@@ -12,8 +12,6 @@ function renderTopBar() {
 }
 
 describe('TopBar — déconnexion', () => {
-	// Un `<a>` est préchargé au survol (app.html : data-sveltekit-preload-data="hover") :
-	// la déconnexion doit être une soumission, jamais une navigation.
 	it('déconnecte par un bouton de formulaire, pas par un lien', async () => {
 		renderTopBar();
 

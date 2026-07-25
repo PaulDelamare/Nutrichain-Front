@@ -2,10 +2,6 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { isHttpError } from '@sveltejs/kit';
 import type { KnownRole } from '$lib/config/roles';
 
-// Ce fichier teste le CÂBLAGE, pas la règle : la règle est testée dans guards.test.ts.
-// Sans lui, supprimer un `exigerAdministrateur` d'une page ne faisait rougir AUCUN test — et la
-// page réservée devenait accessible à tous, en silence.
-
 const ok = <T>(data: T) => ({ ok: true as const, status: 200, data });
 
 vi.mock('$lib/Api/organization.server', () => ({

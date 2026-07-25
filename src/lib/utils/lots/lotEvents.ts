@@ -3,9 +3,7 @@ import type { LotEvent, LotEventTone } from '$lib/types/lot-sheet';
 
 type EventShape = {
 	title: string;
-	/** La teinte peut dépendre du contexte réel : une réception non conforme n'est pas normale. */
 	tone: LotEventTone | ((meta: Record<string, unknown>) => LotEventTone);
-	/** Contexte lisible, tiré des métadonnées réelles de l'étape. Vide si l'API n'en fournit pas. */
 	context: (meta: Record<string, unknown>) => string;
 };
 
@@ -14,13 +12,9 @@ function str(meta: Record<string, unknown>, key: string): string {
 	return typeof v === 'string' || typeof v === 'number' ? String(v) : '';
 }
 
-// La couleur vient de la NATURE de l'étape, jamais d'un jugement.
-// Quarantaine = bloquant mais réversible (orange). Rappel = irréversible (rouge).
 const SHAPES: Record<string, EventShape> = {
 	RECEPTION: {
 		title: 'Réception',
-		// Une réception non conforme place le lot en quarantaine dès son arrivée : elle ne doit
-		// pas s'afficher comme une étape normale.
 		tone: (m) => (m.quarantaine === true ? 'warn' : 'ok'),
 		context: (m) => {
 			const controle = str(m, 'statut_controle');
@@ -30,7 +24,6 @@ const SHAPES: Record<string, EventShape> = {
 	},
 	CONTROLE_QUALITE: {
 		title: 'Contrôle qualité',
-		// La couleur suit le RÉSULTAT : un contrôle non conforme met le lot en quarantaine.
 		tone: (m) => (m.resultat === 'NON_CONFORME' ? 'warn' : 'ok'),
 		context: (m) => {
 			const resultat = str(m, 'resultat') === 'NON_CONFORME' ? 'Non conforme' : 'Conforme';
@@ -88,7 +81,6 @@ const SHAPES: Record<string, EventShape> = {
 	}
 };
 
-/** Étape inconnue : on affiche le code brut plutôt que de le masquer, mais sans couleur. */
 function fallbackShape(typeAction: string): EventShape {
 	return { title: typeAction, tone: 'neutral', context: () => '' };
 }

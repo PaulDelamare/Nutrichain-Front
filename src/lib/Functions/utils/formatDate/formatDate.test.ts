@@ -2,19 +2,18 @@ import { describe, it, expect } from 'vitest';
 import { formatDate, formatTime } from './formatDate';
 
 describe('formatDate', () => {
-	// Cas basiques avec des dates valides
 	it('formate correctement une date standard en dd/mm/yyyy', () => {
-		const date = new Date(2025, 2, 7); // 07/03/2025 (mois = 0-indexé)
+		const date = new Date(2025, 2, 7);
 		expect(formatDate(date)).toBe('07/03/2025');
 	});
 
 	it('ajoute un zéro devant les jours et mois à un chiffre', () => {
-		const date = new Date(2023, 3, 5); // 05/04/2023
+		const date = new Date(2023, 3, 5);
 		expect(formatDate(date)).toBe('05/04/2023');
 	});
 
 	it("formate la date d'époque (Unix Epoch)", () => {
-		const date = new Date(0); // 01/01/1970
+		const date = new Date(0);
 		expect(formatDate(date)).toBe('01/01/1970');
 	});
 
@@ -28,7 +27,6 @@ describe('formatDate', () => {
 		expect(formatDate(date)).toBe(expected);
 	});
 
-	// Tests de correspondance du format (pattern dd/mm/yyyy)
 	it('renvoie une chaîne respectant le format dd/mm/yyyy', () => {
 		const date = new Date(2022, 10, 15);
 		const formatted = formatDate(date);
@@ -61,12 +59,9 @@ describe('formatDate', () => {
 
 describe('formatTime', () => {
 	it('formate correctement une heure avec heures et minutes à deux chiffres', () => {
-		// Exemple : 08:05
 		const date = new Date(2023, 0, 1, 8, 5);
 		const result = formatTime(date);
-		// On vérifie le format HH:MM
 		expect(result).toMatch(/^\d{2}:\d{2}$/);
-		// Pour fr-FR, cela devrait renvoyer "08:05"
 		expect(result).toBe('08:05');
 	});
 

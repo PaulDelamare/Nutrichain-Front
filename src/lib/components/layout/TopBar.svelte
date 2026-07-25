@@ -6,7 +6,6 @@
 
 	type Props = {
 		title: string;
-		// null = le compte n'a pas pu être vérifié : on n'affiche rien plutôt qu'un « 0 » faux.
 		coldAlerts: number | null;
 		sidebarCollapsed?: boolean;
 		onMenuToggle?: () => void;

@@ -35,7 +35,6 @@ describe('PendingQcPanel', () => {
 			.toBeInTheDocument();
 	});
 
-	// Le formulaire n'est pas ouvert d'emblée : la page ne doit pas devenir un mur de champs.
 	it('ouvre le formulaire de saisie à la demande', async () => {
 		renderPanel([lot()]);
 
@@ -46,7 +45,6 @@ describe('PendingQcPanel', () => {
 		await expect.element(page.getByText('Type de test')).toBeInTheDocument();
 	});
 
-	// Les deux issues sont explicites : l'utilisateur voit la CONSÉQUENCE avant de cliquer.
 	it('nomme la conséquence de chaque décision', async () => {
 		renderPanel([lot()]);
 		await page.getByRole('button', { name: 'Saisir le contrôle' }).click();

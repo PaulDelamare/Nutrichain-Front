@@ -15,12 +15,8 @@
 		return () => pageSearch.deactivate();
 	});
 
-	const users = $derived(
-		filterRowsByText(data.users, pageSearch.query, (u) => [u.email, u.role, u.lastLogin])
-	);
+	const users = $derived(filterRowsByText(data.users, pageSearch.query, (u) => [u.email, u.role]));
 
-	// Invitation et gestion des membres partagent le même `form` : on route par `scope` pour ne pas
-	// afficher un message de gestion dans la carte d'invitation, et inversement.
 	const isMemberForm = $derived(form && 'scope' in form && form.scope === 'member');
 	const inviteForm = $derived(isMemberForm ? null : form);
 	const memberForm = $derived(isMemberForm ? form : null);

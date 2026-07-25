@@ -1,7 +1,4 @@
 <script lang="ts">
-	// Combobox cherchable pour les listes qui grossissent (lots, produits…).
-	// Remplace un <select> natif devenu ingérable : on tape pour filtrer.
-	// Compatible form SSR : la valeur choisie part dans un <input type="hidden">.
 	interface Option {
 		value: string;
 		label: string;
@@ -67,7 +64,6 @@
 		}
 	}
 
-	// Focus le champ de filtre à l'ouverture + ferme au clic extérieur.
 	$effect(() => {
 		if (!open) return;
 		filterInput?.focus();

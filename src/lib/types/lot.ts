@@ -12,7 +12,6 @@ export type LotRow = {
 	lotNumber?: string;
 	produit: string;
 	gtin: string;
-	sscc: string;
 	site: string;
 	statut: LotStatus;
 	temperature: string;

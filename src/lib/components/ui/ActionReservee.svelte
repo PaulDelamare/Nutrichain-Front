@@ -1,15 +1,10 @@
 <script lang="ts">
 	import { roleLabel, type KnownRole } from '$lib/config/roles';
 
-	// On EXPLIQUE le refus au lieu de faire disparaître le bouton : un bouton absent passe pour un
-	// oubli, une phrase montre que le cloisonnement est VOULU. C'est ce qui rend la séparation des
-	// tâches HACCP démontrable.
 	type Props = { action: string; role: KnownRole };
 
 	let { action, role }: Props = $props();
 
-	// La règle HACCP ne s'applique qu'à celui qui manipule la matière : la resservir à un lecteur
-	// serait un non-sequitur. Lui, il n'a simplement aucun droit d'écriture.
 	const estOperateur = $derived(role === 'operator');
 </script>
 

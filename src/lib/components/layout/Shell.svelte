@@ -21,7 +21,6 @@
 	const title = $derived(headerTitle($page.url.pathname));
 
 	$effect(() => {
-		// dépendance réactive : reset de la recherche à chaque navigation
 		void $page.url.pathname;
 		pageSearch.resetQuery();
 	});

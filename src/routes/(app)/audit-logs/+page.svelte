@@ -19,7 +19,6 @@
 		return () => pageSearch.deactivate();
 	});
 
-	// Filtre par type d'action : liste des actions réellement présentes (code → libellé).
 	let actionFilter = $state('all');
 	const actionOptions = $derived([
 		...new Map(data.rows.map((r) => [r.action, r.actionLabel])).entries()
@@ -84,8 +83,10 @@
 
 {#if data.error}
 	<p class="banner">API indisponible — {data.error}</p>
-{:else if rows.length === 0}
+{:else if rows.length === 0 && (pageSearch.query || actionFilter !== 'all')}
 	<p class="empty">Aucune entrée ne correspond à la recherche.</p>
+{:else if rows.length === 0}
+	<p class="empty">Aucune entrée dans le journal d'audit.</p>
 {:else}
 	<div class="table-wrap">
 		<table>

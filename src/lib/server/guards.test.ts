@@ -34,8 +34,6 @@ describe('exigerAdministrateur — garde de PAGE', () => {
 		expect(refusDe(() => exigerAdministrateur(undefined, 'Le journal'))).toBe(403);
 	});
 
-	// Rôle absent = API antérieure. Verrouiller ici priverait l'owner de son propre outil
-	// d'administration à cause d'un simple décalage de déploiement.
 	it("laisse passer quand le rôle est inconnu — le 403 de l'API reste l'autorité", () => {
 		expect(refusDe(() => exigerAdministrateur(utilisateur(undefined), 'Le journal'))).toBeNull();
 	});
@@ -46,8 +44,6 @@ describe('exigerAdministrateur — garde de PAGE', () => {
 });
 
 describe('refusDecisionQualite — garde d’ACTION', () => {
-	// Une action ne doit PAS lever error() : les formulaires ne sont pas interceptés, la saisie
-	// de l'utilisateur serait jetée par une navigation pleine page. Elle renvoie un message.
 	it("refuse l'opérateur avec un message affichable", () => {
 		const refus = refusDecisionQualite(utilisateur('operator'));
 

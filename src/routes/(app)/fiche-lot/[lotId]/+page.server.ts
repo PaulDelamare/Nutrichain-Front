@@ -2,12 +2,15 @@ import { error, fail } from '@sveltejs/kit';
 import { refusDecisionQualite } from '$lib/server/guards';
 import type { Actions, PageServerLoad } from './$types';
 import { getBatchById, releaseQuarantine } from '$lib/Api/logistics.server';
-import { getMovements } from '$lib/Api/organization.server';
+import { getAuditLogs, getMovements } from '$lib/Api/organization.server';
 import { getBatches, getGenealogy, triggerRecall } from '$lib/Api/traceability.server';
 import type { ApiBatch, ApiOrigin } from '$lib/Api/traceability.server';
-import { batchToSheet } from '$lib/utils/lots/mapBatch';
+import {
+	auditLogsToBatchMouvements,
+	batchToSheet,
+	movementToBatchMouvement
+} from '$lib/utils/lots/mapBatch';
 
-// L'amont (fournisseurs d'origine) ne doit jamais faire échouer la fiche : dégradation silencieuse.
 async function loadOrigins(
 	fetch: typeof globalThis.fetch,
 	cookies: import('@sveltejs/kit').Cookies,
@@ -23,8 +26,8 @@ async function loadFromCatalog(
 	lotId: string
 ): Promise<ApiBatch | null> {
 	const [list, movements] = await Promise.all([
-		getBatches(fetch, cookies),
-		getMovements(fetch, cookies, { lotId, limit: 10 })
+		getBatches(fetch, cookies, { search: lotId }),
+		getMovements(fetch, cookies, { lotId, limit: 50 })
 	]);
 
 	if (!list.ok) return null;
@@ -34,7 +37,34 @@ async function loadFromCatalog(
 
 	return {
 		...batch,
-		mouvements: movements.ok ? movements.data : []
+		mouvements: movements.ok ? movements.data.map(movementToBatchMouvement) : []
+	};
+}
+
+async function enrichBatch(
+	fetch: typeof globalThis.fetch,
+	cookies: import('@sveltejs/kit').Cookies,
+	batch: ApiBatch,
+	lotId: string
+): Promise<ApiBatch> {
+	const [movements, audit] = await Promise.all([
+		getMovements(fetch, cookies, { lotId, limit: 50 }),
+		getAuditLogs(fetch, cookies, 100)
+	]);
+
+	const fromMovements = movements.ok ? movements.data.map(movementToBatchMouvement) : [];
+	const fromAudit =
+		audit.ok && fromMovements.length < 3
+			? auditLogsToBatchMouvements(
+					audit.data.filter((l) => l.entity === 'Batch' && l.entity_id === lotId)
+				)
+			: [];
+
+	const mergedEvents = fromMovements.length > 0 ? fromMovements : fromAudit;
+
+	return {
+		...batch,
+		mouvements: mergedEvents.length > 0 ? mergedEvents : (batch.mouvements ?? [])
 	};
 }
 
@@ -45,12 +75,14 @@ export const load: PageServerLoad = async ({ fetch, cookies, params }) => {
 	]);
 
 	if (res.ok) {
-		return { sheet: batchToSheet(res.data), origines, source: 'api' as const };
+		const enriched = await enrichBatch(fetch, cookies, res.data, params.lotId);
+		return { sheet: batchToSheet(enriched), origines, source: 'api' as const };
 	}
 
 	const fromCatalog = await loadFromCatalog(fetch, cookies, params.lotId);
 	if (fromCatalog) {
-		return { sheet: batchToSheet(fromCatalog), origines, source: 'api' as const };
+		const enriched = await enrichBatch(fetch, cookies, fromCatalog, params.lotId);
+		return { sheet: batchToSheet(enriched), origines, source: 'api' as const };
 	}
 
 	if (res.status === 404) {
@@ -63,7 +95,6 @@ export const load: PageServerLoad = async ({ fetch, cookies, params }) => {
 };
 
 export const actions = {
-	// Lever la quarantaine du lot (décision qualité) directement depuis sa fiche.
 	release: async ({ request, fetch, cookies, params, locals }) => {
 		const refus = refusDecisionQualite(locals.user);
 		if (refus) return fail(403, { releaseError: refus });
@@ -77,7 +108,6 @@ export const actions = {
 		return { released: true };
 	},
 
-	// Déclencher un rappel produit à partir du lot (bloque le lot et sa descendance).
 	recall: async ({ request, fetch, cookies, params, locals }) => {
 		const refus = refusDecisionQualite(locals.user);
 		if (refus) return fail(403, { recallError: refus });

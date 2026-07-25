@@ -8,7 +8,6 @@
 
 	let { events, temperature = '—' }: Props = $props();
 
-	// Une frise trop longue ne se lit plus. On montre les étapes récentes, le reste se déroule.
 	const COLLAPSED_COUNT = 5;
 
 	let expanded = $state(false);
@@ -108,7 +107,6 @@
 		padding: 0 0 1.1rem;
 	}
 
-	/* Le rail relie les étapes entre elles : il s'arrête à la dernière. */
 	.step:not(:last-child)::before {
 		content: '';
 		position: absolute;

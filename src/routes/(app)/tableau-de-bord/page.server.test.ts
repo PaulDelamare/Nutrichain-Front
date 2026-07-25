@@ -1,8 +1,6 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
-// La purge a eu lieu dans les chargeurs de page : c'est là qu'il faut la tester.
-// Le risque n'est plus le mock, c'est le ZÉRO SILENCIEUX — « 0 anomalie ouverte » affiché
-// alors que l'appel qui aurait pu en trouver a échoué.
 const ok = <T>(data: T) => ({ ok: true as const, status: 200, data });
 const err = (message: string) => ({ ok: false as const, status: 503, message });
 
@@ -25,7 +23,6 @@ vi.mock('$lib/Api/traceability.server', () => ({
 
 const { load } = await import('./+page.server');
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
 const run = () => (load as any)({ fetch: vi.fn(), cookies: {} });
 
 beforeEach(() => {

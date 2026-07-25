@@ -94,6 +94,13 @@
 					: ''} impactée{form.recall.affectedShipments.length > 1 ? 's' : ''}
 			</p>
 
+			{#if form.recall.depthSaturated}
+				<p class="saturation" role="alert">
+					⚠️ Attention — la descendance bloquée peut être incomplète (profondeur de graphe saturée).
+					Vérifiez manuellement les lots liés.
+				</p>
+			{/if}
+
 			{#if form.recall.affectedShipments.length > 0}
 				<ul class="shipments">
 					{#each form.recall.affectedShipments as shipment (shipment.shipmentId)}
@@ -198,6 +205,15 @@
 		margin: 0.75rem 0 0;
 		font-size: 0.875rem;
 		color: #b91c1c;
+	}
+
+	.saturation {
+		margin: 0 0 0.5rem;
+		padding: 0.5rem 0.75rem;
+		border-radius: 0.375rem;
+		background: #fffbeb;
+		color: #92400e;
+		font-size: 0.8125rem;
 	}
 
 	.result {

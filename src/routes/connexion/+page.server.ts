@@ -1,12 +1,12 @@
 import { fail, redirect } from '@sveltejs/kit';
 import { signIn } from '$lib/Api/auth.server';
+import { safeRedirect } from '$lib/utils/safeRedirect';
 import type { Actions, PageServerLoad } from './$types';
 
 export const load: PageServerLoad = async ({ locals, url }) => {
 	if (locals.user) {
-		// L'admin de plateforme n'a pas d'espace métier : sa console est sa page d'accueil.
 		const defaut = locals.user.isPlatformAdmin ? '/plateforme' : '/tableau-de-bord';
-		redirect(303, url.searchParams.get('redirect') || defaut);
+		redirect(303, safeRedirect(url.searchParams.get('redirect'), defaut));
 	}
 };
 
@@ -25,12 +25,12 @@ export const actions = {
 		if (!res.ok) {
 			const message =
 				res.status === 429
-					? 'Trop de requêtes vers l’API. Attendez une minute puis réessayez.'
+					? "Trop de requêtes vers l'API. Attendez une minute puis réessayez."
 					: res.message;
 			return fail(res.status === 429 ? 429 : res.status, { error: message, email });
 		}
 
-		const target = url.searchParams.get('redirect') || '/tableau-de-bord';
+		const target = safeRedirect(url.searchParams.get('redirect'), '/tableau-de-bord');
 
 		if (res.twoFactorRedirect) {
 			redirect(303, `/connexion/2fa?redirect=${encodeURIComponent(target)}`);

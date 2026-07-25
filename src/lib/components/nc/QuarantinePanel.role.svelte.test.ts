@@ -20,8 +20,6 @@ describe('QuarantinePanel — séparation des tâches HACCP', () => {
 		expect(page.getByRole('button', { name: 'Lever la quarantaine' }).all()).toHaveLength(0);
 	});
 
-	// Le point qui compte : masquer une ÉCRITURE ne doit pas masquer une LECTURE.
-	// Un opérateur doit savoir quels lots sont bloqués, même s'il ne peut pas les débloquer.
 	it("laisse l'opérateur VOIR les lots bloqués", async () => {
 		renderPanel('operator');
 
@@ -43,7 +41,6 @@ describe('QuarantinePanel — séparation des tâches HACCP', () => {
 		expect(page.getByRole('button', { name: 'Lever la quarantaine' }).all()).toHaveLength(0);
 	});
 
-	// Si l'API ne renvoie pas encore le rôle, on n'ose rien masquer : le 403 reste l'autorité.
 	it("n'ampute rien quand le rôle est inconnu", async () => {
 		renderPanel(undefined);
 

@@ -13,10 +13,6 @@
 
 	let { data }: { data: PageData } = $props();
 
-	// Pas de recherche sur le tableau de bord : elle ne filtrait que les deux panneaux du bas
-	// (activité récente, à traiter) et laissait KPI et graphes intacts — une barre de recherche
-	// qui semble ne rien faire est pire que pas de barre du tout.
-
 	const nav = $derived(findNavItem($page.url.pathname));
 
 	const recentEvents = $derived(data.recentEvents);
@@ -32,8 +28,6 @@
 
 	<div class="dashboard-body">
 		{#if data.error}
-			<!-- Une source a échoué : on n'affiche AUCUN chiffre. Un « 0 anomalie » non vérifié
-			     est plus dangereux qu'une absence d'information. -->
 			<p class="banner">API indisponible — aucun indicateur affichable ({data.error})</p>
 		{:else}
 			<div class="kpis">

@@ -9,8 +9,6 @@
 	};
 
 	let { variant, text, link }: Props = $props();
-
-	// resolve() n'accepte qu'un littéral de route : on rétrécit l'union Pathname via « as '/' »
 </script>
 
 <div class="alert" class:info={variant === 'info'} class:warn={variant === 'warn'}>

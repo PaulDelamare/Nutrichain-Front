@@ -1,6 +1,7 @@
 <script lang="ts">
 	import ColdAlertTable from '$lib/components/cold/ColdAlertTable.svelte';
 	import IncidentBanner from '$lib/components/cold/IncidentBanner.svelte';
+	import TemperatureChart from '$lib/components/cold/TemperatureChart.svelte';
 	import PageHead from '$lib/components/page/PageHead.svelte';
 	import Placeholder from '$lib/components/page/Placeholder.svelte';
 	import { usePageSearch } from '$lib/context/pageSearch.svelte';
@@ -42,13 +43,31 @@
 	<IncidentBanner incident={data.incident} />
 {/if}
 
+{#if data.telemetry}
+	<section class="telemetry">
+		<TemperatureChart
+			points={data.telemetry.points}
+			threshold={data.telemetry.threshold}
+			label="Capteur {data.telemetry.sensorId}"
+		/>
+	</section>
+{/if}
+
 {#if data.alerts.length > 0}
-	<ColdAlertTable rows={alerts} />
+	{#if alerts.length > 0}
+		<ColdAlertTable rows={alerts} />
+	{:else}
+		<Placeholder message="Aucune alerte ne correspond à la recherche." />
+	{/if}
 {:else if !data.error}
 	<Placeholder message="Aucune alerte de chaîne du froid active." />
 {/if}
 
 <style>
+	.telemetry {
+		margin-bottom: 1rem;
+	}
+
 	.banner {
 		margin: 0 0 0.75rem;
 		padding: 0.5rem 0.75rem;

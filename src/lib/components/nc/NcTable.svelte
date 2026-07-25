@@ -15,6 +15,7 @@
 			<tr>
 				<th>ID</th>
 				<th>Type</th>
+				<th>Lot</th>
 				<th>Statut</th>
 			</tr>
 		</thead>
@@ -23,6 +24,7 @@
 				<tr>
 					<td class="id">{row.id}</td>
 					<td>{row.type}</td>
+					<td>{row.lot}</td>
 					<td><NcStatusBadge statut={row.statut} /></td>
 				</tr>
 			{/each}

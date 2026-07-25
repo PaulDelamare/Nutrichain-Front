@@ -11,12 +11,7 @@ export type MePayload = {
 	};
 	session: Record<string, unknown>;
 	activeOrgId?: string;
-	/**
-	 * Absent si l'API est antérieure à l'exposition du rôle : ce n'est PAS la même chose que
-	 * `null` (aucun rôle). Cf. `$lib/config/roles` — on ne masque rien tant qu'on ne sait pas.
-	 */
 	role?: Role | null;
-	/** Administrateur de la plateforme (personnel NutriChain), au-dessus des organisations. */
 	isPlatformAdmin?: boolean;
 };
 
@@ -89,7 +84,6 @@ export async function signUp(
 	token?: string
 ): Promise<ApiResult<unknown> & { response?: Response }> {
 	const client = api(fetch, cookies);
-	// token = invitation.id, exigé par le guard API dès qu'un utilisateur existe.
 	const res = await client.post('/api/auth/sign-up/email', { name, email, password, token });
 
 	if (res.ok) {

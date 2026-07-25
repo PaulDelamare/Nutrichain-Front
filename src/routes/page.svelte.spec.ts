@@ -5,17 +5,14 @@ import Page from './(app)/tableau-de-bord/+page.svelte';
 import { PAGE_SEARCH_KEY, PageSearchContext } from '$lib/context/pageSearch.svelte';
 import { buildDashboardCharts } from '$lib/utils/org/dashboardCharts';
 
-// La page lit $page.url hors runtime SvelteKit : on fournit un store minimal.
 vi.mock('$app/stores', async () => {
 	const { readable } = await import('svelte/store');
 	return {
-		page: readable({ url: new URL('http://localhost/tableau-de-bord') })
+		page: readable({ url: new URL('http://localhost:5173/tableau-de-bord') })
 	};
 });
 
 function renderDashboard() {
-	// Cast : le type de render() exige `target` avec la forme {props, context},
-	// mais le runtime l'injecte lui-même (limitation vitest-browser-svelte).
 	render(Page, {
 		props: {
 			data: {

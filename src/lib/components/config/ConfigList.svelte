@@ -5,7 +5,6 @@
 
 	type Props = {
 		items: Item[];
-		/** Nom de l'action de bascule, ex. `?/toggleSupplier`. */
 		toggleAction: string;
 		emptyLabel: string;
 		envoi: boolean;

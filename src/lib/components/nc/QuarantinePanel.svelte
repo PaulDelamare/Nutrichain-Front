@@ -7,15 +7,11 @@
 	type Props = {
 		lots: QuarantineLot[];
 		onexport?: () => void;
-		// REQUIS : une prop optionnelle vaudrait `undefined` = « n'interdis rien ». Oublier de la
-		// câbler donnerait les pleins droits, sans erreur de typage ni test rouge.
 		role: KnownRole;
 	};
 
 	let { lots, onexport, role }: Props = $props();
 
-	// La LISTE reste visible pour tous : un opérateur doit savoir quels lots sont bloqués.
-	// Seule la LEVÉE — une décision qualité — lui est refusée.
 	const peutLever = $derived(peutDeciderQualite(role));
 </script>
 
@@ -35,7 +31,6 @@
 						— {item.detail}
 					</p>
 					{#if peutLever}
-						<!-- Levée = décision qualité : motif obligatoire (tracé dans l'audit WORM). -->
 						<form method="POST" action="?/release" class="release">
 							<input type="hidden" name="lotId" value={item.lot} />
 							<input

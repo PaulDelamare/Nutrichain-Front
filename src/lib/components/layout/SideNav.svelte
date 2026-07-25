@@ -7,13 +7,10 @@
 	type Props = {
 		collapsed?: boolean;
 		onMenuToggle?: () => void;
-		/** Navigation déjà filtrée selon le rôle. REQUIS : un défaut « tout » masquerait un oubli. */
 		groups: NavGroup[];
 	};
 
 	let { collapsed = false, onMenuToggle, groups }: Props = $props();
-
-	// resolve() n'accepte qu'un littéral de route : on rétrécit l'union Pathname via « as '/' »
 
 	function isActive(href: string, pathname: string): boolean {
 		if (href === '/recherche-lots' && pathname.startsWith('/fiche-lot/')) {

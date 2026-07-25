@@ -5,20 +5,15 @@
 
 	type Props = {
 		lots: PendingQcLot[];
-		/** Lot dont la saisie vient d'échouer, avec le message de l'API. */
 		errorLotId?: string;
 		errorMessage?: string;
-		/** REQUIS : optionnel = `undefined` = aucune restriction. Un oubli ouvrirait tout en silence. */
 		role: KnownRole;
 	};
 
 	let { lots, errorLotId, errorMessage, role }: Props = $props();
 
-	// La liste des lots bloqués reste visible : c'est une information de production, utile à
-	// l'opérateur. Seule la SAISIE du contrôle est une décision qualité.
 	const peutControler = $derived(peutDeciderQualite(role));
 
-	// Un seul formulaire ouvert à la fois : la page ne doit pas devenir un mur de champs.
 	let openLot = $state<string | null>(null);
 </script>
 

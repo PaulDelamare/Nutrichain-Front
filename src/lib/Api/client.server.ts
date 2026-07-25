@@ -28,8 +28,6 @@ export type ApiErr = {
 
 export type ApiResult<T> = ApiOk<T> | ApiErr;
 
-// Échec réseau (API down, DNS, timeout) : on dégrade en ApiErr au lieu de laisser
-// le fetch rejeter — sinon chaque load/action SSR devient une page 500.
 const UNREACHABLE: ApiErr = {
 	ok: false,
 	status: 503,

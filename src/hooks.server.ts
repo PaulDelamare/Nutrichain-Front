@@ -11,14 +11,8 @@ import type { Handle, HandleFetch } from '@sveltejs/kit';
 
 let rbacEteintSignale = false;
 
-/**
- * `undefined` si l'API n'expose pas le champ (déploiement antérieur) — on ne masquera alors rien.
- * `null` si elle l'expose sans rôle exploitable, ou avec un rôle hors référentiel.
- */
 function lireRole(data: MePayload): KnownRole {
 	if (!('role' in data)) {
-		// Sans ce cri, un front déployé avant l'API se comporterait comme un RBAC qui marche : tout
-		// s'affiche, aucun test ne rougit, personne ne sait que le cloisonnement est éteint.
 		if (!rbacEteintSignale) {
 			rbacEteintSignale = true;
 			console.warn(
@@ -34,11 +28,6 @@ function lireRole(data: MePayload): KnownRole {
 
 let plateformeInconnueSignalee = false;
 
-/**
- * Fail-CLOSED, à l'inverse du rôle métier (fail-open) : un champ absent ne doit JAMAIS ouvrir la
- * console plateforme à un membre normal. Le prix est qu'un VRAI admin de plateforme sur une API
- * antérieure serait traité en membre — d'où l'avertissement, pour rendre le décalage visible.
- */
 function lireAdminPlateforme(data: MePayload): boolean {
 	if (!('isPlatformAdmin' in data) && !plateformeInconnueSignalee) {
 		plateformeInconnueSignalee = true;

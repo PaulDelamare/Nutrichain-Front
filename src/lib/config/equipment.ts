@@ -12,6 +12,8 @@ export type EquipmentType = (typeof EQUIPMENT_TYPE_OPTIONS)[number]['value'];
 
 export const EQUIPMENT_TYPES: EquipmentType[] = EQUIPMENT_TYPE_OPTIONS.map((o) => o.value);
 
+export const COLD_EQUIPMENT_TYPES: EquipmentType[] = ['FRIGO', 'CONGELATEUR'];
+
 export function estTypeMateriel(valeur: string): valeur is EquipmentType {
 	return (EQUIPMENT_TYPES as string[]).includes(valeur);
 }

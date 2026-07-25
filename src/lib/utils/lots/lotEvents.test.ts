@@ -29,8 +29,6 @@ describe('movementsToLotEvents', () => {
 		expect(e.tone).toBe('neutral');
 	});
 
-	// ⚠️ Métier : la quarantaine bloque le lot mais reste levable ; le rappel est irréversible.
-	// Les confondre visuellement serait une faute — c'est la distinction centrale du domaine.
 	it('distingue la quarantaine (réversible) du rappel (irréversible)', () => {
 		const [quarantaine] = movementsToLotEvents([mvt({ type_action: 'QUARANTAINE_FROID' })]);
 		const [rappel] = movementsToLotEvents([mvt({ type_action: 'RAPPEL' })]);

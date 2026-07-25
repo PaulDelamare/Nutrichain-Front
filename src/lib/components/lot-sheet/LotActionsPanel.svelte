@@ -1,8 +1,6 @@
 <script lang="ts">
 	import { resolve } from '$app/paths';
 
-	// Poste d'actions du lot : lever la quarantaine, déclencher un rappel, voir la
-	// traçabilité — directement depuis la fiche, sans passer par les autres pages.
 	interface ActionFeedback {
 		released?: boolean;
 		releaseError?: string;
@@ -21,17 +19,11 @@
 		role
 	}: {
 		lotId: string;
-		// Statut métier du lot : conforme (EN_STOCK), quarantaine (BLOQUE), surveillance (ALERTE = déjà rappelé),
-		// et périmé / expédié / inconnu — tous rappelables (un lot déjà parti est justement celui qu'on rappelle).
 		statut: LotStatus;
 		form: ActionFeedback | null;
-		/** REQUIS : optionnel = `undefined` = aucune restriction. Un oubli ouvrirait tout en silence. */
 		role: KnownRole;
 	} = $props();
 
-	// Lever une quarantaine et déclencher un rappel sont des décisions qualité : l'opérateur en est
-	// exclu. Le CONTEXTE reste affiché — il doit comprendre l'état du lot, pas seulement subir un
-	// bouton manquant.
 	const peutDecider = $derived(peutDeciderQualite(role));
 </script>
 
@@ -39,7 +31,6 @@
 	<h3>Actions</h3>
 
 	{#if statut === 'quarantaine'}
-		<!-- Lot bloqué (quarantaine qualité) : seule la levée a du sens. -->
 		<div class="action">
 			<p class="action-title">Lever la quarantaine</p>
 			<p class="action-hint">Décision qualité — motif obligatoire, tracé dans l'audit WORM.</p>
@@ -64,7 +55,6 @@
 			{/if}
 		</div>
 	{:else if statut === 'surveillance'}
-		<!-- Lot déjà sous rappel (ALERTE) : aucun nouveau rappel, on ne rejoue pas l'action. -->
 		<div class="action">
 			<p class="action-title">Rappel en cours</p>
 			<p class="action-hint">
@@ -73,7 +63,6 @@
 			</p>
 		</div>
 	{:else}
-		<!-- Lot conforme : on peut déclencher un rappel (qui passe le lot et sa descendance en alerte). -->
 		<div class="action">
 			<p class="action-title">Déclencher un rappel</p>
 			<p class="action-hint">
@@ -111,6 +100,16 @@
 		<input type="hidden" name="lot" value={lotId} />
 		<button type="submit" class="trace-link">Voir la traçabilité (amont / aval) →</button>
 	</form>
+
+	<p class="label-row">
+		<a
+			href={resolve('/(app)/fiche-lot/[lotId]/label', { lotId: encodeURIComponent(lotId) })}
+			target="_blank"
+			rel="noopener noreferrer"
+		>
+			Imprimer l'étiquette QR →
+		</a>
+	</p>
 </section>
 
 <style>
@@ -222,6 +221,21 @@
 
 	.trace-link:hover {
 		color: var(--nc-brand-hover);
+		text-decoration: underline;
+	}
+
+	.label-row {
+		margin: 0.5rem 0 0;
+		font-size: 0.875rem;
+	}
+
+	.label-row a {
+		color: var(--nc-brand);
+		font-weight: 500;
+		text-decoration: none;
+	}
+
+	.label-row a:hover {
 		text-decoration: underline;
 	}
 </style>

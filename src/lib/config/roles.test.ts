@@ -26,16 +26,12 @@ describe('séparation des tâches HACCP', () => {
 });
 
 describe('rôle inconnu — le pire cas', () => {
-	// Si le front part avant l'API qui expose le rôle, le champ est ABSENT. Masquer alors
-	// verrouillerait l'application pour TOUT LE MONDE, owner compris. On n'ose rien masquer :
-	// le 403 de l'API reste l'autorité.
 	it("n'interdit RIEN quand l'API ne renvoie pas le champ (undefined)", () => {
 		expect(peutDeciderQualite(undefined)).toBe(true);
 		expect(peutAdministrer(undefined)).toBe(true);
 		expect(peutEcrire(undefined)).toBe(true);
 	});
 
-	// null = l'API a répondu, et l'utilisateur n'a réellement aucun rôle exploitable.
 	it('interdit tout quand le rôle est explicitement null', () => {
 		expect(peutDeciderQualite(null)).toBe(false);
 		expect(peutAdministrer(null)).toBe(false);

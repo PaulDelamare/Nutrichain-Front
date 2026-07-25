@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { isHttpError } from '@sveltejs/kit';
 
@@ -43,10 +44,7 @@ beforeEach(() => {
 });
 
 describe('console plateforme — gardes de page ET d’action', () => {
-	// SvelteKit n'exécute PAS le load du layout avant l'action d'une page enfant.
-	// Sans garde dans l'action, un non-admin pourrait POSTer ?/create malgré la redirection.
 	it("refuse l'action create à un non-admin (contournement du garde de layout)", async () => {
-		// eslint-disable-next-line @typescript-eslint/no-explicit-any
 		const create = (mod as any).actions.create;
 		const s = await statut(create, {
 			...form({ name: 'Pirate', slug: 'pirate' }),
@@ -58,7 +56,6 @@ describe('console plateforme — gardes de page ET d’action', () => {
 	});
 
 	it("refuse l'action inviteOwner à un non-admin", async () => {
-		// eslint-disable-next-line @typescript-eslint/no-explicit-any
 		const invite = (mod as any).actions.inviteOwner;
 		const s = await statut(invite, {
 			...form({ organizationId: 'o', email: 'x@y.z' }),
@@ -70,7 +67,6 @@ describe('console plateforme — gardes de page ET d’action', () => {
 	});
 
 	it('refuse le load à un non-admin', async () => {
-		// eslint-disable-next-line @typescript-eslint/no-explicit-any
 		const s = await statut((mod as any).load, {
 			fetch: vi.fn(),
 			cookies: {},
@@ -81,7 +77,6 @@ describe('console plateforme — gardes de page ET d’action', () => {
 	});
 
 	it('laisse un admin de plateforme créer une organisation', async () => {
-		// eslint-disable-next-line @typescript-eslint/no-explicit-any
 		const create = (mod as any).actions.create;
 		const res = await create({
 			...form({ name: 'Fromagerie des Alpes', slug: '' }),
@@ -92,9 +87,7 @@ describe('console plateforme — gardes de page ET d’action', () => {
 		expect(res).toMatchObject({ created: { id: 'o' } });
 	});
 
-	// Le slug est déduit du nom quand il est vide, et normalisé (accents, espaces).
 	it('déduit un slug valide du nom quand le champ est vide', async () => {
-		// eslint-disable-next-line @typescript-eslint/no-explicit-any
 		const create = (mod as any).actions.create;
 		await create({
 			...form({ name: 'Fromagerie des Alpes', slug: '' }),

@@ -10,7 +10,6 @@ const OWNER: AppUser = {
 	email: 'owner@x.fr',
 	role: 'Propriétaire',
 	rawRole: 'owner',
-	lastLogin: '—',
 	mfa: true
 };
 const MOI: AppUser = {
@@ -19,7 +18,6 @@ const MOI: AppUser = {
 	email: 'moi@x.fr',
 	role: 'Administrateur',
 	rawRole: 'admin',
-	lastLogin: '—',
 	mfa: false
 };
 const AUTRE: AppUser = {
@@ -28,7 +26,6 @@ const AUTRE: AppUser = {
 	email: 'autre@x.fr',
 	role: 'Opérateur',
 	rawRole: 'operator',
-	lastLogin: '—',
 	mfa: false
 };
 

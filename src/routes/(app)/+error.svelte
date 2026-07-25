@@ -8,7 +8,6 @@
 <section class="erreur">
 	<p class="code">{$page.status}</p>
 	<h1>{estRefus ? 'Accès refusé' : 'Une erreur est survenue'}</h1>
-	<!-- role="alert" sur le seul message : sur toute la section, le lecteur d'écran réciterait le bloc entier. -->
 	<p class="message" role="alert">{$page.error?.message ?? 'Erreur inattendue.'}</p>
 	{#if estRefus}
 		<p class="aide">

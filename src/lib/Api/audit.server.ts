@@ -14,7 +14,6 @@ export type AuditVerifyResult = {
 	actualRowCount: number | null;
 };
 
-/** Recalcule la chaîne d'audit WORM de l'organisation et renvoie son intégrité. */
 export function verifyAudit(fetch: typeof globalThis.fetch, cookies: Cookies) {
 	return api(fetch, cookies).get<AuditVerifyResult>('/api/audit/verify');
 }

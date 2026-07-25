@@ -1,4 +1,5 @@
 import type { Cookies } from '@sveltejs/kit';
+import { env } from '$env/dynamic/private';
 import { api } from './client.server';
 
 export type ApiMember = {
@@ -26,7 +27,6 @@ export type ApiAuditLog = {
 	entity_id: string;
 	horodatage: string;
 	id_user?: string | null;
-	// État avant/après l'action (contient le motif d'une levée de quarantaine, un changement de statut, etc.)
 	ancienne_valeur?: Record<string, unknown> | null;
 	nouvelle_valeur?: Record<string, unknown> | null;
 };
@@ -45,6 +45,7 @@ export type ApiEquipment = {
 	nom: string;
 	type: string;
 	statut: string;
+	sensor_id?: string | null;
 	temp_actuelle: string | number | null;
 	temp_seuil_max: string | number | null;
 	lieu?: { nom: string };
@@ -103,10 +104,6 @@ function orgApi(fetch: typeof globalThis.fetch, cookies: Cookies) {
 export const getMembers = (fetch: typeof globalThis.fetch, cookies: Cookies) =>
 	orgApi(fetch, cookies).get<ApiMember[]>('/api/organization/members');
 
-// Gestion des membres : changer un rôle, révoquer un accès. Ces actions engagent une PERSONNE,
-// donc elles passent par la session (`useApiKey: false`), jamais par la clé API — comme les
-// décisions qualité. L'API garde ces routes (ADMIN_ROLES) et refuse de cibler le propriétaire
-// ou soi-même : ici on se contente de transmettre et de remonter son message d'erreur.
 export const changeMemberRole = (
 	fetch: typeof globalThis.fetch,
 	cookies: Cookies,
@@ -136,7 +133,6 @@ export type ApiQuarantineBatch = {
 	id: string;
 	produit?: { nom: string };
 	statut: string;
-	// Emplacement (matériel) où le lot est stocké — sert à relier un lot à l'alerte froid de son frigo.
 	id_materiel_actuel?: string | null;
 };
 
@@ -151,6 +147,42 @@ export const createEquipment = (
 	cookies: Cookies,
 	body: { nom: string; type: string; id_lieu: string; temp_seuil_max?: number; sensor_id?: string }
 ) => orgApi(fetch, cookies).post<ApiEquipment>('/api/organization/equipment', body);
+
+export async function fetchEquipmentLabel(
+	fetch: typeof globalThis.fetch,
+	cookies: Cookies,
+	equipmentId: string
+): Promise<{ ok: true; buffer: ArrayBuffer } | { ok: false; message: string }> {
+	const base = (env.API_URL ?? 'http://localhost:3000').replace(/\/$/, '');
+	const cookieHeader = cookies
+		.getAll()
+		.map((c) => `${c.name}=${c.value}`)
+		.join('; ');
+
+	try {
+		const res = await fetch(
+			`${base}/api/organization/equipment/${encodeURIComponent(equipmentId)}/label`,
+			{
+				headers: {
+					Accept: 'image/png',
+					...(cookieHeader ? { Cookie: cookieHeader } : {}),
+					...(env.API_KEY ? { 'x-api-key': env.API_KEY } : {})
+				}
+			}
+		);
+
+		if (!res.ok) {
+			return {
+				ok: false,
+				message: res.status === 404 ? 'Étiquette introuvable.' : 'Téléchargement impossible.'
+			};
+		}
+
+		return { ok: true, buffer: await res.arrayBuffer() };
+	} catch {
+		return { ok: false, message: 'API injoignable.' };
+	}
+}
 
 export const getMovements = (
 	fetch: typeof globalThis.fetch,
@@ -302,7 +334,6 @@ export const setProductActive = (
 export const getShipments = (fetch: typeof globalThis.fetch, cookies: Cookies) =>
 	orgApi(fetch, cookies).get<ApiShipment[]>('/api/organization/shipments');
 
-/** Lot en attente de son contrôle qualité de sortie d'usine (barrière HACCP). */
 export type ApiPendingQcBatch = {
 	id: string;
 	lot_number: string | null;
@@ -322,8 +353,6 @@ export type QualityControlInput = {
 	notes?: string;
 };
 
-// Une décision qualité engage une PERSONNE : elle passe par la session, jamais par la clé API
-// (une clé identifie une application, elle n'autorise pas une action).
 export const createQualityControl = (
 	fetch: typeof globalThis.fetch,
 	cookies: Cookies,

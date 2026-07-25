@@ -3,7 +3,6 @@ import {
 	alertsToCold,
 	alertsToRappels,
 	auditLogsToRows,
-	auditToConnectors,
 	buildDashboardKpis,
 	buildDashboardTasks,
 	buildPortailBrief,
@@ -76,9 +75,6 @@ describe('auditLogsToRows', () => {
 	});
 });
 
-// Règle commune à tous les mappers : une réponse API valide mais vide produit une sortie vide.
-// Jamais une donnée inventée — c'est le cas nominal d'une base saine, pas une panne.
-
 describe('alertsToCold', () => {
 	it('ne rend ni incident ni ligne quand aucune alerte froid n’est active', () => {
 		expect(alertsToCold([], [])).toEqual({ incident: null, rows: [] });
@@ -100,13 +96,17 @@ describe('alertsToCold', () => {
 			] as never
 		);
 
-		// Seul le lot du frigo en excursion est rattaché — pas celui d'un autre équipement.
 		expect(rows[0].lotsImpactes).toEqual([{ id: 'lot-a', produit: 'Beurre' }]);
 	});
 
 	it('ne rattache aucun lot quand aucun n’est en quarantaine sur cet équipement', () => {
 		const { rows } = alertsToCold([alert({ id_materiel: 'frigo-1' })], [], []);
 		expect(rows[0].lotsImpactes).toEqual([]);
+	});
+
+	it('mappe PANIC en statut critique', () => {
+		const { rows } = alertsToCold([alert({ niveau_gravite: 'PANIC' })], []);
+		expect(rows[0].statut).toBe('critique');
 	});
 });
 
@@ -173,12 +173,6 @@ describe('buildPortailBrief', () => {
 	});
 });
 
-describe('auditToConnectors', () => {
-	it('ne rend aucun connecteur inventé quand le journal n’en contient pas', () => {
-		expect(auditToConnectors([auditLog({})])).toEqual([]);
-	});
-});
-
 describe('countActiveColdAlerts', () => {
 	it('ne compte QUE les alertes froid actives — c’est le chiffre du badge global', () => {
 		const alerts = [
@@ -210,10 +204,15 @@ describe('qualityToNc', () => {
 	});
 
 	it('retient les contrôles qui demandent une action', () => {
-		const rows = qualityToNc([control('NON_CONFORME — QUARANTAINE'), control('EN_COURS')]);
-		expect(rows).toHaveLength(2);
+		const rows = qualityToNc([
+			control('NON_CONFORME — QUARANTAINE'),
+			control('NON_CONFORME'),
+			control('EN_COURS')
+		]);
+		expect(rows).toHaveLength(3);
 		expect(rows[0].statut).toBe('quarantaine');
-		expect(rows[1].statut).toBe('en_cours');
+		expect(rows[1].statut).toBe('quarantaine');
+		expect(rows[2].statut).toBe('en_cours');
 	});
 });
 

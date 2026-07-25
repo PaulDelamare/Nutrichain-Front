@@ -24,7 +24,6 @@ export function filterLots(rows: LotRow[], filters: LotFilters): LotRow[] {
 	return rows.filter(
 		(row) =>
 			match(row.gtin, filters.gtin) &&
-			// le filtre « N° lot » cible le numéro de lot GS1 affiché (repli id).
 			match(row.lotNumber ?? row.id, filters.lot) &&
 			matchProduit(row.produit, filters.produit) &&
 			matchSite(row.site, filters.site) &&

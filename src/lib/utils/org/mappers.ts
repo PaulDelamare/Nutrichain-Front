@@ -14,9 +14,9 @@ import type { NcRow, QuarantineLot } from '$lib/types/nc';
 import type { Recall } from '$lib/types/recall';
 import type { AppUser } from '$lib/types/user';
 import type { TraceGraph } from '$lib/types/trace';
-import type { Connector } from '$lib/types/integration';
 import type { StoreStat, StoreBrief } from '$lib/types/portail';
-import { openQualityIssues } from './quality';
+import { movementEventLabel } from '$lib/utils/movements/labels';
+import { normalizeQualityResult, openQualityIssues } from './quality';
 
 const ROLE_LABELS: Record<string, string> = {
 	owner: 'Propriétaire',
@@ -55,17 +55,19 @@ export function membersToUsers(members: ApiMember[]): AppUser[] {
 		email: m.user.email,
 		role: ROLE_LABELS[m.role] ?? m.role,
 		rawRole: m.role,
-		lastLogin: '—',
 		mfa: Boolean(m.user.twoFactorEnabled)
 	}));
 }
 
-// Types d'alerte « chaîne du froid » : TEMP_EXCURSION est celui réellement émis par
-// l'API (module IoT) ; FROID est conservé par compatibilité.
 const COLD_ALERT_TYPES = ['TEMP_EXCURSION', 'FROID'];
 
-// Idem pour les rappels : l'API émet PRODUCT_RECALL ; RAPPEL est conservé par compatibilité.
-const RECALL_ALERT_TYPES = ['PRODUCT_RECALL', 'RAPPEL'];
+const RECALL_ALERT_TYPES = ['PRODUCT_RECALL', 'RAPPEL', 'RECALL_DEPTH_SATURATION'];
+
+function mapColdSeverity(niveau: string): 'critique' | 'investigation' {
+	const n = niveau.toUpperCase();
+	if (n === 'CRITIQUE' || n === 'PANIC' || n === 'HAUTE') return 'critique';
+	return 'investigation';
+}
 
 export function alertsToCold(
 	alerts: ApiAlert[],
@@ -83,10 +85,8 @@ export function alertsToCold(
 	const rows: ColdAlertRow[] = cold.map((a) => {
 		const equip = equipment.find((e) => e.id === a.id_materiel);
 		const temp = equip?.temp_actuelle != null ? `${equip.temp_actuelle} °C` : '—';
-		const statut = a.niveau_gravite === 'CRITIQUE' ? 'critique' : 'investigation';
+		const statut = mapColdSeverity(a.niveau_gravite);
 
-		// L'alerte porte l'équipement en excursion ; les lots impactés sont ceux mis en quarantaine
-		// SUR CET équipement. C'est ce qui relie l'alerte (l'effet visible) aux lots (le concret).
 		const lotsImpactes: ColdAlertLot[] = a.id_materiel
 			? quarantineBatches
 					.filter((b) => b.id_materiel_actuel === a.id_materiel)
@@ -107,8 +107,6 @@ export function alertsToCold(
 	return { incident, rows };
 }
 
-// Référence courte et lisible d'une alerte. Les préfixes « RAP- » / « COLD- » d'avant étaient
-// fabriqués : l'API ne délivre aucun numéro de rappel, seulement un identifiant technique.
 function shortRef(id: string): string {
 	return id.split('-')[0].slice(0, 8).toUpperCase();
 }
@@ -117,14 +115,16 @@ export function countActiveColdAlerts(alerts: ApiAlert[]): number {
 	return alerts.filter((a) => COLD_ALERT_TYPES.includes(a.type) && a.statut === 'ACTIVE').length;
 }
 
-// « NC ouvertes » : uniquement les contrôles qui demandent une action. Un contrôle conforme
-// n'a rien à faire dans une liste de non-conformités.
 export function qualityToNc(rows: ApiQualityControl[]): NcRow[] {
-	return openQualityIssues(rows).map((q) => ({
-		id: q.id.slice(0, 8).toUpperCase(),
-		type: q.type_test,
-		statut: q.resultat.toUpperCase().includes('QUARANT') ? 'quarantaine' : 'en_cours'
-	}));
+	return openQualityIssues(rows).map((q) => {
+		const normalized = normalizeQualityResult(q.resultat);
+		return {
+			id: q.id.slice(0, 8).toUpperCase(),
+			type: q.type_test,
+			lot: q.lot?.produit?.nom ?? q.lot?.id?.slice(0, 8) ?? '—',
+			statut: normalized === 'NON_CONFORME' ? 'quarantaine' : 'en_cours'
+		};
+	});
 }
 
 export function batchesToQuarantine(
@@ -140,14 +140,15 @@ export function alertsToRappels(alerts: ApiAlert[]): Recall[] {
 	return alerts
 		.filter((a) => RECALL_ALERT_TYPES.includes(a.type))
 		.map((a) => {
-			// Message API : « RAPPEL DÉCLENCHÉ : <motif>. Source: <lot>. Total lots impactés: N.
-			// Expéditions à notifier: M. » — on en extrait les chiffres réels.
+			const isSaturation = a.type === 'RECALL_DEPTH_SATURATION';
 			const lotsImpacted = a.message.match(/Total lots impactés: (\d+)/)?.[1];
 			const shipments = a.message.match(/Expéditions à notifier: (\d+)/)?.[1];
-			const motif = a.message
-				.replace(/^Rappel produit — /, '')
-				.replace(/^RAPPEL DÉCLENCHÉ : /, '')
-				.split('. Source:')[0];
+			const motif = isSaturation
+				? 'Saturation de profondeur — descendance peut être incomplète'
+				: a.message
+						.replace(/^Rappel produit — /, '')
+						.replace(/^RAPPEL DÉCLENCHÉ : /, '')
+						.split('. Source:')[0];
 
 			return {
 				id: shortRef(a.id),
@@ -155,34 +156,35 @@ export function alertsToRappels(alerts: ApiAlert[]): Recall[] {
 				statut: a.statut === 'ACTIVE' ? ('en_cours' as const) : ('cloture' as const),
 				lots: lotsImpacted ? `${lotsImpacted} lot(s) bloqué(s)` : (a.related_id ?? '—'),
 				sites: shipments != null ? `${shipments} expédition(s) à notifier` : '—',
-				etape: a.statut === 'ACTIVE' ? 'En cours' : 'Clôturé',
-				etapeTitre: a.statut === 'ACTIVE' ? 'Blocage & notification' : 'Rappel terminé',
-				etapeDetail: `Lot source : ${a.related_id ?? '—'}`
+				etape: isSaturation
+					? 'Vérification requise'
+					: a.statut === 'ACTIVE'
+						? 'En cours'
+						: 'Clôturé',
+				etapeTitre: isSaturation
+					? 'Descendance incomplète'
+					: a.statut === 'ACTIVE'
+						? 'Blocage & notification'
+						: 'Rappel terminé',
+				etapeDetail: isSaturation ? a.message : `Lot source : ${a.related_id ?? '—'}`
 			};
 		});
 }
 
 export function movementsToEvents(movements: ApiMovement[]): EpcisEvent[] {
-	return movements.map((m) => {
-		const titleMap: Record<string, string> = {
-			RECEPTION: 'ObjectEvent — réception',
-			EXPEDITION: 'TransactionEvent — expédition',
-			QUARANTAINE: 'ObjectEvent — quarantaine',
-			TRANSFORMATION: 'TransformationEvent — production'
-		};
-		return {
-			when: fmtWhen(m.created_at),
-			title: titleMap[m.type_action] ?? `ObjectEvent — ${m.type_action}`,
-			meta: `Lot ${m.lot?.id ?? '—'} · ${m.lot?.produit?.nom ?? ''}`.trim()
-		};
-	});
+	return movements.map((m) => ({
+		when: fmtWhen(m.created_at),
+		title: movementEventLabel(m.type_action),
+		meta: `Lot ${m.lot?.id ?? '—'} · ${m.lot?.produit?.nom ?? ''}`.trim()
+	}));
 }
 
 export function buildDashboardKpis(
 	batchCount: number,
 	alerts: ApiAlert[],
 	qualityCount: number,
-	quarantineCount: number
+	quarantineCount: number,
+	capped = false
 ): Kpi[] {
 	const cold = alerts.filter(
 		(a) => COLD_ALERT_TYPES.includes(a.type) && a.statut === 'ACTIVE'
@@ -193,8 +195,10 @@ export function buildDashboardKpis(
 	return [
 		{
 			label: 'Lots suivis',
-			value: String(batchCount),
-			detail: 'Catalogue organisation active'
+			value: capped ? `${batchCount}+` : String(batchCount),
+			detail: capped
+				? '100 lots les plus récents — recherchez un lot pour aller plus loin'
+				: 'Catalogue organisation active'
 		},
 		{
 			label: 'Alertes chaîne du froid',
@@ -225,15 +229,17 @@ export function buildDashboardTasks(alerts: ApiAlert[], qualityCount: number): T
 	const rappel = alerts.find((a) => RECALL_ALERT_TYPES.includes(a.type) && a.statut === 'ACTIVE');
 	if (rappel) {
 		tasks.push({
-			variant: 'warn',
-			text: `Rappel actif — ${rappel.message.slice(0, 60)}…`,
+			variant: rappel.type === 'RECALL_DEPTH_SATURATION' ? 'warn' : 'warn',
+			text:
+				rappel.type === 'RECALL_DEPTH_SATURATION'
+					? `Rappel incomplet — ${rappel.message.slice(0, 80)}…`
+					: `Rappel actif — ${rappel.message.slice(0, 60)}…`,
 			link: { href: '/rappels-produits', label: 'voir le suivi' }
 		});
 	}
 	return tasks;
 }
 
-/** Généalogie structurée : amont (lots parents) → lot analysé → aval (lots issus). */
 export function genealogyToGraph(
 	genealogy: ApiGenealogy,
 	selected: ApiBatch | undefined
@@ -263,7 +269,6 @@ export function genealogyToGraph(
 	};
 }
 
-// Libellés lisibles des actions tracées (les codes bruts restent recherchables).
 const AUDIT_ACTION_LABELS: Record<string, string> = {
 	ADD: 'Ajout',
 	CREATE: 'Création',
@@ -282,7 +287,6 @@ const AUDIT_ACTION_LABELS: Record<string, string> = {
 	TRANSFORMATION_SORTIE: 'Transformation — sortie'
 };
 
-// Détail lisible : le motif d'une décision (levée de quarantaine…) ou un changement de statut.
 function auditDetail(l: ApiAuditLog): string {
 	const nv = l.nouvelle_valeur;
 	const ov = l.ancienne_valeur;
@@ -325,16 +329,4 @@ export function buildPortailBrief(alerts: ApiAlert[]): StoreBrief | null {
 		title: 'Consigne active',
 		text: rappel.message
 	};
-}
-
-export function auditToConnectors(logs: ApiAuditLog[]): Connector[] {
-	const syncLogs = logs.filter((l) => l.entity === 'integration' || l.action === 'SYNC');
-	if (syncLogs.length === 0) return [];
-	return [
-		{
-			name: 'WMS / ERP (audit)',
-			statut: 'ok',
-			lines: syncLogs.slice(0, 2).map((l) => `${l.action} — ${fmtWhen(l.horodatage)}`)
-		}
-	];
 }

@@ -18,10 +18,9 @@ import {
 } from '$lib/Api/organization.server';
 import { importProductsCsv, importCustomersCsv } from '$lib/Api/connectors.server';
 import { exigerAdministrateur, refusAdministration } from '$lib/server/guards';
-import { estTypeMateriel } from '$lib/config/equipment';
+import { COLD_EQUIPMENT_TYPES, estTypeMateriel } from '$lib/config/equipment';
 
 export const load: PageServerLoad = async ({ fetch, cookies, locals }) => {
-	// Le garde de layout ne couvre pas les actions : on garde aussi ce load.
 	exigerAdministrateur(locals.user, "La configuration de l'usine");
 
 	// includeArchived : l'écran d'administration montre TOUT, y compris les archivés, pour réactiver.
@@ -222,10 +221,18 @@ export const actions = {
 			return fail(400, { equipmentError: 'Nom (3 caractères), type et emplacement requis.', nom });
 		}
 
-		// Le seuil n'a de sens que pour un matériel réfrigéré ; il reste facultatif.
 		const temp_seuil_max = tempRaw === '' ? undefined : Number(tempRaw);
 		if (temp_seuil_max !== undefined && !Number.isFinite(temp_seuil_max)) {
 			return fail(400, { equipmentError: 'Seuil de température invalide.', nom });
+		}
+		if (
+			COLD_EQUIPMENT_TYPES.includes(type) &&
+			(temp_seuil_max == null || !Number.isFinite(temp_seuil_max))
+		) {
+			return fail(400, {
+				equipmentError: 'Seuil de température requis pour un frigo ou congélateur.',
+				nom
+			});
 		}
 
 		const res = await createEquipment(fetch, cookies, {

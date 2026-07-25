@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { describe, it, expect } from 'vitest';
 import { isRedirect } from '@sveltejs/kit';
 import type { KnownRole } from '$lib/config/roles';
@@ -7,9 +8,8 @@ const { load } = await import('./+layout.server');
 const run = async (user: { role: KnownRole; isPlatformAdmin: boolean } | null) => {
 	const event = {
 		locals: { user: user ? { id: 'u', name: 'N', email: 'e', ...user } : undefined },
-		url: new URL('http://x/plateforme')
+		url: new URL('http://localhost:5173/plateforme')
 	};
-	// eslint-disable-next-line @typescript-eslint/no-explicit-any
 	return (load as any)(event).catch((e: unknown) => e);
 };
 

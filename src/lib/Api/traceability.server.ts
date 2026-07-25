@@ -8,7 +8,6 @@ export type ApiBatchMouvement = {
 	unite: string;
 	created_at: string;
 	user?: { name: string } | null;
-	/** Contexte de l'étape : motif d'une décision, cause d'une quarantaine, fournisseur… */
 	metadata?: Record<string, unknown> | null;
 };
 
@@ -22,6 +21,7 @@ export type ApiBatch = {
 	date_creation?: string;
 	produit?: { nom: string; code_gtin: string };
 	unite?: { nom: string };
+	id_materiel_actuel?: string | null;
 	materiel?: {
 		nom: string;
 		lieu?: { nom: string; type?: string };
@@ -42,9 +42,11 @@ export type ApiProduct = {
 
 export type ApiGenealogyBatch = {
 	id: string;
-	statut: string;
 	nom_produit: string;
+	statut: string;
 	lot_number?: string | null;
+	quantite_actuelle?: string | number;
+	unite_code?: string;
 	date_peremption?: string | null;
 };
 
@@ -83,8 +85,14 @@ export type ApiRecallResult = {
 	depthSaturated: boolean;
 };
 
-export function getBatches(fetch: typeof globalThis.fetch, cookies: Cookies) {
-	return api(fetch, cookies).get<ApiBatch[]>('/api/traceability/batches');
+export function getBatches(
+	fetch: typeof globalThis.fetch,
+	cookies: Cookies,
+	opts?: { search?: string }
+) {
+	const q = opts?.search?.trim();
+	const qs = q ? `?q=${encodeURIComponent(q)}` : '';
+	return api(fetch, cookies).get<ApiBatch[]>(`/api/traceability/batches${qs}`);
 }
 
 export function getGenealogy(fetch: typeof globalThis.fetch, cookies: Cookies, lotId: string) {
@@ -107,4 +115,10 @@ export function triggerRecall(
 
 export function getProducts(fetch: typeof globalThis.fetch, cookies: Cookies) {
 	return api(fetch, cookies).get<ApiProduct[]>('/api/traceability/products');
+}
+
+export function getBatchGenealogy(fetch: typeof globalThis.fetch, cookies: Cookies, id: string) {
+	return api(fetch, cookies, { useApiKey: false }).get<ApiGenealogy>(
+		`/api/traceability/batches/${id}/genealogy`
+	);
 }

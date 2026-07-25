@@ -20,8 +20,6 @@ describe('PendingQcPanel — la barrière qualité ne se signe pas soi-même', (
 		await expect.element(page.getByText(/HACCP/i)).toBeInTheDocument();
 	});
 
-	// Masquer l'écriture ne doit pas masquer la lecture : l'opérateur doit savoir que son lot
-	// est bloqué en attente de contrôle, sinon il le croit expédiable.
 	it("laisse l'opérateur voir les lots en attente", async () => {
 		renderPanel('operator');
 
