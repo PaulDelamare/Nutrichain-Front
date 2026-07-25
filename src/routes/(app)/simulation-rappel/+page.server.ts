@@ -1,11 +1,11 @@
 import type { PageServerLoad, Actions } from './$types';
 import { fail } from '@sveltejs/kit';
-import { getBatches, getBatchGenealogy } from '$lib/Api/traceability.server';
+import { getBatchList, getBatchGenealogy } from '$lib/Api/traceability.server';
 
 type LotOption = { id: string; produit: string };
 
 export const load: PageServerLoad = async ({ fetch, cookies }) => {
-	const res = await getBatches(fetch, cookies);
+	const res = await getBatchList(fetch, cookies);
 
 	if (!res.ok) {
 		return { lots: [] as LotOption[], error: res.message };

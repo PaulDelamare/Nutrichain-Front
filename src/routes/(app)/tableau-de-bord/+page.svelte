@@ -37,7 +37,7 @@
 			</div>
 
 			<section class="charts">
-				<ChartCard title="Répartition des lots" subtitle="Par statut opérationnel">
+				<ChartCard title="Répartition des lots" subtitle={data.lotStatusSubtitle}>
 					<DonutChart
 						segments={data.charts.lotStatus}
 						centerLabel="lots"

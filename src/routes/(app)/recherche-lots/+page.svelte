@@ -4,9 +4,11 @@
 	import LotFilters from '$lib/components/lots/LotFilters.svelte';
 	import LotTable from '$lib/components/lots/LotTable.svelte';
 	import PageHead from '$lib/components/page/PageHead.svelte';
+	import Pagination from '$lib/components/page/Pagination.svelte';
 	import { usePageSearch } from '$lib/context/pageSearch.svelte';
 	import { emptyLotFilters } from '$lib/types/lot';
 	import { filterLots } from '$lib/utils/lots/filterLots';
+	import { pageHref } from '$lib/utils/pageSearch/pageHref';
 	import { schedulePageSearchNavigation } from '$lib/utils/pageSearch/syncToUrl';
 	import type { PageData } from './$types';
 
@@ -26,8 +28,18 @@
 
 	$effect(() => {
 		const q = pageSearch.query;
-		return schedulePageSearchNavigation(resolve('/recherche-lots'), $page.url.searchParams, 'q', q);
+		return schedulePageSearchNavigation(
+			resolve('/recherche-lots'),
+			$page.url.searchParams,
+			'q',
+			q,
+			{ resetParams: ['page'] }
+		);
 	});
+
+	const hrefForPage = $derived((target: number) =>
+		pageHref(resolve('/recherche-lots'), $page.url.searchParams, target)
+	);
 
 	let draft = $state(emptyLotFilters());
 	let applied = $state(emptyLotFilters());
@@ -57,13 +69,6 @@
 	description="Filtres — GTIN, numéro de lot, produit, site et statut."
 />
 
-{#if data.cappedAt100}
-	<p class="note">
-		Affichage limité aux 100 lots les plus récents. Utilisez la recherche (barre en haut) pour
-		retrouver un lot plus ancien.
-	</p>
-{/if}
-
 {#if data.error}
 	<p class="warn">API indisponible — {data.error}</p>
 {/if}
@@ -74,6 +79,23 @@
 	<div class="results">
 		<LotTable rows={results} />
 	</div>
+
+	<Pagination
+		page={data.pagination.page}
+		totalPages={data.pagination.totalPages}
+		total={data.pagination.total}
+		unit="lots"
+		hrefFor={hrefForPage}
+	/>
+
+	<!-- Les filtres du panneau s'appliquent à la page affichée, pas au catalogue : le dire évite
+	     de conclure qu'un lot n'existe pas alors qu'il est deux pages plus loin. -->
+	{#if data.pagination.totalPages > 1}
+		<p class="note">
+			Les filtres ci-dessus portent sur les lots de cette page. Pour chercher dans tout le
+			catalogue, utilisez la barre de recherche en haut.
+		</p>
+	{/if}
 {/if}
 
 <style>

@@ -1,5 +1,5 @@
 import type { PageServerLoad } from './$types';
-import { getBatches } from '$lib/Api/traceability.server';
+import { getBatches, MAX_BATCH_PAGE_SIZE } from '$lib/Api/traceability.server';
 import {
 	getAlerts,
 	getQualityControls,
@@ -12,15 +12,17 @@ import { openQualityIssues } from '$lib/utils/org/quality';
 
 export const load: PageServerLoad = async ({ fetch, cookies }) => {
 	const [batches, alerts, quality, quarantine, movements] = await Promise.all([
-		getBatches(fetch, cookies),
+		getBatches(fetch, cookies, { limit: MAX_BATCH_PAGE_SIZE }),
 		getAlerts(fetch, cookies),
 		getQualityControls(fetch, cookies),
 		getQuarantineBatches(fetch, cookies),
 		getMovements(fetch, cookies, { limit: 100 })
 	]);
 
-	const batchList = batches.ok ? batches.data : [];
-	const cappedAt100 = batches.ok && batchList.length >= 100;
+	const batchList = batches.ok ? batches.data.data : [];
+	// Le décompte des lots suivis vient du total de l'API, pas de la page reçue : les deux ne
+	// coïncident qu'en deçà du plafond de volumétrie.
+	const totalBatches = batches.ok ? batches.data.pagination.total : 0;
 	const alertList = alerts.ok ? alerts.data : [];
 	const qualityList = quality.ok ? quality.data : [];
 	const quarantineList = quarantine.ok ? quarantine.data : [];
@@ -31,14 +33,14 @@ export const load: PageServerLoad = async ({ fetch, cookies }) => {
 	const openIssues = openQualityIssues(qualityList).length;
 
 	return {
-		kpis: buildDashboardKpis(
-			batchList.length,
-			alertList,
-			openIssues,
-			quarantineList.length,
-			cappedAt100
-		),
+		kpis: buildDashboardKpis(totalBatches, alertList, openIssues, quarantineList.length),
 		charts: buildDashboardCharts(batchList, alertList, movementList, qualityList),
+		// La répartition ne porte que sur les lots effectivement reçus. Au-delà du plafond, le dire
+		// vaut mieux que de laisser croire que le camembert couvre tout le catalogue.
+		lotStatusSubtitle:
+			totalBatches > batchList.length
+				? `Par statut — ${batchList.length} lots les plus récents sur ${totalBatches}`
+				: 'Par statut opérationnel',
 		recentEvents: movementsToEvents(movementList.slice(0, 5)),
 		tasks: buildDashboardTasks(alertList, openIssues),
 		error

@@ -179,12 +179,15 @@ export function movementsToEvents(movements: ApiMovement[]): EpcisEvent[] {
 	}));
 }
 
+/**
+ * `batchCount` doit être le total renvoyé par l'API, pas le nombre de lots de la page reçue :
+ * le KPI annonçait « 100 » (puis « 100+ ») pour une organisation qui en suivait trois cents.
+ */
 export function buildDashboardKpis(
 	batchCount: number,
 	alerts: ApiAlert[],
 	qualityCount: number,
-	quarantineCount: number,
-	capped = false
+	quarantineCount: number
 ): Kpi[] {
 	const cold = alerts.filter(
 		(a) => COLD_ALERT_TYPES.includes(a.type) && a.statut === 'ACTIVE'
@@ -195,10 +198,8 @@ export function buildDashboardKpis(
 	return [
 		{
 			label: 'Lots suivis',
-			value: capped ? `${batchCount}+` : String(batchCount),
-			detail: capped
-				? '100 lots les plus récents — recherchez un lot pour aller plus loin'
-				: 'Catalogue organisation active'
+			value: String(batchCount),
+			detail: 'Catalogue organisation active'
 		},
 		{
 			label: 'Alertes chaîne du froid',
