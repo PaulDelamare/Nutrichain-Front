@@ -1,6 +1,11 @@
 // ! IMPORTS
 import { env } from '$env/dynamic/private';
-import { getMe, hasAuthSessionCookie, type MePayload } from '$lib/Api/auth.server';
+import {
+	getMe,
+	hasAuthSessionCookie,
+	deleteSessionCookies,
+	type MePayload
+} from '$lib/Api/auth.server';
 import { estRole, type KnownRole } from '$lib/config/roles';
 import type { Handle, HandleFetch } from '@sveltejs/kit';
 
@@ -50,17 +55,14 @@ export const handle = (async ({ event, resolve }) => {
 				name: me.data.user.name,
 				email: me.data.user.email,
 				role: lireRole(me.data),
-				isPlatformAdmin: lireAdminPlateforme(me.data)
+				isPlatformAdmin: lireAdminPlateforme(me.data),
+				twoFactorEnabled: Boolean(me.data.user.twoFactorEnabled)
 			};
 		} else {
 			event.locals.user = undefined;
 
 			if (me.status === 401) {
-				for (const c of event.cookies.getAll()) {
-					if (c.name.includes('better-auth') || c.name.includes('session')) {
-						event.cookies.delete(c.name, { path: '/' });
-					}
-				}
+				deleteSessionCookies(event.cookies);
 			}
 		}
 	} catch (err) {
@@ -81,9 +83,12 @@ export const handleFetch = (async ({ request, fetch, event }) => {
 			request.headers.set('x-api-key', env.API_KEY);
 		}
 
+		// `cookies.getAll()` décode la valeur (cf. `client.server.ts#buildCookieHeader`) : sans
+		// ré-encodage, ce hook écrase le Cookie header déjà correctement construit par `ApiClient`
+		// avec une version non ré-encodée, et l'API (Better-Auth) refuse le cookie relayé.
 		const cookie = event.cookies
 			.getAll()
-			.map((c) => `${c.name}=${c.value}`)
+			.map((c) => `${c.name}=${encodeURIComponent(c.value)}`)
 			.join('; ');
 
 		if (cookie) request.headers.set('Cookie', cookie);

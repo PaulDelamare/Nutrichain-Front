@@ -25,12 +25,17 @@ export const actions = {
 		if (!res.ok) {
 			const message =
 				res.status === 429
-					? 'Trop de requêtes vers l’API. Attendez une minute puis réessayez.'
+					? "Trop de requêtes vers l'API. Attendez une minute puis réessayez."
 					: res.message;
 			return fail(res.status === 429 ? 429 : res.status, { error: message, email });
 		}
 
 		const target = safeRedirect(url.searchParams.get('redirect'), '/tableau-de-bord');
+
+		if (res.twoFactorRedirect) {
+			redirect(303, `/connexion/2fa?redirect=${encodeURIComponent(target)}`);
+		}
+
 		redirect(303, target);
 	}
 } satisfies Actions;

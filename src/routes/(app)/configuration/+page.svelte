@@ -2,6 +2,7 @@
 	import { enhance } from '$app/forms';
 	import PageHead from '$lib/components/page/PageHead.svelte';
 	import ConfigList from '$lib/components/config/ConfigList.svelte';
+	import ImportCsv from '$lib/components/config/ImportCsv.svelte';
 	import {
 		COLD_EQUIPMENT_TYPES,
 		EQUIPMENT_TYPE_OPTIONS,
@@ -14,6 +15,14 @@
 	let { data, form }: { data: PageData; form: ActionData } = $props();
 
 	const activeLocations = $derived(data.locations.filter((l) => l.is_active));
+
+	// Le résultat d'un import CSV est routé vers la section (produits / clients) qui l'a déclenché.
+	const importReportFor = (kind: 'products' | 'customers') =>
+		(form && 'importReport' in form && form.importKind === kind ? form.importReport : null) ?? null;
+	const importErrorFor = (kind: 'products' | 'customers') =>
+		(form && 'importError' in form && 'importKind' in form && form.importKind === kind
+			? form.importError
+			: null) ?? null;
 
 	let envoi = $state(false);
 	let typeMateriel = $state<EquipmentType>('FRIGO');
@@ -125,6 +134,14 @@
 			{envoi}
 			{pendant}
 		/>
+		<ImportCsv
+			action="?/importCustomers"
+			columns="nom_enseigne, adresse_livraison, email, contact_urgence"
+			report={importReportFor('customers')}
+			error={importErrorFor('customers')}
+			{envoi}
+			{pendant}
+		/>
 	</section>
 
 	<section>
@@ -173,6 +190,14 @@
 			}))}
 			toggleAction="?/toggleProduct"
 			emptyLabel="Aucun produit. Ajoutez-en un pour réceptionner ou produire."
+			{envoi}
+			{pendant}
+		/>
+		<ImportCsv
+			action="?/importProducts"
+			columns="nom, code_gtin, categorie, duree_conservation_defaut, seuil_alerte_stock, unite_reference"
+			report={importReportFor('products')}
+			error={importErrorFor('products')}
 			{envoi}
 			{pendant}
 		/>

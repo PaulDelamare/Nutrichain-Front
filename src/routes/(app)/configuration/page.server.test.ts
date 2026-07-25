@@ -18,7 +18,13 @@ const api = {
 	createEquipment: vi.fn()
 };
 
+const connectors = {
+	importProductsCsv: vi.fn(),
+	importCustomersCsv: vi.fn()
+};
+
 vi.mock('$lib/Api/organization.server', () => api);
+vi.mock('$lib/Api/connectors.server', () => connectors);
 
 const mod = await import('./+page.server');
 
@@ -66,6 +72,22 @@ beforeEach(() => {
 	api.createProduct.mockResolvedValue({ ok: true, data: { id: 'p' } });
 	api.getEquipment.mockResolvedValue({ ok: true, data: [] });
 	api.createEquipment.mockResolvedValue({ ok: true, data: { id: 'eq' } });
+	connectors.importProductsCsv.mockReset();
+	connectors.importCustomersCsv.mockReset();
+	const report = { total: 1, created: 1, updated: 0, errors: 0, results: [] };
+	connectors.importProductsCsv.mockResolvedValue({ ok: true, data: report });
+	connectors.importCustomersCsv.mockResolvedValue({ ok: true, data: report });
+});
+
+const formWithFile = (csv: string | null) => ({
+	request: {
+		formData: async () => ({
+			get: (k: string) =>
+				k === 'file' && csv !== null ? new File([csv], 'x.csv', { type: 'text/csv' }) : null
+		})
+	},
+	fetch: vi.fn(),
+	cookies: {}
 });
 
 describe('configuration — réservée aux administrateurs', () => {
@@ -134,7 +156,7 @@ describe('configuration — réservée aux administrateurs', () => {
 		expect(p).toMatchObject({ productCreated: { id: 'p' } });
 	});
 
-	it('refuse un GTIN mal formé côté serveur avant l’appel API', async () => {
+	it("refuse un GTIN mal formé côté serveur avant l'appel API", async () => {
 		const res = await (mod as any).actions.createProduct({
 			...form({
 				nom: 'X',
@@ -159,7 +181,7 @@ describe('configuration — réservée aux administrateurs', () => {
 		expect(res).toMatchObject({ supplierCreated: { id: 's' } });
 	});
 
-	it('valide les champs requis avant d’appeler l’API', async () => {
+	it("valide les champs requis avant d'appeler l'API", async () => {
 		const res = await (mod as any).actions.createLocation({
 			...form({ nom: 'A', type: '' }),
 			locals: { user: user(true) }
@@ -178,7 +200,7 @@ describe('configuration — réservée aux administrateurs', () => {
 		expect(api.createEquipment).not.toHaveBeenCalled();
 	});
 
-	it('refuse un type de matériel hors référentiel avant l’appel API', async () => {
+	it("refuse un type de matériel hors référentiel avant l'appel API", async () => {
 		// eslint-disable-next-line @typescript-eslint/no-explicit-any
 		const res = await (mod as any).actions.createEquipment({
 			...form({ nom: 'Machine', type: 'ROBOT', id_lieu: 'loc-1' }),
@@ -188,7 +210,7 @@ describe('configuration — réservée aux administrateurs', () => {
 		expect(api.createEquipment).not.toHaveBeenCalled();
 	});
 
-	it('refuse un matériel sans emplacement avant l’appel API', async () => {
+	it("refuse un matériel sans emplacement avant l'appel API", async () => {
 		// eslint-disable-next-line @typescript-eslint/no-explicit-any
 		const res = await (mod as any).actions.createEquipment({
 			...form({ nom: 'Frigo A', type: 'FRIGO', id_lieu: '' }),
@@ -196,6 +218,41 @@ describe('configuration — réservée aux administrateurs', () => {
 		});
 		expect(res).toMatchObject({ status: 400 });
 		expect(api.createEquipment).not.toHaveBeenCalled();
+	});
+
+	it("refuse l'import CSV à un non-admin, sans appeler l'API", async () => {
+		// eslint-disable-next-line @typescript-eslint/no-explicit-any
+		const s = await statutAction((mod as any).actions.importProducts, {
+			...formWithFile('nom,code_gtin\nYaourt,3456789012345'),
+			locals: { user: user(false) }
+		});
+		expect(s).toBe(403);
+		expect(connectors.importProductsCsv).not.toHaveBeenCalled();
+	});
+
+	it("refuse un import sans fichier (400) avant l'appel API", async () => {
+		// eslint-disable-next-line @typescript-eslint/no-explicit-any
+		const res = await (mod as any).actions.importCustomers({
+			...formWithFile(null),
+			locals: { user: user(true) }
+		});
+		expect(res).toMatchObject({ status: 400 });
+		expect(connectors.importCustomersCsv).not.toHaveBeenCalled();
+	});
+
+	it('laisse un admin importer un CSV et renvoie le rapport routé par type', async () => {
+		// eslint-disable-next-line @typescript-eslint/no-explicit-any
+		const res = await (mod as any).actions.importProducts({
+			...formWithFile(
+				'nom,code_gtin,categorie,duree_conservation_defaut,seuil_alerte_stock,unite_reference\nYaourt,3456789012345,Frais,30,5,KG'
+			),
+			locals: { user: user(true) }
+		});
+		expect(connectors.importProductsCsv).toHaveBeenCalledOnce();
+		expect(res).toMatchObject({
+			importKind: 'products',
+			importReport: { created: 1, total: 1 }
+		});
 	});
 
 	it('laisse un admin créer un matériel non réfrigéré sans seuil', async () => {
@@ -210,7 +267,7 @@ describe('configuration — réservée aux administrateurs', () => {
 		expect(res).toMatchObject({ equipmentCreated: { id: 'eq' } });
 	});
 
-	it('exige un seuil pour un frigo avant l’appel API', async () => {
+	it("exige un seuil pour un frigo avant l'appel API", async () => {
 		// eslint-disable-next-line @typescript-eslint/no-explicit-any
 		const res = await (mod as any).actions.createEquipment({
 			...form({ nom: 'Frigo A', type: 'FRIGO', id_lieu: 'loc-1', temp_seuil_max: '' }),

@@ -6,4 +6,5 @@ export type SessionUser = {
 	email: string;
 	role: KnownRole;
 	isPlatformAdmin: boolean;
+	twoFactorEnabled?: boolean;
 };
