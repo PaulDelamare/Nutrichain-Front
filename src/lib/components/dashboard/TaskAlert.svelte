@@ -9,7 +9,6 @@
 	};
 
 	let { variant, text, link }: Props = $props();
-
 </script>
 
 <div class="alert" class:info={variant === 'info'} class:warn={variant === 'warn'}>

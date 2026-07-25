@@ -161,10 +161,12 @@ export function alertsToRappels(alerts: ApiAlert[]): Recall[] {
 					: a.statut === 'ACTIVE'
 						? 'En cours'
 						: 'Clôturé',
-				etapeTitre: isSaturation ? 'Descendance incomplète' : a.statut === 'ACTIVE' ? 'Blocage & notification' : 'Rappel terminé',
-				etapeDetail: isSaturation
-					? a.message
-					: `Lot source : ${a.related_id ?? '—'}`
+				etapeTitre: isSaturation
+					? 'Descendance incomplète'
+					: a.statut === 'ACTIVE'
+						? 'Blocage & notification'
+						: 'Rappel terminé',
+				etapeDetail: isSaturation ? a.message : `Lot source : ${a.related_id ?? '—'}`
 			};
 		});
 }
@@ -328,4 +330,3 @@ export function buildPortailBrief(alerts: ApiAlert[]): StoreBrief | null {
 		text: rappel.message
 	};
 }
-

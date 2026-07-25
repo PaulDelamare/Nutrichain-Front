@@ -15,7 +15,7 @@
 	</header>
 
 	{#if data.error}
-		<section class="card err">
+		<section class="err card">
 			<h2>Produit introuvable</h2>
 			<p>{data.error}</p>
 		</section>

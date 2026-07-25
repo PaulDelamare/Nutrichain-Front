@@ -55,11 +55,11 @@ API_KEY=your-api-key-here
 NODE_ENV=development
 ```
 
-| Variable | Obligatoire | Description |
-|----------|-------------|-------------|
-| `API_URL` | Oui | URL de base de l'API (lue côté serveur par `client.server.ts`) |
-| `API_KEY` | Oui | Clé API transmise en `x-api-key` — sans elle, les routes protégées échouent |
-| `NODE_ENV` | Non | `development` ou `production` |
+| Variable   | Obligatoire | Description                                                                 |
+| ---------- | ----------- | --------------------------------------------------------------------------- |
+| `API_URL`  | Oui         | URL de base de l'API (lue côté serveur par `client.server.ts`)              |
+| `API_KEY`  | Oui         | Clé API transmise en `x-api-key` — sans elle, les routes protégées échouent |
+| `NODE_ENV` | Non         | `development` ou `production`                                               |
 
 > Les variables `VITE_*` ne sont **pas** utilisées par ce projet : toute communication API passe par les routes serveur SvelteKit.
 

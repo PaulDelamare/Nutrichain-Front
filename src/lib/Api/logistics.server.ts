@@ -57,7 +57,10 @@ export async function fetchBatchLabel(
 		});
 
 		if (!res.ok) {
-			return { ok: false, message: res.status === 404 ? 'Étiquette introuvable.' : 'Téléchargement impossible.' };
+			return {
+				ok: false,
+				message: res.status === 404 ? 'Étiquette introuvable.' : 'Téléchargement impossible.'
+			};
 		}
 
 		return { ok: true, buffer: await res.arrayBuffer() };

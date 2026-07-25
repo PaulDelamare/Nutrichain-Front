@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { isHttpError } from '@sveltejs/kit';
 
@@ -191,7 +192,6 @@ describe('configuration — réservée aux administrateurs', () => {
 	});
 
 	it("refuse l'action createEquipment à un non-admin", async () => {
-		// eslint-disable-next-line @typescript-eslint/no-explicit-any
 		const s = await statutAction((mod as any).actions.createEquipment, {
 			...form({ nom: 'Frigo A', type: 'FRIGO', id_lieu: 'loc-1' }),
 			locals: { user: user(false) }
@@ -201,7 +201,6 @@ describe('configuration — réservée aux administrateurs', () => {
 	});
 
 	it("refuse un type de matériel hors référentiel avant l'appel API", async () => {
-		// eslint-disable-next-line @typescript-eslint/no-explicit-any
 		const res = await (mod as any).actions.createEquipment({
 			...form({ nom: 'Machine', type: 'ROBOT', id_lieu: 'loc-1' }),
 			locals: { user: user(true) }
@@ -211,7 +210,6 @@ describe('configuration — réservée aux administrateurs', () => {
 	});
 
 	it("refuse un matériel sans emplacement avant l'appel API", async () => {
-		// eslint-disable-next-line @typescript-eslint/no-explicit-any
 		const res = await (mod as any).actions.createEquipment({
 			...form({ nom: 'Frigo A', type: 'FRIGO', id_lieu: '' }),
 			locals: { user: user(true) }
@@ -221,7 +219,6 @@ describe('configuration — réservée aux administrateurs', () => {
 	});
 
 	it("refuse l'import CSV à un non-admin, sans appeler l'API", async () => {
-		// eslint-disable-next-line @typescript-eslint/no-explicit-any
 		const s = await statutAction((mod as any).actions.importProducts, {
 			...formWithFile('nom,code_gtin\nYaourt,3456789012345'),
 			locals: { user: user(false) }
@@ -231,7 +228,6 @@ describe('configuration — réservée aux administrateurs', () => {
 	});
 
 	it("refuse un import sans fichier (400) avant l'appel API", async () => {
-		// eslint-disable-next-line @typescript-eslint/no-explicit-any
 		const res = await (mod as any).actions.importCustomers({
 			...formWithFile(null),
 			locals: { user: user(true) }
@@ -241,7 +237,6 @@ describe('configuration — réservée aux administrateurs', () => {
 	});
 
 	it('laisse un admin importer un CSV et renvoie le rapport routé par type', async () => {
-		// eslint-disable-next-line @typescript-eslint/no-explicit-any
 		const res = await (mod as any).actions.importProducts({
 			...formWithFile(
 				'nom,code_gtin,categorie,duree_conservation_defaut,seuil_alerte_stock,unite_reference\nYaourt,3456789012345,Frais,30,5,KG'
@@ -256,7 +251,6 @@ describe('configuration — réservée aux administrateurs', () => {
 	});
 
 	it('laisse un admin créer un matériel non réfrigéré sans seuil', async () => {
-		// eslint-disable-next-line @typescript-eslint/no-explicit-any
 		const res = await (mod as any).actions.createEquipment({
 			...form({ nom: 'Étagère A', type: 'ETAGERE', id_lieu: 'loc-1', temp_seuil_max: '' }),
 			locals: { user: user(true) }
@@ -268,7 +262,6 @@ describe('configuration — réservée aux administrateurs', () => {
 	});
 
 	it("exige un seuil pour un frigo avant l'appel API", async () => {
-		// eslint-disable-next-line @typescript-eslint/no-explicit-any
 		const res = await (mod as any).actions.createEquipment({
 			...form({ nom: 'Frigo A', type: 'FRIGO', id_lieu: 'loc-1', temp_seuil_max: '' }),
 			locals: { user: user(true) }

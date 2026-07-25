@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { page } from '$app/stores';
+	import { resolve } from '$app/paths';
 	import LotFilters from '$lib/components/lots/LotFilters.svelte';
 	import LotTable from '$lib/components/lots/LotTable.svelte';
 	import PageHead from '$lib/components/page/PageHead.svelte';
@@ -25,7 +26,7 @@
 
 	$effect(() => {
 		const q = pageSearch.query;
-		return schedulePageSearchNavigation($page.url.pathname, $page.url.searchParams, 'q', q);
+		return schedulePageSearchNavigation(resolve('/recherche-lots'), $page.url.searchParams, 'q', q);
 	});
 
 	let draft = $state(emptyLotFilters());

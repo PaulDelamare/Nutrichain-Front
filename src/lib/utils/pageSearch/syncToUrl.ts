@@ -1,7 +1,7 @@
 import { goto } from '$app/navigation';
 
 export function schedulePageSearchNavigation(
-	pathname: string,
+	basePath: string,
 	searchParams: URLSearchParams,
 	param: string,
 	query: string,
@@ -16,7 +16,9 @@ export function schedulePageSearchNavigation(
 		if (next) params.set(param, next);
 		else params.delete(param);
 		const qs = params.toString();
-		goto(`${pathname}${qs ? `?${qs}` : ''}`, {
+		// basePath doit être passé via resolve() par l'appelant (ex. recherche-lots).
+		// eslint-disable-next-line svelte/no-navigation-without-resolve
+		goto(`${basePath}${qs ? `?${qs}` : ''}`, {
 			replaceState: true,
 			keepFocus: true,
 			noScroll: true

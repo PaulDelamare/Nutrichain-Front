@@ -117,11 +117,7 @@ export function getProducts(fetch: typeof globalThis.fetch, cookies: Cookies) {
 	return api(fetch, cookies).get<ApiProduct[]>('/api/traceability/products');
 }
 
-export function getBatchGenealogy(
-	fetch: typeof globalThis.fetch,
-	cookies: Cookies,
-	id: string
-) {
+export function getBatchGenealogy(fetch: typeof globalThis.fetch, cookies: Cookies, id: string) {
 	return api(fetch, cookies, { useApiKey: false }).get<ApiGenealogy>(
 		`/api/traceability/batches/${id}/genealogy`
 	);

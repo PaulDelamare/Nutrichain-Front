@@ -75,7 +75,6 @@ describe('auditLogsToRows', () => {
 	});
 });
 
-
 describe('alertsToCold', () => {
 	it('ne rend ni incident ni ligne quand aucune alerte froid n’est active', () => {
 		expect(alertsToCold([], [])).toEqual({ incident: null, rows: [] });

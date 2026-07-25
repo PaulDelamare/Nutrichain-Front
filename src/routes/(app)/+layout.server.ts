@@ -6,7 +6,10 @@ import { safeRedirect } from '$lib/utils/safeRedirect';
 
 export const load: LayoutServerLoad = async ({ locals, url, fetch, cookies, depends }) => {
 	if (!locals.user) {
-		redirect(303, `/connexion?redirect=${encodeURIComponent(safeRedirect(url.pathname, '/tableau-de-bord'))}`);
+		redirect(
+			303,
+			`/connexion?redirect=${encodeURIComponent(safeRedirect(url.pathname, '/tableau-de-bord'))}`
+		);
 	}
 
 	if (locals.user.isPlatformAdmin) {

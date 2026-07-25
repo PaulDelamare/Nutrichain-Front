@@ -28,11 +28,13 @@ export const load: PageServerLoad = async ({ fetch, cookies, url }) => {
 		quarantine.ok ? quarantine.data : []
 	);
 
-	let telemetry: { sensorId: string; points: { timestamp: string; temperature: number }[]; threshold: number | null } | null =
-		null;
+	let telemetry: {
+		sensorId: string;
+		points: { timestamp: string; temperature: number }[];
+		threshold: number | null;
+	} | null = null;
 
-	const targetSensor =
-		sensorId ?? equipment.data.find((e) => e.sensor_id)?.sensor_id ?? null;
+	const targetSensor = sensorId ?? equipment.data.find((e) => e.sensor_id)?.sensor_id ?? null;
 
 	if (targetSensor) {
 		const history = await getSensorHistory(fetch, cookies, targetSensor, 48);

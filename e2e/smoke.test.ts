@@ -1,6 +1,5 @@
 import { expect, test } from '@playwright/test';
 
-
 test('un visiteur non connecté est redirigé vers /connexion', async ({ page }) => {
 	await page.goto('/tableau-de-bord');
 	await expect(page).toHaveURL(/\/connexion/);

@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { enhance } from '$app/forms';
+	import { resolve } from '$app/paths';
 	import PageHead from '$lib/components/page/PageHead.svelte';
 	import ConfigList from '$lib/components/config/ConfigList.svelte';
 	import ImportCsv from '$lib/components/config/ImportCsv.svelte';
@@ -9,7 +10,6 @@
 		equipmentTypeLabel,
 		type EquipmentType
 	} from '$lib/config/equipment';
-	import { equipmentLabelPath } from '$lib/utils/equipment/labelPath';
 	import type { ActionData, PageData } from './$types';
 
 	let { data, form }: { data: PageData; form: ActionData } = $props();
@@ -254,7 +254,14 @@
 							· {item.statut}
 						</span>
 					</div>
-					<a class="label-link" href={equipmentLabelPath(item.id)} target="_blank" rel="noopener">
+					<a
+						class="label-link"
+						href={resolve('/(app)/configuration/equipment/[id]/label', {
+							id: encodeURIComponent(item.id)
+						})}
+						target="_blank"
+						rel="noopener"
+					>
 						Étiquette QR
 					</a>
 				</li>

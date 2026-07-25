@@ -15,9 +15,7 @@
 		return () => pageSearch.deactivate();
 	});
 
-	const users = $derived(
-		filterRowsByText(data.users, pageSearch.query, (u) => [u.email, u.role])
-	);
+	const users = $derived(filterRowsByText(data.users, pageSearch.query, (u) => [u.email, u.role]));
 
 	const isMemberForm = $derived(form && 'scope' in form && form.scope === 'member');
 	const inviteForm = $derived(isMemberForm ? null : form);

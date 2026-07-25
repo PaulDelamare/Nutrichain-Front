@@ -2,7 +2,6 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { isHttpError } from '@sveltejs/kit';
 import type { KnownRole } from '$lib/config/roles';
 
-
 const ok = <T>(data: T) => ({ ok: true as const, status: 200, data });
 
 vi.mock('$lib/Api/organization.server', () => ({

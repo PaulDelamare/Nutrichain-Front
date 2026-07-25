@@ -96,8 +96,8 @@
 
 			{#if form.recall.depthSaturated}
 				<p class="saturation" role="alert">
-					⚠️ Attention — la descendance bloquée peut être incomplète (profondeur de graphe
-					saturée). Vérifiez manuellement les lots liés.
+					⚠️ Attention — la descendance bloquée peut être incomplète (profondeur de graphe saturée).
+					Vérifiez manuellement les lots liés.
 				</p>
 			{/if}
 

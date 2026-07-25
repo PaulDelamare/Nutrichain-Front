@@ -13,7 +13,6 @@
 
 	let { data }: { data: PageData } = $props();
 
-
 	const nav = $derived(findNavItem($page.url.pathname));
 
 	const recentEvents = $derived(data.recentEvents);

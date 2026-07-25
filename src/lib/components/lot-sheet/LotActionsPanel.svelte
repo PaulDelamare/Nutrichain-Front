@@ -1,6 +1,5 @@
 <script lang="ts">
 	import { resolve } from '$app/paths';
-	import { batchLabelPath } from '$lib/Api/logistics.server';
 
 	interface ActionFeedback {
 		released?: boolean;
@@ -103,7 +102,11 @@
 	</form>
 
 	<p class="label-row">
-		<a href={batchLabelPath(lotId)} target="_blank" rel="noopener noreferrer">
+		<a
+			href={resolve('/(app)/fiche-lot/[lotId]/label', { lotId: encodeURIComponent(lotId) })}
+			target="_blank"
+			rel="noopener noreferrer"
+		>
 			Imprimer l'étiquette QR →
 		</a>
 	</p>

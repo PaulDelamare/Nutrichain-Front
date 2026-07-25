@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { resolve } from '$app/paths';
 	import PageHead from '$lib/components/page/PageHead.svelte';
 	import BarcodeScanner from '$lib/components/scan/BarcodeScanner.svelte';
 	import StatusBadge from '$lib/components/lots/StatusBadge.svelte';
@@ -95,7 +96,12 @@
 							</div>
 							<div class="hit-right">
 								<StatusBadge statut={lot.statut} />
-								<a class="btn" href="/fiche-lot/{encodeURIComponent(lot.id)}">Ouvrir la fiche</a>
+								<a
+									class="btn"
+									href={resolve('/(app)/fiche-lot/[lotId]', {
+										lotId: encodeURIComponent(lot.id)
+									})}>Ouvrir la fiche</a
+								>
 							</div>
 						</li>
 					{/each}

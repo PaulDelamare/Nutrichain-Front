@@ -12,7 +12,6 @@
 
 	let { collapsed = false, onMenuToggle, groups }: Props = $props();
 
-
 	function isActive(href: string, pathname: string): boolean {
 		if (href === '/recherche-lots' && pathname.startsWith('/fiche-lot/')) {
 			return true;

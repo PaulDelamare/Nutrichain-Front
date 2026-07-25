@@ -33,8 +33,7 @@
 			return `${x},${y}`;
 		});
 
-		const thresholdY =
-			threshold != null ? h - ((threshold - yMin) / (yMax - yMin)) * h : null;
+		const thresholdY = threshold != null ? h - ((threshold - yMin) / (yMax - yMin)) * h : null;
 
 		return { coords: coords.join(' '), w, h, thresholdY, yMin, yMax };
 	});
@@ -47,13 +46,7 @@
 		<figcaption>{label}</figcaption>
 		<svg viewBox="0 0 {view.w} {view.h}" role="img" aria-label={label}>
 			{#if view.thresholdY != null}
-				<line
-					x1="0"
-					y1={view.thresholdY}
-					x2={view.w}
-					y2={view.thresholdY}
-					class="threshold"
-				/>
+				<line x1="0" y1={view.thresholdY} x2={view.w} y2={view.thresholdY} class="threshold" />
 			{/if}
 			<polyline points={view.coords} class="line" />
 		</svg>

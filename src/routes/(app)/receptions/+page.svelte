@@ -16,7 +16,9 @@
 {/if}
 
 {#if data.receipts.length > 0}
-	<p class="count">{data.total} réception{data.total > 1 ? 's' : ''} enregistrée{data.total > 1 ? 's' : ''}</p>
+	<p class="count">
+		{data.total} réception{data.total > 1 ? 's' : ''} enregistrée{data.total > 1 ? 's' : ''}
+	</p>
 	<div class="table-wrap">
 		<table>
 			<thead>

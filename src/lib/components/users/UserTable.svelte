@@ -17,16 +17,12 @@
 		return canManage && row.rawRole !== 'owner' && row.userId !== currentUserId;
 	}
 
-	const apresAction = () => async ({
-		result,
-		update
-	}: {
-		result: { type: string };
-		update: () => Promise<void>;
-	}) => {
-		if (result.type === 'success') await invalidateAll();
-		await update();
-	};
+	const apresAction =
+		() =>
+		async ({ result, update }: { result: { type: string }; update: () => Promise<void> }) => {
+			if (result.type === 'success') await invalidateAll();
+			await update();
+		};
 
 	function confirmerRevocation(email: string, event: SubmitEvent) {
 		if (
