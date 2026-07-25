@@ -12,6 +12,12 @@ export type ApiOk<T> = {
 	status: number;
 	message: string;
 	data: T;
+	/**
+	 * Corps JSON brut de la réponse. Les routes du passthrough Better-Auth (sign-in, 2FA…) ne
+	 * répondent pas dans notre enveloppe `{message, data}` — sans ce champ, un flag comme
+	 * `twoFactorRedirect` est invisible : `data` vaudrait `undefined` (`payload.data` n'existe pas).
+	 */
+	raw?: unknown;
 };
 
 export type ApiErr = {
@@ -35,9 +41,13 @@ function baseUrl(): string {
 }
 
 function buildCookieHeader(cookies: Cookies): string {
+	// Symétrique du décodage fait à la réception (`applySetCookies`) : `cookies.getAll()` renvoie la
+	// valeur DÉCODÉE. L'API (Better-Auth) attend de retrouver la même forme encodée qu'elle avait
+	// elle-même émise dans son Set-Cookie — sans ce ré-encodage, le cookie relayé au retour ne
+	// correspond plus à celui vérifié côté API (401 « Invalid two factor cookie » sur le défi 2FA).
 	return cookies
 		.getAll()
-		.map((c) => `${c.name}=${c.value}`)
+		.map((c) => `${c.name}=${encodeURIComponent(c.value)}`)
 		.join('; ');
 }
 
@@ -55,7 +65,8 @@ async function parseJson<T>(res: Response): Promise<ApiResult<T>> {
 			ok: true,
 			status: res.status,
 			message: payload.message ?? 'OK',
-			data: payload.data as T
+			data: payload.data as T,
+			raw: payload
 		};
 	}
 
@@ -73,7 +84,22 @@ export function applySetCookies(res: Response, cookies: Cookies) {
 		if (eq === -1) continue;
 
 		const name = pair.slice(0, eq).trim();
-		const value = pair.slice(eq + 1).trim();
+		// L'API renvoie déjà une valeur URL-encodée (Better-Auth encode ses cookies à l'émission).
+		// `cookies.set` de SvelteKit encode À NOUVEAU sa valeur avant d'écrire l'en-tête : sans ce
+		// décodage, la valeur repart doublement encodée (`%3D` → `%253D`), et le cookie relayé ne
+		// correspond plus à celui attendu par l'API à la requête suivante (401 « Invalid two factor
+		// cookie » constaté sur le défi 2FA — la session normale n'en souffrait pas visiblement,
+		// mais la même corruption s'y appliquait).
+		const rawValue = pair.slice(eq + 1).trim();
+		// Un `%` non suivi d'un couple hexadécimal valide ferait planter `decodeURIComponent` (rare,
+		// mais une valeur Better-Auth n'est pas censée en contenir) — on dégrade sur la valeur brute
+		// plutôt que de faire échouer toute la requête pour un cookie mal formé.
+		let value: string;
+		try {
+			value = decodeURIComponent(rawValue);
+		} catch {
+			value = rawValue;
+		}
 		const opts: Parameters<Cookies['set']>[2] = { path: '/' };
 
 		for (const attr of attrs) {

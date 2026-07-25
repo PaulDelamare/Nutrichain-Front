@@ -8,4 +8,5 @@ export type SessionUser = {
 	role: KnownRole;
 	/** Personnel NutriChain, au-dessus des organisations : il gère la plateforme, pas le métier. */
 	isPlatformAdmin: boolean;
+	twoFactorEnabled?: boolean;
 };
