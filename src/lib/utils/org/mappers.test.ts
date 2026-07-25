@@ -3,16 +3,24 @@ import {
 	alertsToCold,
 	alertsToRappels,
 	auditLogsToRows,
+	batchesToQuarantine,
 	buildDashboardKpis,
 	buildDashboardTasks,
 	buildPortailBrief,
+	buildPortailStats,
 	countActiveColdAlerts,
 	genealogyToGraph,
+	membersToUsers,
 	movementsToEvents,
 	qualityToNc
 } from './mappers';
-import type { ApiAlert, ApiAuditLog, ApiQualityControl } from '$lib/Api/organization.server';
-import type { ApiGenealogy } from '$lib/Api/traceability.server';
+import type {
+	ApiAlert,
+	ApiAuditLog,
+	ApiMember,
+	ApiQualityControl
+} from '$lib/Api/organization.server';
+import type { ApiBatch, ApiGenealogy } from '$lib/Api/traceability.server';
 
 function auditLog(partial: Partial<ApiAuditLog>): ApiAuditLog {
 	return {
@@ -221,5 +229,252 @@ describe('genealogyToGraph', () => {
 		const genealogy: ApiGenealogy = { batchId: 'lot-1', upstream: [], downstream: [] };
 		const graph = genealogyToGraph(genealogy, undefined);
 		expect(graph.selected.badge).toBeUndefined();
+	});
+
+	it('identifie les lots parents et issus par leur numéro GS1', () => {
+		const graph = genealogyToGraph(
+			{
+				batchId: 'lot-1',
+				upstream: [{ id: 'p1', nom_produit: 'Lait cru', statut: 'EXPEDIE', lot_number: 'A-1' }],
+				downstream: [{ id: 'd1', nom_produit: 'Yaourt', statut: 'EN_STOCK', lot_number: 'B-2' }]
+			},
+			{
+				id: 'lot-1',
+				statut: 'EN_STOCK',
+				lot_number: 'C-3',
+				produit: { nom: 'Lait pasteurisé' }
+			} as ApiBatch
+		);
+
+		expect(graph.upstream[0].title).toBe('Lait cru — A-1');
+		expect(graph.downstream[0].title).toBe('Yaourt — B-2');
+		expect(graph.selected.title).toBe('Lait pasteurisé — C-3');
+	});
+
+	it('retombe sur l’identifiant technique quand le lot n’a pas de numéro GS1', () => {
+		const graph = genealogyToGraph(
+			{
+				batchId: 'lot-1',
+				upstream: [{ id: 'p1', nom_produit: 'Lait cru', statut: 'EXPEDIE' }],
+				downstream: []
+			},
+			{ id: 'lot-1', statut: 'EN_STOCK' } as ApiBatch
+		);
+
+		expect(graph.upstream[0].title).toBe('Lait cru — p1');
+		expect(graph.selected.title).toBe('Produit — lot-1');
+	});
+
+	it('affiche le statut réel du lot analysé', () => {
+		const graph = genealogyToGraph({ batchId: 'lot-1', upstream: [], downstream: [] }, {
+			id: 'lot-1',
+			statut: 'BLOQUE'
+		} as ApiBatch);
+		expect(graph.selected.badge).toEqual({ label: 'BLOQUE', variant: 'green' });
+	});
+});
+
+describe('membersToUsers', () => {
+	function member(partial: Partial<ApiMember> = {}): ApiMember {
+		return {
+			id: 'membre-1',
+			role: 'quality',
+			user: { id: 'u1', email: 'a@b.fr', name: 'Alice', twoFactorEnabled: true },
+			...partial
+		};
+	}
+
+	// Révoquer un membre passe par l'id d'adhésion, pas par l'id utilisateur : les confondre
+	// renvoie un 404 de l'API au moment où l'on retire un accès.
+	it('conserve l’identifiant d’adhésion en plus de l’identifiant utilisateur', () => {
+		const [user] = membersToUsers([member()]);
+		expect(user).toMatchObject({ memberId: 'membre-1', userId: 'u1' });
+	});
+
+	it('traduit le rôle tout en gardant le code brut pour les comparaisons', () => {
+		const [user] = membersToUsers([member({ role: 'owner' })]);
+		expect(user.role).toBe('Propriétaire');
+		expect(user.rawRole).toBe('owner');
+	});
+
+	it('affiche un rôle inconnu tel quel plutôt que rien', () => {
+		const [user] = membersToUsers([member({ role: 'auditeur' })]);
+		expect(user.role).toBe('auditeur');
+	});
+
+	it('considère la 2FA comme désactivée quand l’API ne se prononce pas', () => {
+		const [user] = membersToUsers([
+			member({ user: { id: 'u1', email: 'a@b.fr', name: 'Alice', twoFactorEnabled: null } })
+		]);
+		expect(user.mfa).toBe(false);
+	});
+});
+
+describe('batchesToQuarantine', () => {
+	it('rend le statut technique lisible', () => {
+		const [lot] = batchesToQuarantine([
+			{ id: 'lot-1', produit: { nom: 'Beurre' }, statut: 'EN_ATTENTE_QC' }
+		]);
+		expect(lot.detail).toBe('Beurre — en attente_qc');
+	});
+
+	it('ne laisse pas le produit vide quand l’API ne le joint pas', () => {
+		const [lot] = batchesToQuarantine([{ id: 'lot-1', statut: 'BLOQUE' }]);
+		expect(lot.detail).toBe('Lot — bloque');
+	});
+});
+
+describe('alertsToRappels — saturation de profondeur', () => {
+	// Un rappel dont la descendance est incomplète ne doit pas s'afficher comme un rappel normal :
+	// c'est précisément le cas où il faut vérifier à la main.
+	it('signale explicitement que la descendance peut être incomplète', () => {
+		const [recall] = alertsToRappels([
+			alert({
+				type: 'RECALL_DEPTH_SATURATION',
+				message: 'Profondeur maximale atteinte sur le lot lot-9.'
+			})
+		]);
+
+		expect(recall.produit).toBe('Saturation de profondeur — descendance peut être incomplète');
+		expect(recall.etape).toBe('Vérification requise');
+		expect(recall.etapeTitre).toBe('Descendance incomplète');
+		expect(recall.etapeDetail).toBe('Profondeur maximale atteinte sur le lot lot-9.');
+	});
+
+	it('marque un rappel résolu comme clôturé', () => {
+		const [recall] = alertsToRappels([
+			alert({ type: 'PRODUCT_RECALL', statut: 'RESOLVED', message: 'Rappel produit — Listeria' })
+		]);
+
+		expect(recall.statut).toBe('cloture');
+		expect(recall.etape).toBe('Clôturé');
+		expect(recall.etapeTitre).toBe('Rappel terminé');
+	});
+
+	it('rappelle le lot source à défaut de compte des lots bloqués', () => {
+		const [recall] = alertsToRappels([
+			alert({ type: 'RAPPEL', related_id: 'lot-9', message: 'Rappel produit — Listeria' })
+		]);
+
+		expect(recall.lots).toBe('lot-9');
+		expect(recall.etapeDetail).toBe('Lot source : lot-9');
+	});
+});
+
+describe('buildDashboardKpis — ce que le chiffre affirme', () => {
+	it('dit que le total est tronqué plutôt que d’affirmer un décompte faux', () => {
+		const [lots] = buildDashboardKpis(100, [], 0, 0, true);
+		expect(lots.value).toBe('100+');
+		expect(lots.detail).toMatch(/recherchez un lot/);
+	});
+
+	it('annonce un catalogue complet quand rien n’est tronqué', () => {
+		const [lots] = buildDashboardKpis(42, [], 0, 0);
+		expect(lots.value).toBe('42');
+		expect(lots.detail).toBe('Catalogue organisation active');
+	});
+
+	it('compte séparément les alertes froid et les rappels actifs', () => {
+		const kpis = buildDashboardKpis(
+			10,
+			[
+				alert({ type: 'TEMP_EXCURSION', statut: 'ACTIVE' }),
+				alert({ type: 'PRODUCT_RECALL', statut: 'ACTIVE' }),
+				alert({ type: 'PRODUCT_RECALL', statut: 'RESOLVED' })
+			],
+			3,
+			2
+		);
+
+		expect(kpis[1]).toMatchObject({ value: '1', detail: 'Investigation en cours' });
+		expect(kpis[2]).toMatchObject({ value: '1', detail: 'Workflow actif' });
+		expect(kpis[3]).toMatchObject({ value: '3', detail: '2 lot(s) en quarantaine' });
+	});
+
+	it('affiche « aucune » plutôt qu’un zéro sec quand tout va bien', () => {
+		const kpis = buildDashboardKpis(10, [], 0, 0);
+		expect(kpis[1].detail).toBe('Aucune alerte active');
+		expect(kpis[2].detail).toBe('Aucun rappel');
+	});
+});
+
+describe('buildDashboardTasks — ce qu’il reste à faire', () => {
+	it('rappelle les contrôles qualité en attente', () => {
+		const [tache] = buildDashboardTasks([], 3);
+		expect(tache).toMatchObject({
+			variant: 'info',
+			text: expect.stringContaining('3 contrôle(s)')
+		});
+	});
+
+	it('renvoie vers le suivi du rappel actif', () => {
+		const taches = buildDashboardTasks([alert({ type: 'PRODUCT_RECALL', message: 'Listeria' })], 0);
+		expect(taches[0]).toMatchObject({
+			variant: 'warn',
+			link: { href: '/rappels-produits', label: 'voir le suivi' }
+		});
+	});
+
+	it('alerte spécifiquement quand le rappel est peut-être incomplet', () => {
+		const [tache] = buildDashboardTasks(
+			[alert({ type: 'RECALL_DEPTH_SATURATION', message: 'Profondeur saturée' })],
+			0
+		);
+		expect(tache.text).toMatch(/Rappel incomplet/);
+	});
+
+	it('ignore un rappel déjà clôturé', () => {
+		expect(buildDashboardTasks([alert({ type: 'PRODUCT_RECALL', statut: 'RESOLVED' })], 0)).toEqual(
+			[]
+		);
+	});
+});
+
+describe('movementsToEvents', () => {
+	it('nomme l’événement EPCIS et le lot concerné', () => {
+		const [event] = movementsToEvents([
+			{
+				id: 1,
+				type_action: 'EXPEDITION',
+				quantite: 10,
+				unite: 'L',
+				created_at: new Date().toISOString(),
+				lot: { id: 'lot-1', produit: { nom: 'Lait 1L' } }
+			}
+		]);
+
+		expect(event.title).toBe('TransactionEvent — expédition');
+		expect(event.meta).toBe('Lot lot-1 · Lait 1L');
+		expect(event.when).toMatch(/Aujourd'hui/);
+	});
+
+	it('ne laisse pas un lot anonyme sans repère', () => {
+		const [event] = movementsToEvents([
+			{
+				id: 1,
+				type_action: 'RECEPTION',
+				quantite: 1,
+				unite: 'L',
+				created_at: '2026-01-05T09:00:00.000Z'
+			}
+		]);
+		expect(event.meta).toBe('Lot — ·');
+	});
+});
+
+describe('buildPortailStats', () => {
+	it('met en avant les expéditions qui ne sont pas encore livrées', () => {
+		const [clients, expeditions] = buildPortailStats(
+			[{ id: 'c1' }, { id: 'c2' }],
+			[{ statut_livraison: 'EN_TRANSIT' }, { statut_livraison: 'LIVRE' }]
+		);
+
+		expect(clients.value).toBe('2');
+		expect(expeditions).toMatchObject({ value: '1', accent: 'warn' });
+	});
+
+	it('n’attire pas l’attention quand tout est livré', () => {
+		const [, expeditions] = buildPortailStats([], [{ statut_livraison: 'LIVRE' }]);
+		expect(expeditions.accent).toBeUndefined();
 	});
 });

@@ -81,4 +81,69 @@ describe('movementsToLotEvents', () => {
 		const [e] = movementsToLotEvents([mvt({ user: { name: 'Marie Dupont' } })]);
 		expect(e.detail).toContain('par Marie Dupont');
 	});
+
+	it('reste muet sur l’auteur quand l’API ne le nomme pas', () => {
+		const [e] = movementsToLotEvents([mvt({ user: null })]);
+		expect(e.detail).not.toContain('par ');
+	});
+
+	it('date et horodate chaque étape', () => {
+		const [e] = movementsToLotEvents([mvt({ created_at: '2026-07-11T10:30:00.000Z' })]);
+		expect(e.day).toBe('11/07/2026');
+		expect(e.time).toMatch(/^\d{2}:\d{2}$/);
+	});
+});
+
+describe('movementsToLotEvents — contrôle qualité', () => {
+	const qc = (metadata: Record<string, unknown>) =>
+		movementsToLotEvents([mvt({ type_action: 'CONTROLE_QUALITE', metadata })])[0];
+
+	it('dit que le lot a été libéré après un contrôle conforme', () => {
+		const e = qc({ resultat: 'CONFORME', type_test: 'Microbio', statut_resultant: 'EN_STOCK' });
+		expect(e.tone).toBe('ok');
+		expect(e.detail).toContain('Microbio : Conforme — lot libéré');
+	});
+
+	// Un contrôle non conforme rendu comme une étape banale fait rater la décision à prendre.
+	it('dit que le lot est parti en quarantaine après un contrôle non conforme', () => {
+		const e = qc({ resultat: 'NON_CONFORME', type_test: 'Microbio', statut_resultant: 'BLOQUE' });
+		expect(e.tone).toBe('warn');
+		expect(e.detail).toContain('Microbio : Non conforme — lot placé en quarantaine');
+	});
+
+	it('n’annonce aucune suite quand le statut résultant est inconnu', () => {
+		const e = qc({ resultat: 'CONFORME', type_test: 'Microbio' });
+		expect(e.detail).toContain('Microbio : Conforme');
+		expect(e.detail).not.toContain('—');
+	});
+
+	it('n’invente pas de type de test manquant', () => {
+		const e = qc({ resultat: 'CONFORME' });
+		expect(e.detail).toBe('500 KG');
+	});
+});
+
+describe('movementsToLotEvents — étapes de transformation', () => {
+	it('distingue la production de la consommation', () => {
+		const [entree] = movementsToLotEvents([mvt({ type_action: 'TRANSFORMATION_ENTREE' })]);
+		const [sortie] = movementsToLotEvents([mvt({ type_action: 'TRANSFORMATION_SORTIE' })]);
+
+		expect(entree.title).toBe('Transformation — production');
+		expect(sortie.title).toBe('Transformation — consommation');
+	});
+
+	it('ne signale rien d’anormal sur une excursion sans relevé exploitable', () => {
+		const [e] = movementsToLotEvents([
+			mvt({ type_action: 'QUARANTAINE_FROID', metadata: { sensorId: 'CAP-01' } })
+		]);
+		expect(e.detail).toContain('capteur CAP-01');
+		expect(e.detail).not.toContain('Pic');
+	});
+
+	it('ignore une métadonnée qui n’est ni texte ni nombre', () => {
+		const [e] = movementsToLotEvents([
+			mvt({ type_action: 'RAPPEL', metadata: { motif: { texte: 'objet' } } })
+		]);
+		expect(e.detail).toBe('500 KG');
+	});
 });

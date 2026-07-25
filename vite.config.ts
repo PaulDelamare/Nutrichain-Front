@@ -10,6 +10,32 @@ export default defineConfig({
 	test: {
 		expect: { requireAssertions: true },
 
+		coverage: {
+			provider: 'v8',
+			// `json-summary` alimente le récapitulatif publié par la CI : le seuil ne sert à rien
+			// si personne ne voit le chiffre.
+			reporter: ['text', 'html', 'lcov', 'json-summary'],
+			include: ['src/**/*.{ts,svelte}'],
+			// Exclus du périmètre : fichiers sans logique testable unitairement (déclarations de
+			// types, index d'alias vide, bootstrap) et routes SvelteKit, couvertes par les tests
+			// de `+page.server.ts` et par Playwright. La logique métier reste intégralement mesurée.
+			exclude: [
+				'src/**/*.{test,spec}.{js,ts}',
+				'src/**/*.d.ts',
+				'src/hooks.*.ts',
+				'src/routes/**',
+				'src/lib/index.ts',
+				'src/lib/types/**',
+				'src/lib/Models/**'
+			],
+			thresholds: {
+				lines: 70,
+				functions: 70,
+				branches: 70,
+				statements: 70
+			}
+		},
+
 		projects: [
 			{
 				extends: './vite.config.ts',

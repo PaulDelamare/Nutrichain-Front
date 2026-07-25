@@ -1,0 +1,55 @@
+import { page } from 'vitest/browser';
+import { describe, expect, it } from 'vitest';
+import { render, type SvelteComponentOptions } from 'vitest-browser-svelte';
+import ColdAlertTable from './ColdAlertTable.svelte';
+import type { ColdAlertRow } from '$lib/types/cold';
+
+function alerte(partial: Partial<ColdAlertRow> = {}): ColdAlertRow {
+	return {
+		id: 'ALT-2026-031',
+		site: 'Usine Loire',
+		zone: 'Chambre froide 2',
+		tempActuelle: '9,4 °C',
+		depuis: 'depuis 42 min',
+		statut: 'critique',
+		lotsImpactes: [{ id: 'lot-1', produit: 'Bouteille de Lait 1L' }],
+		...partial
+	};
+}
+
+function renderTable(rows: ColdAlertRow[]) {
+	render(ColdAlertTable, { props: { rows } } as unknown as SvelteComponentOptions<
+		typeof ColdAlertTable
+	>);
+}
+
+describe('ColdAlertTable', () => {
+	it('affiche la température relevée et depuis combien de temps elle dérive', async () => {
+		renderTable([alerte()]);
+		await expect.element(page.getByText('9,4 °C')).toBeInTheDocument();
+		await expect.element(page.getByText('depuis 42 min')).toBeInTheDocument();
+	});
+
+	// Une excursion de température qui s'affiche « Investigation » fait perdre un temps décisif.
+	it('affiche la gravité réelle de l’alerte', async () => {
+		renderTable([alerte()]);
+		await expect.element(page.getByText('Critique')).toBeInTheDocument();
+	});
+
+	it('renvoie vers la fiche de chaque lot impacté', async () => {
+		renderTable([alerte()]);
+		const lien = page.getByRole('link', { name: 'Bouteille de Lait 1L' });
+		await expect.element(lien).toHaveAttribute('href', expect.stringContaining('lot-1'));
+	});
+
+	it('marque explicitement une alerte sans lot connu plutôt que de laisser la case vide', async () => {
+		renderTable([alerte({ lotsImpactes: [] })]);
+		await expect.element(page.getByText('—')).toBeInTheDocument();
+	});
+
+	it('liste toutes les alertes en cours', async () => {
+		renderTable([alerte({ id: 'ALT-1' }), alerte({ id: 'ALT-2', statut: 'investigation' })]);
+		await expect.element(page.getByText('ALT-1')).toBeInTheDocument();
+		await expect.element(page.getByText('Investigation')).toBeInTheDocument();
+	});
+});
