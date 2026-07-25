@@ -85,14 +85,71 @@ export type ApiRecallResult = {
 	depthSaturated: boolean;
 };
 
-export function getBatches(
+export type ApiPagination = { page: number; limit: number; total: number; totalPages: number };
+
+export type ApiBatchPage = {
+	data: ApiBatch[];
+	/** `total` compte TOUS les lots correspondants, pas seulement ceux de la page reçue. */
+	pagination: ApiPagination;
+};
+
+export type BatchQuery = { search?: string; page?: number; limit?: number };
+
+/**
+ * Plafond de volumétrie de l'API. Les écrans qui ne paginent pas (sélecteurs de lot, tableau de
+ * bord) le demandent explicitement : mieux vaut une liste large et bornée qu'un défaut à 100 qui
+ * masque quatre lots sur cinq sans le dire.
+ */
+export const MAX_BATCH_PAGE_SIZE = 500;
+
+function batchQueryString(opts?: BatchQuery): string {
+	const params = new URLSearchParams();
+	const q = opts?.search?.trim();
+
+	if (q) params.set('q', q);
+	if (opts?.page) params.set('page', String(opts.page));
+	if (opts?.limit) params.set('limit', String(opts.limit));
+
+	return params.size > 0 ? `?${params}` : '';
+}
+
+/**
+ * Ramène une réponse à la forme paginée. Une API antérieure à la pagination répond par un tableau
+ * nu : sans ce repli, tout écran affichant des lots planterait pendant la fenêtre de déploiement
+ * où les deux versions coexistent.
+ */
+function toBatchPage(data: ApiBatchPage | ApiBatch[] | null): ApiBatchPage {
+	if (Array.isArray(data)) {
+		const total = data.length;
+		return { data, pagination: { page: 1, limit: total, total, totalPages: 1 } };
+	}
+
+	return data ?? { data: [], pagination: { page: 1, limit: 0, total: 0, totalPages: 0 } };
+}
+
+export async function getBatches(
 	fetch: typeof globalThis.fetch,
 	cookies: Cookies,
-	opts?: { search?: string }
+	opts?: BatchQuery
 ) {
-	const q = opts?.search?.trim();
-	const qs = q ? `?q=${encodeURIComponent(q)}` : '';
-	return api(fetch, cookies).get<ApiBatch[]>(`/api/traceability/batches${qs}`);
+	const res = await api(fetch, cookies).get<ApiBatchPage | ApiBatch[] | null>(
+		`/api/traceability/batches${batchQueryString(opts)}`
+	);
+
+	return res.ok ? { ...res, data: toBatchPage(res.data) } : res;
+}
+
+/**
+ * Même lecture, réduite aux lignes : les écrans qui remplissent un sélecteur n'ont que faire du
+ * numéro de page. Ils gardent en revanche le plafond explicite, pour ne pas s'arrêter à 100 lots.
+ */
+export async function getBatchList(
+	fetch: typeof globalThis.fetch,
+	cookies: Cookies,
+	opts?: BatchQuery
+) {
+	const res = await getBatches(fetch, cookies, { limit: MAX_BATCH_PAGE_SIZE, ...opts });
+	return res.ok ? { ...res, data: res.data.data } : res;
 }
 
 export function getGenealogy(fetch: typeof globalThis.fetch, cookies: Cookies, lotId: string) {

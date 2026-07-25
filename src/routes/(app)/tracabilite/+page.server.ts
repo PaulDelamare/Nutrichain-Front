@@ -1,10 +1,10 @@
 import type { PageServerLoad } from './$types';
-import { getBatches, getGenealogy } from '$lib/Api/traceability.server';
+import { getBatchList, getGenealogy } from '$lib/Api/traceability.server';
 import { genealogyToGraph } from '$lib/utils/org/mappers';
 
 export const load: PageServerLoad = async ({ fetch, cookies, url }) => {
 	const lotId = url.searchParams.get('lot');
-	const batches = await getBatches(fetch, cookies);
+	const batches = await getBatchList(fetch, cookies);
 
 	if (!batches.ok) {
 		return { graph: null, batches: [], lotId: null, error: batches.message, genealogyError: null };

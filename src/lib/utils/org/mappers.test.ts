@@ -362,16 +362,20 @@ describe('alertsToRappels — saturation de profondeur', () => {
 });
 
 describe('buildDashboardKpis — ce que le chiffre affirme', () => {
-	it('dit que le total est tronqué plutôt que d’affirmer un décompte faux', () => {
-		const [lots] = buildDashboardKpis(100, [], 0, 0, true);
-		expect(lots.value).toBe('100+');
-		expect(lots.detail).toMatch(/recherchez un lot/);
+	/**
+	 * ⚠️ Le KPI affichait la taille de la page reçue, plafonnée par l'API : une organisation qui
+	 * suivait 342 lots lisait « 100 », puis « 100+ ». Il compte désormais le total réel, que
+	 * l'appelant tient de la pagination.
+	 */
+	it('affiche le total du catalogue, pas la taille de la page reçue', () => {
+		const [lots] = buildDashboardKpis(342, [], 0, 0);
+		expect(lots.value).toBe('342');
+		expect(lots.detail).toBe('Catalogue organisation active');
 	});
 
-	it('annonce un catalogue complet quand rien n’est tronqué', () => {
-		const [lots] = buildDashboardKpis(42, [], 0, 0);
-		expect(lots.value).toBe('42');
-		expect(lots.detail).toBe('Catalogue organisation active');
+	it('annonce un catalogue vide sans fioriture', () => {
+		const [lots] = buildDashboardKpis(0, [], 0, 0);
+		expect(lots.value).toBe('0');
 	});
 
 	it('compte séparément les alertes froid et les rappels actifs', () => {

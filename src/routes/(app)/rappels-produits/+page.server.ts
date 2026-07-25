@@ -2,13 +2,13 @@ import { fail } from '@sveltejs/kit';
 import { refusDecisionQualite } from '$lib/server/guards';
 import type { Actions, PageServerLoad } from './$types';
 import { getAlerts } from '$lib/Api/organization.server';
-import { getBatches, triggerRecall } from '$lib/Api/traceability.server';
+import { getBatchList, triggerRecall } from '$lib/Api/traceability.server';
 import { alertsToRappels } from '$lib/utils/org/mappers';
 
 export const load: PageServerLoad = async ({ fetch, cookies }) => {
 	const [alerts, batches] = await Promise.all([
 		getAlerts(fetch, cookies),
-		getBatches(fetch, cookies)
+		getBatchList(fetch, cookies)
 	]);
 
 	return {

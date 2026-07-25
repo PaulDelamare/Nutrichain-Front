@@ -3,7 +3,7 @@ import { refusDecisionQualite } from '$lib/server/guards';
 import type { Actions, PageServerLoad } from './$types';
 import { getBatchById, releaseQuarantine } from '$lib/Api/logistics.server';
 import { getAuditLogs, getMovements } from '$lib/Api/organization.server';
-import { getBatches, getGenealogy, triggerRecall } from '$lib/Api/traceability.server';
+import { getBatchList, getGenealogy, triggerRecall } from '$lib/Api/traceability.server';
 import type { ApiBatch, ApiOrigin } from '$lib/Api/traceability.server';
 import {
 	auditLogsToBatchMouvements,
@@ -26,7 +26,7 @@ async function loadFromCatalog(
 	lotId: string
 ): Promise<ApiBatch | null> {
 	const [list, movements] = await Promise.all([
-		getBatches(fetch, cookies, { search: lotId }),
+		getBatchList(fetch, cookies, { search: lotId }),
 		getMovements(fetch, cookies, { lotId, limit: 50 })
 	]);
 

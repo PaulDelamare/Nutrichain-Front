@@ -1,11 +1,11 @@
 import type { PageServerLoad } from './$types';
-import { getBatches } from '$lib/Api/traceability.server';
+import { getBatchList } from '$lib/Api/traceability.server';
 import { getEquipment } from '$lib/Api/organization.server';
 import { batchToRow } from '$lib/utils/lots/mapBatch';
 
 export const load: PageServerLoad = async ({ fetch, cookies }) => {
 	const [res, equipment] = await Promise.all([
-		getBatches(fetch, cookies),
+		getBatchList(fetch, cookies),
 		getEquipment(fetch, cookies)
 	]);
 
