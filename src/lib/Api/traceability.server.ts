@@ -137,7 +137,12 @@ export type ApiEpcisEventPage = {
 	pagination: { page: number; limit: number; total: number; totalPages: number };
 };
 
-export type EventsQuery = { page?: number; limit?: number; eventType?: string; relatedEntity?: string };
+export type EventsQuery = {
+	page?: number;
+	limit?: number;
+	eventType?: string;
+	relatedEntity?: string;
+};
 
 function eventsQueryString(opts?: EventsQuery): string {
 	const params = new URLSearchParams();

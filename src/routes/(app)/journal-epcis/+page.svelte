@@ -62,7 +62,8 @@
 	<label for="event-type-filter">Type d'événement</label>
 	<select
 		id="event-type-filter"
-		onchange={(e) => (window.location.href = filterHref(e.currentTarget.value || null, data.relatedEntity))}
+		onchange={(e) =>
+			(window.location.href = filterHref(e.currentTarget.value || null, data.relatedEntity))}
 	>
 		<option value="" selected={!data.eventType}>Tous les types</option>
 		{#each Object.entries(EVENT_TYPE_LABELS) as [code, label] (code)}
@@ -73,7 +74,8 @@
 	<label for="related-entity-filter">Origine</label>
 	<select
 		id="related-entity-filter"
-		onchange={(e) => (window.location.href = filterHref(data.eventType, e.currentTarget.value || null))}
+		onchange={(e) =>
+			(window.location.href = filterHref(data.eventType, e.currentTarget.value || null))}
 	>
 		<option value="" selected={!data.relatedEntity}>Toutes les origines</option>
 		{#each Object.entries(RELATED_ENTITY_LABELS) as [code, label] (code)}
