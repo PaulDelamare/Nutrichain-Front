@@ -31,6 +31,11 @@ export const actions = {
 		}
 
 		const target = url.searchParams.get('redirect') || '/tableau-de-bord';
+
+		if (res.twoFactorRedirect) {
+			redirect(303, `/connexion/2fa?redirect=${encodeURIComponent(target)}`);
+		}
+
 		redirect(303, target);
 	}
 } satisfies Actions;

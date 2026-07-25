@@ -97,6 +97,18 @@ export const navGroups: NavGroup[] = [
 		]
 	},
 	{
+		label: 'Compte',
+		items: [
+			{
+				href: '/mon-compte',
+				label: 'Mon compte',
+				title: 'Mon compte',
+				heading: 'Mon compte',
+				description: 'Sécurité de votre compte — authentification à deux facteurs (2FA).'
+			}
+		]
+	},
+	{
 		label: 'Système',
 		items: [
 			{
