@@ -298,6 +298,50 @@ describe('construction des paramètres de requête', () => {
 		expect(chemin()).toBe('/api/traceability/batches');
 	});
 
+	/**
+	 * ⚠️ Sans `page`, l'API ne sert que ses 100 lots les plus récents : un lot plus ancien était
+	 * déclaré inexistant faute de pouvoir demander la suite.
+	 */
+	it('getBatches demande la page et la taille de page voulues', async () => {
+		await trace.getBatches(fetchEspion, cookies, { search: 'lait', page: 3, limit: 50 });
+		expect(chemin()).toBe('/api/traceability/batches?q=lait&page=3&limit=50');
+	});
+
+	it('getBatchList demande d’emblée le plafond de l’API — un sélecteur ne pagine pas', async () => {
+		await trace.getBatchList(fetchEspion, cookies);
+		expect(chemin()).toBe(`/api/traceability/batches?limit=${trace.MAX_BATCH_PAGE_SIZE}`);
+	});
+
+	const repond = (data: unknown) =>
+		(async () =>
+			new Response(JSON.stringify({ message: 'OK', data }), {
+				status: 200,
+				headers: { 'content-type': 'application/json' }
+			})) as unknown as typeof globalThis.fetch;
+
+	it('getBatchList réduit la réponse paginée à ses lignes', async () => {
+		const res = await trace.getBatchList(
+			repond({
+				data: [{ id: 'lot-1' }],
+				pagination: { page: 1, limit: 500, total: 342, totalPages: 1 }
+			}),
+			cookies
+		);
+
+		expect(res.ok && res.data).toEqual([{ id: 'lot-1' }]);
+	});
+
+	/**
+	 * Filet de déploiement : le front peut atteindre une API pas encore paginée, qui répond par un
+	 * tableau nu. Mieux vaut une liste correcte qu'un écran de lots en erreur.
+	 */
+	it('getBatches accepte encore la réponse non paginée d’une API antérieure', async () => {
+		const res = await trace.getBatches(repond([{ id: 'lot-1' }, { id: 'lot-2' }]), cookies);
+
+		expect(res.ok && res.data.data).toHaveLength(2);
+		expect(res.ok && res.data.pagination.total).toBe(2);
+	});
+
 	it('getMovements n’envoie que les filtres réellement demandés', async () => {
 		await trace.getBatches(fetchEspion, cookies);
 		await org.getMovements(fetchEspion, cookies);
