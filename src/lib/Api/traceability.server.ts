@@ -179,3 +179,39 @@ export function getBatchGenealogy(fetch: typeof globalThis.fetch, cookies: Cooki
 		`/api/traceability/batches/${id}/genealogy`
 	);
 }
+
+export type ApiEpcisEvent = {
+	id: string;
+	event_time: string;
+	event_type: string;
+	related_entity: string;
+	related_id: string;
+	payload: Record<string, unknown>;
+};
+
+export type ApiEpcisEventPage = {
+	data: ApiEpcisEvent[];
+	pagination: { page: number; limit: number; total: number; totalPages: number };
+};
+
+export type EventsQuery = {
+	page?: number;
+	limit?: number;
+	eventType?: string;
+	relatedEntity?: string;
+};
+
+function eventsQueryString(opts?: EventsQuery): string {
+	const params = new URLSearchParams();
+	if (opts?.page) params.set('page', String(opts.page));
+	if (opts?.limit) params.set('limit', String(opts.limit));
+	if (opts?.eventType) params.set('event_type', opts.eventType);
+	if (opts?.relatedEntity) params.set('related_entity', opts.relatedEntity);
+	return params.size > 0 ? `?${params}` : '';
+}
+
+export function getEvents(fetch: typeof globalThis.fetch, cookies: Cookies, opts?: EventsQuery) {
+	return api(fetch, cookies).get<ApiEpcisEventPage>(
+		`/api/traceability/events${eventsQueryString(opts)}`
+	);
+}

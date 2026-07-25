@@ -160,6 +160,14 @@ export const navGroups: NavGroup[] = [
 				heading: 'Audit & logs',
 				description: "Journal d'audit et événements système.",
 				roles: ADMIN_ROLES
+			},
+			{
+				href: '/journal-epcis',
+				label: 'Journal EPCIS',
+				title: 'Journal EPCIS',
+				heading: 'Journal EPCIS',
+				description:
+					"Événements GS1/EPCIS produits par l'organisation — réception, transformation, expédition."
 			}
 		]
 	}
