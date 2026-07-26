@@ -48,13 +48,26 @@
 							<span class="none">—</span>
 						{:else}
 							{#each row.lotsImpactes as lot (lot.id)}
-								<a
-									href={resolve('/(app)/fiche-lot/[lotId]', {
-										lotId: encodeURIComponent(lot.id)
-									})}
-								>
-									{lot.produit}
-								</a>
+								<span class="lot">
+									<a
+										href={resolve('/(app)/fiche-lot/[lotId]', {
+											lotId: encodeURIComponent(lot.id)
+										})}
+									>
+										{lot.produit}
+									</a>
+									{#if !lot.levable}
+										<span
+											class="blocked"
+											title={lot.motifBlocage
+												? `Non levable — ${lot.motifBlocage}`
+												: 'Non levable via cette alerte'}
+										>
+											non levable{#if lot.motifBlocage}
+												({lot.motifBlocage}){/if}
+										</span>
+									{/if}
+								</span>
 							{/each}
 						{/if}
 					</td>
@@ -139,6 +152,13 @@
 		gap: 0.35rem;
 	}
 
+	.lot {
+		display: inline-flex;
+		flex-wrap: wrap;
+		align-items: baseline;
+		gap: 0.25rem;
+	}
+
 	.lots a {
 		color: var(--nc-brand);
 		text-decoration: none;
@@ -147,6 +167,11 @@
 
 	.lots a:hover {
 		text-decoration: underline;
+	}
+
+	.blocked {
+		font-size: 0.75rem;
+		color: #b45309;
 	}
 
 	.none {

@@ -1,18 +1,17 @@
 import { fail } from '@sveltejs/kit';
 import type { Actions, PageServerLoad } from './$types';
-import { resolveAlert } from '$lib/Api/alerts.server';
-import { getAlerts, getEquipment, getQuarantineBatches } from '$lib/Api/organization.server';
+import { getAlertBatches, resolveAlert, type ApiAlertBatch } from '$lib/Api/alerts.server';
+import { getAlerts, getEquipment } from '$lib/Api/organization.server';
 import { getSensorHistory } from '$lib/Api/iot.server';
 import { refusDecisionQualite } from '$lib/server/guards';
-import { alertsToCold } from '$lib/utils/org/mappers';
+import { alertsToCold, listActiveColdAlerts } from '$lib/utils/org/mappers';
 
 export const load: PageServerLoad = async ({ fetch, cookies, url }) => {
 	const sensorId = url.searchParams.get('sensor');
 
-	const [alerts, equipment, quarantine] = await Promise.all([
+	const [alerts, equipment] = await Promise.all([
 		getAlerts(fetch, cookies),
-		getEquipment(fetch, cookies),
-		getQuarantineBatches(fetch, cookies)
+		getEquipment(fetch, cookies)
 	]);
 
 	if (!alerts.ok || !equipment.ok) {
@@ -25,11 +24,16 @@ export const load: PageServerLoad = async ({ fetch, cookies, url }) => {
 		};
 	}
 
-	const { incident, rows } = alertsToCold(
-		alerts.data,
-		equipment.data,
-		quarantine.ok ? quarantine.data : []
-	);
+	const cold = listActiveColdAlerts(alerts.data);
+	const batchResponses = await Promise.all(cold.map((a) => getAlertBatches(fetch, cookies, a.id)));
+	const batchesByAlertId = new Map<string, ApiAlertBatch[]>();
+	cold.forEach((a, i) => {
+		const res = batchResponses[i];
+		// Échec → liste vide (jamais retomber sur quarantine-batches × frigo).
+		batchesByAlertId.set(a.id, res.ok ? res.data : []);
+	});
+
+	const { incident, rows } = alertsToCold(alerts.data, equipment.data, batchesByAlertId);
 
 	let telemetry: {
 		sensorId: string;
