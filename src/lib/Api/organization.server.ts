@@ -75,6 +75,10 @@ export type ApiLocation = {
 	nom: string;
 	type: string;
 	description?: string | null;
+	// Position du lieu, saisie dans Configuration. Chaînes (colonnes DECIMAL côté API), `null` tant
+	// qu'elle n'a pas été renseignée — la fiche lot n'affiche alors pas de carte (cf. #23).
+	latitude?: string | number | null;
+	longitude?: string | number | null;
 	is_active: boolean;
 };
 
@@ -257,7 +261,14 @@ export const updateLocation = (
 	fetch: typeof globalThis.fetch,
 	cookies: Cookies,
 	id: string,
-	body: Partial<{ nom: string; type: string; description: string }>
+	// `latitude`/`longitude` se modifient ENSEMBLE ; les deux à `null` retirent la position.
+	body: Partial<{
+		nom: string;
+		type: string;
+		description: string;
+		latitude: number | null;
+		longitude: number | null;
+	}>
 ) => orgApi(fetch, cookies).patch<ApiLocation>(`/api/organization/locations/${id}`, body);
 
 export const setLocationActive = (

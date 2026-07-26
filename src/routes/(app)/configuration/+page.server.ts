@@ -9,6 +9,7 @@ import {
 	createSupplier,
 	setSupplierActive,
 	createLocation,
+	updateLocation,
 	setLocationActive,
 	createCustomer,
 	setCustomerActive,
@@ -19,6 +20,7 @@ import {
 import { importProductsCsv, importCustomersCsv } from '$lib/Api/connectors.server';
 import { exigerAdministrateur, refusAdministration } from '$lib/server/guards';
 import { COLD_EQUIPMENT_TYPES, estTypeMateriel } from '$lib/config/equipment';
+import { parseCoordinateFields } from '$lib/utils/geo/coordinates';
 
 export const load: PageServerLoad = async ({ fetch, cookies, locals }) => {
 	exigerAdministrateur(locals.user, "La configuration de l'usine");
@@ -102,6 +104,27 @@ export const actions = {
 		});
 		if (!res.ok) return fail(res.status, { locationError: res.message, nom });
 		return { locationCreated: res.data };
+	},
+
+	// La position d'un emplacement est la SEULE source du repère affiché sur la fiche lot (#23) :
+	// elle se saisit ici, et se retire en soumettant les deux champs vides.
+	setLocationCoordinates: async ({ request, fetch, cookies, locals }) => {
+		const refus = refusAdministration(locals.user);
+		if (refus) return fail(403, { locationError: refus });
+
+		const form = await request.formData();
+		const id = champ(form, 'id');
+		if (!id) return fail(400, { locationError: 'Emplacement à positionner requis.' });
+
+		const coords = parseCoordinateFields(champ(form, 'latitude'), champ(form, 'longitude'));
+		if (!coords.ok) return fail(400, { locationError: coords.message });
+
+		const res = await updateLocation(fetch, cookies, id, {
+			latitude: coords.latitude,
+			longitude: coords.longitude
+		});
+		if (!res.ok) return fail(res.status, { locationError: res.message });
+		return { locationPositioned: res.data };
 	},
 
 	toggleLocation: async ({ request, fetch, cookies, locals }) => {

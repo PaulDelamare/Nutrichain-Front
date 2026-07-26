@@ -2,7 +2,7 @@
 	import { browser } from '$app/environment';
 	import { onMount } from 'svelte';
 	import type { LotMapPin } from '$lib/types/lot-map';
-	import { defaultZoomForPin } from '$lib/utils/lots/resolveLotMapLocation';
+	import { LOT_MAP_ZOOM } from '$lib/utils/lots/resolveLotMapLocation';
 
 	type Props = {
 		pin: LotMapPin | null;
@@ -28,25 +28,19 @@
 
 				if (cancelled || !container) return;
 
-				const zoom = defaultZoomForPin(pin);
-
 				map = L.map(container, {
 					zoomControl: true,
 					scrollWheelZoom: false
-				}).setView([pin.lat, pin.lng], zoom);
+				}).setView([pin.lat, pin.lng], LOT_MAP_ZOOM);
 
 				L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
 					attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',
 					maxZoom: 19
 				}).addTo(map);
 
-				const markerHtml = pin.precise
-					? '<span class="lot-pin lot-pin--precise" aria-hidden="true"></span>'
-					: '<span class="lot-pin lot-pin--approx" aria-hidden="true"></span>';
-
 				const icon = L.divIcon({
 					className: 'lot-map-marker-wrap',
-					html: markerHtml,
+					html: '<span class="lot-pin" aria-hidden="true"></span>',
 					iconSize: [28, 28],
 					iconAnchor: [14, 14]
 				});
@@ -54,8 +48,7 @@
 				const popupLines = [
 					`<strong>${escapeHtml(pin.label)}</strong>`,
 					pin.sublabel ? escapeHtml(pin.sublabel) : null,
-					lotId ? `Lot ${escapeHtml(lotId)}` : null,
-					pin.precise ? null : '<em>Position approximative (site)</em>'
+					lotId ? `Lot ${escapeHtml(lotId)}` : null
 				]
 					.filter(Boolean)
 					.join('<br />');
@@ -87,8 +80,11 @@
 <div class="lot-map" class:lot-map--ready={mapReady}>
 	{#if !pin}
 		<div class="lot-map-empty">
-			<p>Emplacement indisponible</p>
-			<span>Les coordonnées GPS seront affichées dès qu'elles seront renseignées.</span>
+			<p>Emplacement non positionné</p>
+			<span>
+				Renseignez les coordonnées de cet emplacement dans Configuration pour voir le lot sur la
+				carte.
+			</span>
 		</div>
 	{:else if mapError}
 		<div class="lot-map-empty">
@@ -104,9 +100,6 @@
 		></div>
 		{#if !mapReady}
 			<div class="lot-map-loading">Chargement de la carte…</div>
-		{/if}
-		{#if pin && !pin.precise}
-			<p class="lot-map-hint">Position approximative — coordonnées GPS à venir.</p>
 		{/if}
 	{/if}
 </div>
@@ -168,21 +161,6 @@
 		max-width: 14rem;
 	}
 
-	.lot-map-hint {
-		position: absolute;
-		left: 0.5rem;
-		right: 0.5rem;
-		bottom: 0.5rem;
-		margin: 0;
-		padding: 0.35rem 0.5rem;
-		border-radius: 0.25rem;
-		background: rgba(255, 255, 255, 0.92);
-		font-size: 0.6875rem;
-		color: var(--nc-text-muted);
-		box-shadow: 0 1px 3px rgba(15, 23, 42, 0.08);
-		pointer-events: none;
-	}
-
 	:global(.lot-map-marker-wrap) {
 		background: transparent;
 		border: none;
@@ -194,15 +172,8 @@
 		height: 1.25rem;
 		border-radius: 999px;
 		border: 3px solid #fff;
-		box-shadow: 0 2px 8px rgba(15, 23, 42, 0.25);
-	}
-
-	:global(.lot-pin--precise) {
 		background: var(--nc-brand);
-	}
-
-	:global(.lot-pin--approx) {
-		background: var(--nc-text-subtle);
+		box-shadow: 0 2px 8px rgba(15, 23, 42, 0.25);
 	}
 
 	:global(.lot-map .leaflet-control-attribution) {

@@ -1,11 +1,13 @@
-/** Position affichée sur la carte — prête pour GPS / WMS futur. */
+/**
+ * Position affichée sur la carte. Un pin n'existe que sur des coordonnées SAISIES sur l'emplacement
+ * (cf. #23) : il n'y a donc plus de repère « approximatif » à distinguer, et l'absence de position
+ * se dit par `null` plutôt que par un point de repli.
+ */
 export type LotMapPin = {
 	lat: number;
 	lng: number;
 	label: string;
 	sublabel?: string;
-	/** true = coordonnées connues (site ou API), false = repli géographique */
-	precise: boolean;
 };
 
 export type LotMapOptions = {

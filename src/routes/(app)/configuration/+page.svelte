@@ -4,6 +4,7 @@
 	import PageHead from '$lib/components/page/PageHead.svelte';
 	import ConfigList from '$lib/components/config/ConfigList.svelte';
 	import ImportCsv from '$lib/components/config/ImportCsv.svelte';
+	import { formatCoordinates } from '$lib/utils/geo/coordinates';
 	import {
 		COLD_EQUIPMENT_TYPES,
 		EQUIPMENT_TYPE_OPTIONS,
@@ -61,12 +62,40 @@
 			<input name="description" placeholder="Description (optionnel)" />
 			<button type="submit" disabled={envoi}>Ajouter</button>
 		</form>
+		<p class="hint sub-hint">
+			Position sur la carte — c'est la seule source du repère affiché sur la fiche lot. Laissez les
+			deux champs vides pour la retirer.
+		</p>
+		<form method="POST" action="?/setLocationCoordinates" use:enhance={pendant}>
+			<select name="id" required aria-label="Emplacement à positionner">
+				{#each data.locations as lieu (lieu.id)}
+					<option value={lieu.id}>{lieu.nom}</option>
+				{/each}
+			</select>
+			<input
+				name="latitude"
+				type="number"
+				step="0.000001"
+				min="-90"
+				max="90"
+				placeholder="Latitude (ex. 48.832910)"
+			/>
+			<input
+				name="longitude"
+				type="number"
+				step="0.000001"
+				min="-180"
+				max="180"
+				placeholder="Longitude (ex. 2.286540)"
+			/>
+			<button type="submit" disabled={envoi || data.locations.length === 0}>Positionner</button>
+		</form>
 		{#if form?.locationError}<p class="error" role="alert">{form.locationError}</p>{/if}
 		<ConfigList
 			items={data.locations.map((l) => ({
 				id: l.id,
 				title: l.nom,
-				subtitle: l.type,
+				subtitle: `${l.type} · ${formatCoordinates(l.latitude, l.longitude) ?? 'sans position'}`,
 				is_active: l.is_active
 			}))}
 			toggleAction="?/toggleLocation"
@@ -298,6 +327,10 @@
 		margin: 0.25rem 0 1rem;
 		font-size: 0.8125rem;
 		color: var(--nc-text-muted);
+	}
+
+	.sub-hint {
+		margin-top: 0.9rem;
 	}
 
 	form {

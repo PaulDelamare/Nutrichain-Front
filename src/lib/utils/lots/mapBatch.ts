@@ -100,6 +100,10 @@ export function batchToSheet(batch: ApiBatch): LotSheet {
 		site: batch.materiel?.lieu?.nom ?? '—',
 		zone: batch.materiel?.nom ?? '—',
 		createdAtLabel: batch.date_creation ? `Créé le ${fmtDate(batch.date_creation)}` : '—',
-		mapPin: resolveLotMapLocation(batch.materiel?.lieu?.nom, batch.materiel?.nom)
+		mapPin: resolveLotMapLocation(
+			batch.materiel?.lieu?.nom,
+			batch.materiel?.nom,
+			batch.materiel?.lieu
+		)
 	};
 }
