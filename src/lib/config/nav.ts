@@ -104,19 +104,25 @@ export const navGroups: NavGroup[] = [
 				description: 'Flux sortants — destination, statut de livraison, lots embarqués.'
 			},
 			{
+				href: '/transformations',
+				label: 'Transformations',
+				title: 'Transformations',
+				heading: 'Transformations',
+				description: 'Production — consommer des lots parents pour créer un lot enfant tracé.'
+			},
+			{
 				href: '/portail-magasins',
 				label: 'Portail magasins',
 				title: 'Portail magasins',
 				heading: 'Portail magasins',
-				description:
-					'Consignes de retrait, confirmations et traçabilité simplifiée pour la force de vente.'
+				description: 'Brief rappel et indicateurs magasins dérivés des alertes actives.'
 			},
 			{
 				href: '/integrations',
 				label: 'Intégrations',
 				title: 'Intégrations',
 				heading: 'Intégrations ERP / WMS / TMS',
-				description: "Connecteurs, états de synchronisation et files d'attente.",
+				description: 'Export EPCIS CSV et imports catalogue (Configuration).',
 				roles: ADMIN_ROLES
 			}
 		]

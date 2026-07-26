@@ -80,3 +80,69 @@ export function releaseQuarantine(
 		{ motif }
 	);
 }
+
+export type CreateReceiptBody = {
+	id_fournisseur: string;
+	shipment_id: string;
+	id_produit: string;
+	quantite_actuelle: number;
+	unite_code: string;
+	statut_controle: 'OK' | 'ALERTE' | 'NONCONFORME';
+	id_materiel?: string;
+	lot_number?: string;
+	date_peremption?: string;
+};
+
+export type CreateReceiptResult = {
+	message: string;
+	receiptId: string;
+	batchId: string;
+};
+
+export function createReceipt(
+	fetch: typeof globalThis.fetch,
+	cookies: Cookies,
+	body: CreateReceiptBody
+) {
+	return api(fetch, cookies, { useApiKey: false }).post<CreateReceiptResult>(
+		'/api/logistics/receipts',
+		body
+	);
+}
+
+export type CreateShipmentBody = {
+	id_client: string;
+	shipment_id: string;
+	transporteur: string;
+	destination_adresse: string;
+	lots: { id_lot: string; quantite_expediee: number }[];
+};
+
+export type ApiShipmentCreated = {
+	id: string;
+	shipment_id: string;
+	statut_livraison: string;
+};
+
+export function createShipment(
+	fetch: typeof globalThis.fetch,
+	cookies: Cookies,
+	body: CreateShipmentBody
+) {
+	return api(fetch, cookies, { useApiKey: false }).post<{ shipment: ApiShipmentCreated }>(
+		'/api/logistics/shipments',
+		body
+	);
+}
+
+/** Résolution exacte par numéro de lot GS1 (AI 10) — équivalent mobile `lookupBatch`. */
+export function resolveBatchByLotNumber(
+	fetch: typeof globalThis.fetch,
+	cookies: Cookies,
+	lotNumber: string
+) {
+	const q = new URLSearchParams({ lot_number: lotNumber.trim() });
+	return api(fetch, cookies, { useApiKey: false }).get<ApiBatch>(
+		`/api/logistics/batches/resolve?${q}`
+	);
+}

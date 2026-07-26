@@ -121,6 +121,9 @@
 			<button type="submit" disabled={envoi}>Ajouter</button>
 		</form>
 		{#if form?.supplierError}<p class="error" role="alert">{form.supplierError}</p>{/if}
+		{#if form?.supplierUpdated}
+			<p class="ok" role="status">Fournisseur mis à jour.</p>
+		{/if}
 		<ConfigList
 			items={data.suppliers.map((s) => ({
 				id: s.id,
@@ -133,6 +136,22 @@
 			{envoi}
 			{pendant}
 		/>
+		{#if data.suppliers.some((s) => s.is_active)}
+			<form method="POST" action="?/updateSupplier" use:enhance={pendant} class="edit-supplier">
+				<p class="hint">Modifier un fournisseur actif</p>
+				<select name="id" required>
+					<option value="">Choisir…</option>
+					{#each data.suppliers.filter((s) => s.is_active) as s (s.id)}
+						<option value={s.id}>{s.nom_ferme}</option>
+					{/each}
+				</select>
+				<input name="nom_ferme" placeholder="Nom" required minlength="2" />
+				<input name="adresse_siege" placeholder="Adresse du siège" required minlength="2" />
+				<input name="type_produit" placeholder="Type de produit (optionnel)" />
+				<input name="contact_qualite" placeholder="Contact qualité (optionnel)" />
+				<button type="submit" disabled={envoi}>Enregistrer</button>
+			</form>
+		{/if}
 	</section>
 
 	<section>
@@ -374,6 +393,27 @@
 		margin: 0.5rem 0 0;
 		font-size: 0.8125rem;
 		color: #991b1b;
+	}
+
+	.ok {
+		margin: 0.5rem 0 0;
+		font-size: 0.8125rem;
+		color: #166534;
+	}
+
+	.edit-supplier {
+		margin-top: 1rem;
+		padding-top: 1rem;
+		border-top: 1px solid #f1f5f9;
+		display: grid;
+		grid-template-columns: repeat(auto-fill, minmax(10rem, 1fr));
+		gap: 0.5rem;
+		align-items: end;
+	}
+
+	.edit-supplier .hint {
+		grid-column: 1 / -1;
+		margin: 0;
 	}
 
 	.equip-list {

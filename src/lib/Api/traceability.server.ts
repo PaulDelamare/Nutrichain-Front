@@ -222,3 +222,31 @@ export function getEvents(fetch: typeof globalThis.fetch, cookies: Cookies, opts
 		`/api/traceability/events${eventsQueryString(opts)}`
 	);
 }
+
+export const TRANSFORM_UNITS = ['KG', 'G', 'L', 'ML', 'UNIT', 'PALLET', 'BOX'] as const;
+export type TransformUnit = (typeof TRANSFORM_UNITS)[number];
+
+export type CreateTransformationBody = {
+	id_produit_fini: string;
+	id_materiel: string;
+	quantite_produite: number;
+	unite_code: TransformUnit;
+	inputs: { id_lot_parent: string; quantite_prelevee: number; unite: TransformUnit }[];
+	date_peremption?: string;
+};
+
+export type CreateTransformationResult = {
+	transformation_id: string;
+	lot_enfant_id: string;
+};
+
+export function createTransformation(
+	fetch: typeof globalThis.fetch,
+	cookies: Cookies,
+	body: CreateTransformationBody
+) {
+	return api(fetch, cookies, { useApiKey: false }).post<CreateTransformationResult>(
+		'/api/traceability/transformations',
+		body
+	);
+}
