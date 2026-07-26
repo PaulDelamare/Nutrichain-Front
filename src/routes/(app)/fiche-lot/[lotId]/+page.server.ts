@@ -47,6 +47,12 @@ async function enrichBatch(
 	batch: ApiBatch,
 	lotId: string
 ): Promise<ApiBatch> {
+	// `getBatchById` joint déjà les mouvements (avec metadata). Les recharger pour les jeter
+	// (metadata: null) vidait la frise du motif de levée alors que la décision était en base (#30).
+	if (batch.mouvements && batch.mouvements.length > 0) {
+		return batch;
+	}
+
 	const [movements, audit] = await Promise.all([
 		getMovements(fetch, cookies, { lotId, limit: 50 }),
 		getAuditLogs(fetch, cookies, 100)
@@ -54,7 +60,7 @@ async function enrichBatch(
 
 	const fromMovements = movements.ok ? movements.data.map(movementToBatchMouvement) : [];
 	const fromAudit =
-		audit.ok && fromMovements.length < 3
+		audit.ok && fromMovements.length === 0
 			? auditLogsToBatchMouvements(
 					audit.data.filter((l) => l.entity === 'Batch' && l.entity_id === lotId)
 				)
@@ -64,7 +70,7 @@ async function enrichBatch(
 
 	return {
 		...batch,
-		mouvements: mergedEvents.length > 0 ? mergedEvents : (batch.mouvements ?? [])
+		mouvements: mergedEvents.length > 0 ? mergedEvents : []
 	};
 }
 

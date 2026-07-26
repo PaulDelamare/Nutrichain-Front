@@ -33,7 +33,9 @@
 	{#if statut === 'quarantaine'}
 		<div class="action">
 			<p class="action-title">Lever la quarantaine</p>
-			<p class="action-hint">Décision qualité — motif obligatoire, tracé dans l'audit WORM.</p>
+			<p class="action-hint">
+				Décision qualité — motif obligatoire, tracé dans l'historique du lot.
+			</p>
 			{#if peutDecider}
 				<form method="POST" action="?/release">
 					<input

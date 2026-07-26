@@ -59,6 +59,11 @@ export type ApiMovement = {
 	created_at: string;
 	lot?: { id: string; produit?: { nom: string } };
 	user?: { name: string } | null;
+	/**
+	 * Contexte de la décision (motif de levée, pic de température, résultat QC…). Sans lui, la
+	 * frise de la fiche lot affiche le type d'événement mais pas le « pourquoi » (#30).
+	 */
+	metadata?: Record<string, unknown> | null;
 };
 
 export type ApiSupplier = {

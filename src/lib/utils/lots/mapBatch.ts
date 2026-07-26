@@ -74,7 +74,9 @@ export function movementToBatchMouvement(m: ApiMovement): ApiBatchMouvement {
 		unite: m.unite,
 		created_at: m.created_at,
 		user: m.user,
-		metadata: null
+		// Le motif de levée, le pic de température, le résultat QC… vivent ICI. Les jeter rendait
+		// la frise muette sur le « pourquoi » alors que l'API les écrit déjà (#30).
+		metadata: m.metadata ?? null
 	};
 }
 
