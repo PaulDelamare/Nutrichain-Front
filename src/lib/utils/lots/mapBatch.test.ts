@@ -49,6 +49,12 @@ describe('mapBatch — mapStatut', () => {
 	it('mappe EN_ATTENTE_QC sur l’attente de contrôle', () => {
 		expect(batchToRow(batch('EN_ATTENTE_QC')).statut).toBe('attente_qc');
 	});
+
+	it('mappe EN_PRODUCTION / EPUISE / REBUT (statuts API réels)', () => {
+		expect(batchToRow(batch('EN_PRODUCTION')).statut).toBe('en_production');
+		expect(batchToRow(batch('EPUISE')).statut).toBe('epuise');
+		expect(batchToRow(batch('REBUT')).statut).toBe('rebut');
+	});
 });
 
 describe('batchToRow — la ligne du tableau de recherche', () => {

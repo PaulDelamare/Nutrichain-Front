@@ -3,6 +3,9 @@ export type LotStatus =
 	| 'attente_qc'
 	| 'surveillance'
 	| 'quarantaine'
+	| 'en_production'
+	| 'epuise'
+	| 'rebut'
 	| 'perime'
 	| 'expedie'
 	| 'inconnu';

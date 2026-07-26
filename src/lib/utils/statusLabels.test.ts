@@ -28,8 +28,11 @@ describe('libellés de statut', () => {
 	it('traduit tous les statuts de lot, y compris l’inconnu', () => {
 		expect(lotStatusLabel('conforme')).toBe('Conforme');
 		expect(lotStatusLabel('attente_qc')).toBe('En attente de contrôle');
-		expect(lotStatusLabel('surveillance')).toBe('Surveillance');
+		expect(lotStatusLabel('surveillance')).toBe('Sous rappel');
 		expect(lotStatusLabel('quarantaine')).toBe('Quarantaine');
+		expect(lotStatusLabel('en_production')).toBe('En production');
+		expect(lotStatusLabel('epuise')).toBe('Épuisé');
+		expect(lotStatusLabel('rebut')).toBe('Mis au rebut');
 		expect(lotStatusLabel('perime')).toBe('Périmé');
 		expect(lotStatusLabel('expedie')).toBe('Expédié');
 		expect(lotStatusLabel('inconnu')).toBe('Inconnu');

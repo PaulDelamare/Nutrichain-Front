@@ -16,6 +16,7 @@ import type { AppUser } from '$lib/types/user';
 import type { TraceGraph } from '$lib/types/trace';
 import type { StoreStat, StoreBrief } from '$lib/types/portail';
 import { movementEventLabel } from '$lib/utils/movements/labels';
+import { toColdAlertUiStatus } from '$lib/vocab/alertSeverity';
 import { normalizeQualityResult, openQualityIssues } from './quality';
 
 const ROLE_LABELS: Record<string, string> = {
@@ -63,12 +64,6 @@ const COLD_ALERT_TYPES = ['TEMP_EXCURSION', 'FROID'];
 
 const RECALL_ALERT_TYPES = ['PRODUCT_RECALL', 'RAPPEL', 'RECALL_DEPTH_SATURATION'];
 
-function mapColdSeverity(niveau: string): 'critique' | 'investigation' {
-	const n = niveau.toUpperCase();
-	if (n === 'CRITIQUE' || n === 'PANIC' || n === 'HAUTE') return 'critique';
-	return 'investigation';
-}
-
 const MOTIF_BLOCAGE_LABEL: Record<string, string> = {
 	CONTROLE_NON_CONFORME: 'contrôle non conforme'
 };
@@ -110,7 +105,7 @@ export function alertsToCold(
 	const rows: ColdAlertRow[] = cold.map((a) => {
 		const equip = equipment.find((e) => e.id === a.id_materiel);
 		const temp = equip?.temp_actuelle != null ? `${equip.temp_actuelle} °C` : '—';
-		const statut = mapColdSeverity(a.niveau_gravite);
+		const statut = toColdAlertUiStatus(a.niveau_gravite);
 
 		return {
 			id: shortRef(a.id),

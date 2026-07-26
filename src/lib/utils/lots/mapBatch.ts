@@ -3,7 +3,8 @@ import type { ApiAuditLog, ApiMovement } from '$lib/Api/organization.server';
 import { movementsToLotEvents } from '$lib/utils/lots/lotEvents';
 import { resolveLotMapLocation } from '$lib/utils/lots/resolveLotMapLocation';
 import type { LotSheet } from '$lib/types/lot-sheet';
-import type { LotRow, LotStatus } from '$lib/types/lot';
+import type { LotRow } from '$lib/types/lot';
+import { toLotStatus } from '$lib/vocab/batchStatus';
 
 const AUDIT_TO_MOVEMENT: Record<string, string> = {
 	CREATE_RECEIPT: 'RECEPTION',
@@ -30,17 +31,6 @@ export function auditLogsToBatchMouvements(logs: ApiAuditLog[]): ApiBatchMouveme
 	}));
 }
 
-function mapStatut(statut: string): LotStatus {
-	const s = statut.toUpperCase();
-	if (s === 'EN_ATTENTE_QC') return 'attente_qc';
-	if (s === 'BLOQUE' || s === 'QUARANTAINE') return 'quarantaine';
-	if (s === 'ALERTE' || s === 'SURVEILLANCE') return 'surveillance';
-	if (s === 'PERIME') return 'perime';
-	if (s === 'EXPEDIE') return 'expedie';
-	if (s === 'EN_STOCK' || s === 'PRET') return 'conforme';
-	return 'inconnu';
-}
-
 function fmtDate(iso: string | null): string {
 	if (!iso) return '—';
 	return new Date(iso).toLocaleDateString('fr-FR');
@@ -61,7 +51,7 @@ export function batchToRow(
 		produit: batch.produit?.nom ?? '—',
 		gtin: batch.produit?.code_gtin ?? '—',
 		site: batch.materiel?.lieu?.nom ?? '—',
-		statut: mapStatut(batch.statut),
+		statut: toLotStatus(batch.statut),
 		temperature: fmtTemp(temp)
 	};
 }
@@ -94,7 +84,7 @@ export function batchToSheet(batch: ApiBatch): LotSheet {
 		gtin: batch.produit?.code_gtin ?? '—',
 		dlc: fmtDate(batch.date_peremption),
 		quantite: `${batch.quantite_actuelle} ${batch.unite?.nom ?? batch.unite_code}`,
-		statut: mapStatut(batch.statut),
+		statut: toLotStatus(batch.statut),
 		statutRaw: batch.statut.replace(/_/g, ' '),
 		temperature: fmtTemp(batch.materiel?.temp_actuelle),
 		createdBy: batch.user?.name ?? '—',

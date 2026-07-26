@@ -3,8 +3,11 @@ import type { LotStatus } from '$lib/types/lot';
 const labels: Record<LotStatus, string> = {
 	conforme: 'Conforme',
 	attente_qc: 'En attente de contrôle',
-	surveillance: 'Surveillance',
+	surveillance: 'Sous rappel',
 	quarantaine: 'Quarantaine',
+	en_production: 'En production',
+	epuise: 'Épuisé',
+	rebut: 'Mis au rebut',
 	perime: 'Périmé',
 	expedie: 'Expédié',
 	inconnu: 'Inconnu'
