@@ -1,48 +1,58 @@
 import { describe, it, expect } from 'vitest';
-import { resolveLotMapLocation, defaultZoomForPin } from './resolveLotMapLocation';
+import { resolveLotMapLocation, LOT_MAP_ZOOM } from './resolveLotMapLocation';
 
 describe('resolveLotMapLocation', () => {
-	it('n’affiche aucun pin quand le lot n’a ni coordonnées ni site', () => {
-		expect(resolveLotMapLocation(null, null)).toBeNull();
-		expect(resolveLotMapLocation('—', '—')).toBeNull();
+	it('place le repère sur les coordonnées saisies de l’emplacement', () => {
+		const pin = resolveLotMapLocation('Chambre froide A', 'Groupe 1', {
+			latitude: '48.833180',
+			longitude: '2.286910'
+		});
+
+		expect(pin).toEqual({
+			lat: 48.83318,
+			lng: 2.28691,
+			label: 'Chambre froide A',
+			sublabel: 'Groupe 1'
+		});
 	});
 
-	it('marque « précis » uniquement les coordonnées réellement fournies par l’API', () => {
-		const pin = resolveLotMapLocation('Usine Loire', 'Cuve 3', { lat: 47.21, lng: -1.55 });
-		expect(pin).toMatchObject({ lat: 47.21, lng: -1.55, precise: true, sublabel: 'Cuve 3' });
+	/**
+	 * ⚠️ Le cœur de #23 : cette fonction DÉDUISAIT la position du nom du site (« Loire » → pin de
+	 * Nantes) et, à défaut, repliait sur le centre de la France. Un nom de lieu ne dit rien de sa
+	 * position : sans coordonnées, il n'y a pas de repère.
+	 */
+	it('ne déduit AUCUNE position du nom du site', () => {
+		expect(resolveLotMapLocation('Usine Loire', 'Cuve 3')).toBeNull();
+		expect(resolveLotMapLocation('Entrepôt de Rennes', 'Quai 2')).toBeNull();
+		expect(resolveLotMapLocation('Plateforme Paris Sud')).toBeNull();
 	});
 
-	it('ne se dit jamais précis quand la position est déduite du nom du site', () => {
-		const pin = resolveLotMapLocation('Usine Loire');
-		expect(pin?.precise).toBe(false);
+	it('ne se replie pas sur le centre de la France quand le lieu n’est pas positionné', () => {
+		expect(resolveLotMapLocation('Quai de réception', 'Rack A', {})).toBeNull();
+		expect(
+			resolveLotMapLocation('Quai de réception', 'Rack A', { latitude: null, longitude: null })
+		).toBeNull();
 	});
 
-	it('centre sur la France quand le site n’est reconnu par aucun repère', () => {
-		const pin = resolveLotMapLocation('Site inconnu');
-		expect(pin).toMatchObject({ lat: 47, lng: 2, precise: false });
+	it('refuse une demi-position : une latitude seule ne place rien', () => {
+		expect(resolveLotMapLocation('Quai', null, { latitude: 48.83291 })).toBeNull();
+		expect(resolveLotMapLocation('Quai', null, { longitude: 2.28654 })).toBeNull();
 	});
 
-	it('une latitude seule ne suffit pas à revendiquer une position précise', () => {
-		const pin = resolveLotMapLocation('Site inconnu', null, { lat: 47.21, lng: null });
-		expect(pin?.precise).toBe(false);
+	it('ignore des coordonnées hors du domaine terrestre plutôt que de les afficher', () => {
+		expect(resolveLotMapLocation('Quai', null, { latitude: 122.4, longitude: 37.77 })).toBeNull();
+		expect(resolveLotMapLocation('Quai', null, { latitude: 48.8, longitude: 361 })).toBeNull();
+		expect(resolveLotMapLocation('Quai', null, { latitude: 'nord', longitude: 'est' })).toBeNull();
 	});
 
-	it('nomme le pin « Emplacement du lot » quand seules les coordonnées sont connues', () => {
-		const pin = resolveLotMapLocation(null, null, { lat: 1, lng: 2 });
+	it('nomme le repère « Emplacement du lot » quand le lieu n’a pas de nom lisible', () => {
+		const pin = resolveLotMapLocation('—', '—', { latitude: 48.83291, longitude: 2.28654 });
+
 		expect(pin?.label).toBe('Emplacement du lot');
-	});
-});
-
-describe('defaultZoomForPin', () => {
-	it('dézoome sur la France pour une position approximative', () => {
-		expect(defaultZoomForPin({ lat: 47, lng: 2, label: 'Site inconnu', precise: false })).toBe(6);
+		expect(pin?.sublabel).toBeUndefined();
 	});
 
-	it('zoome sur la ville quand le repère du site est connu', () => {
-		expect(defaultZoomForPin({ lat: 48.11, lng: -1.67, label: 'Rennes', precise: true })).toBe(13);
-	});
-
-	it('garde un zoom ville par défaut pour une position précise hors référentiel', () => {
-		expect(defaultZoomForPin({ lat: 43.6, lng: 1.44, label: 'Toulouse', precise: true })).toBe(12);
+	it('zoome à l’échelle d’un plan d’usine, pas d’une région', () => {
+		expect(LOT_MAP_ZOOM).toBeGreaterThanOrEqual(15);
 	});
 });

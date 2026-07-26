@@ -11,6 +11,7 @@ const api = {
 	createSupplier: vi.fn(),
 	setSupplierActive: vi.fn(),
 	createLocation: vi.fn(),
+	updateLocation: vi.fn(),
 	setLocationActive: vi.fn(),
 	createCustomer: vi.fn(),
 	setCustomerActive: vi.fn(),
@@ -69,6 +70,7 @@ beforeEach(() => {
 	api.getEquipment.mockResolvedValue({ ok: true, data: [] });
 	api.createSupplier.mockResolvedValue({ ok: true, data: { id: 's' } });
 	api.createLocation.mockResolvedValue({ ok: true, data: { id: 'l' } });
+	api.updateLocation.mockResolvedValue({ ok: true, data: { id: 'l' } });
 	api.createCustomer.mockResolvedValue({ ok: true, data: { id: 'c' } });
 	api.createProduct.mockResolvedValue({ ok: true, data: { id: 'p' } });
 	api.getEquipment.mockResolvedValue({ ok: true, data: [] });
@@ -189,6 +191,67 @@ describe('configuration — réservée aux administrateurs', () => {
 		});
 		expect(res).toMatchObject({ status: 400 });
 		expect(api.createLocation).not.toHaveBeenCalled();
+	});
+
+	it("refuse l'action setLocationCoordinates à un non-admin", async () => {
+		const s = await statutAction((mod as any).actions.setLocationCoordinates, {
+			...form({ id: 'loc-1', latitude: '48.832910', longitude: '2.286540' }),
+			locals: { user: user(false) }
+		});
+		expect(s).toBe(403);
+		expect(api.updateLocation).not.toHaveBeenCalled();
+	});
+
+	it('positionne un emplacement avec le couple de coordonnées saisi', async () => {
+		const res = await (mod as any).actions.setLocationCoordinates({
+			...form({ id: 'loc-1', latitude: '48.832910', longitude: '2.286540' }),
+			locals: { user: user(true) }
+		});
+
+		expect(api.updateLocation).toHaveBeenCalledWith(expect.anything(), expect.anything(), 'loc-1', {
+			latitude: 48.83291,
+			longitude: 2.28654
+		});
+		expect(res).toMatchObject({ locationPositioned: { id: 'l' } });
+	});
+
+	it('retire la position quand les deux champs sont vides', async () => {
+		await (mod as any).actions.setLocationCoordinates({
+			...form({ id: 'loc-1', latitude: '', longitude: '' }),
+			locals: { user: user(true) }
+		});
+
+		expect(api.updateLocation).toHaveBeenCalledWith(expect.anything(), expect.anything(), 'loc-1', {
+			latitude: null,
+			longitude: null
+		});
+	});
+
+	it("refuse une demi-position avant l'appel API", async () => {
+		const res = await (mod as any).actions.setLocationCoordinates({
+			...form({ id: 'loc-1', latitude: '48.832910', longitude: '' }),
+			locals: { user: user(true) }
+		});
+		expect(res).toMatchObject({ status: 400 });
+		expect(api.updateLocation).not.toHaveBeenCalled();
+	});
+
+	it("refuse des coordonnées hors bornes avant l'appel API", async () => {
+		const res = await (mod as any).actions.setLocationCoordinates({
+			...form({ id: 'loc-1', latitude: '122.4', longitude: '37.77' }),
+			locals: { user: user(true) }
+		});
+		expect(res).toMatchObject({ status: 400 });
+		expect(api.updateLocation).not.toHaveBeenCalled();
+	});
+
+	it('refuse un positionnement sans emplacement désigné', async () => {
+		const res = await (mod as any).actions.setLocationCoordinates({
+			...form({ id: '', latitude: '48.832910', longitude: '2.286540' }),
+			locals: { user: user(true) }
+		});
+		expect(res).toMatchObject({ status: 400 });
+		expect(api.updateLocation).not.toHaveBeenCalled();
 	});
 
 	it("refuse l'action createEquipment à un non-admin", async () => {

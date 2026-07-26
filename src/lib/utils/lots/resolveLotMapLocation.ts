@@ -1,61 +1,36 @@
 import type { LotMapPin } from '$lib/types/lot-map';
+import { parseCoordinates, type RawCoordinate } from '$lib/utils/geo/coordinates';
 
-/** Référentiel provisoire — remplacé par lat/lng en base (Location) plus tard. */
-const SITE_COORDINATES: { match: RegExp; lat: number; lng: number; zoom: number }[] = [
-	{ match: /rennes|bretagne/i, lat: 48.1173, lng: -1.6778, zoom: 13 },
-	{ match: /loire|nantes|stef/i, lat: 47.2184, lng: -1.5536, zoom: 12 },
-	{ match: /paris|ile-de-france|île-de-france/i, lat: 48.8566, lng: 2.3522, zoom: 11 },
-	{ match: /lyon|rhône|rhone/i, lat: 45.764, lng: 4.8357, zoom: 12 }
-];
+/**
+ * Zoom d'un plan d'usine : les coordonnées d'un emplacement désignent un bâtiment, pas une région.
+ */
+export const LOT_MAP_ZOOM = 17;
 
-const DEFAULT_CENTER = { lat: 47.0, lng: 2.0, zoom: 6 };
+type LieuCoordinates = {
+	latitude?: RawCoordinate;
+	longitude?: RawCoordinate;
+};
 
-function matchSite(site: string) {
-	return SITE_COORDINATES.find(({ match }) => match.test(site));
-}
-
+/**
+ * Position du lot sur la carte — UNIQUEMENT à partir des coordonnées saisies sur son emplacement.
+ *
+ * Cette fonction devinait la position par regex sur le NOM du site (« Loire » → pin de Nantes) et,
+ * à défaut, repliait sur le centre de la France ; le repère s'affichait sous une bannière « données
+ * en direct depuis la base » (#23). Un emplacement non positionné ne rend plus aucun repère : la
+ * fiche lot affiche alors son état vide, ce qui est la seule réponse vraie.
+ */
 export function resolveLotMapLocation(
 	site?: string | null,
 	zone?: string | null,
-	coords?: { lat?: number | null; lng?: number | null } | null
+	lieu?: LieuCoordinates | null
 ): LotMapPin | null {
-	const label = site && site !== '—' ? site : null;
-	const sublabel = zone && zone !== '—' ? zone : undefined;
-
-	if (coords?.lat != null && coords?.lng != null) {
-		return {
-			lat: coords.lat,
-			lng: coords.lng,
-			label: label ?? 'Emplacement du lot',
-			sublabel,
-			precise: true
-		};
-	}
-
-	if (!label) return null;
-
-	const hit = matchSite(label);
-	if (hit) {
-		return {
-			lat: hit.lat,
-			lng: hit.lng,
-			label,
-			sublabel,
-			precise: false
-		};
-	}
+	const coords = parseCoordinates(lieu?.latitude, lieu?.longitude);
+	if (!coords) return null;
 
 	return {
-		lat: DEFAULT_CENTER.lat,
-		lng: DEFAULT_CENTER.lng,
-		label,
-		sublabel,
-		precise: false
+		lat: coords.lat,
+		lng: coords.lng,
+		label: site && site !== '—' ? site : 'Emplacement du lot',
+		sublabel: zone && zone !== '—' ? zone : undefined
 	};
-}
-
-export function defaultZoomForPin(pin: LotMapPin): number {
-	if (!pin.precise) return DEFAULT_CENTER.zoom;
-	const hit = SITE_COORDINATES.find(({ match }) => match.test(pin.label));
-	return hit?.zoom ?? 12;
 }

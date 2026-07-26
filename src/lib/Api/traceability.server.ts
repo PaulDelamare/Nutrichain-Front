@@ -24,7 +24,14 @@ export type ApiBatch = {
 	id_materiel_actuel?: string | null;
 	materiel?: {
 		nom: string;
-		lieu?: { nom: string; type?: string };
+		// `latitude`/`longitude` : position SAISIE du lieu, seule source du repère de la fiche lot.
+		// Chaînes côté API (colonnes DECIMAL), `null` tant que le lieu n'est pas positionné.
+		lieu?: {
+			nom: string;
+			type?: string;
+			latitude?: string | number | null;
+			longitude?: string | number | null;
+		};
 		temp_actuelle?: string | number | null;
 		temp_seuil_max?: string | number | null;
 		statut?: string;

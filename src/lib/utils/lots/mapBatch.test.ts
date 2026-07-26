@@ -121,6 +121,32 @@ describe('batchToSheet — la fiche lot', () => {
 		expect(sheet.mapPin).toBeNull();
 	});
 
+	it('place le pin sur les coordonnées de l’emplacement du lot', () => {
+		const sheet = batchToSheet(
+			batchComplet({
+				materiel: {
+					nom: 'Cuve 3',
+					lieu: { nom: 'Ligne de conditionnement', latitude: '48.833450', longitude: '2.287281' }
+				}
+			})
+		);
+
+		expect(sheet.mapPin).toEqual({
+			lat: 48.83345,
+			lng: 2.287281,
+			label: 'Ligne de conditionnement',
+			sublabel: 'Cuve 3'
+		});
+	});
+
+	/**
+	 * ⚠️ « Usine Loire » posait un pin sur Nantes par regex sur le nom du lieu, présenté comme une
+	 * donnée de la base (#23). Un lieu non positionné ne rend plus aucun repère.
+	 */
+	it('n’invente pas de pin à partir du nom du site', () => {
+		expect(batchToSheet(batchComplet()).mapPin).toBeNull();
+	});
+
 	it('n’invente pas d’auteur pour un lot créé par un service', () => {
 		expect(batchToSheet(batchComplet({ user: undefined })).createdBy).toBe('—');
 	});
