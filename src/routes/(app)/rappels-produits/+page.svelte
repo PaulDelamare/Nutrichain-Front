@@ -1,5 +1,6 @@
 <script lang="ts">
 	import RecallCard from '$lib/components/recall/RecallCard.svelte';
+	import RecallResult from '$lib/components/recall/RecallResult.svelte';
 	import PageHead from '$lib/components/page/PageHead.svelte';
 	import Placeholder from '$lib/components/page/Placeholder.svelte';
 	import SearchSelect from '$lib/components/ui/SearchSelect.svelte';
@@ -81,40 +82,7 @@
 	{/if}
 
 	{#if form?.recall}
-		<div class="result" role="status">
-			<p class="result-head">
-				✅ Rappel exécuté — <strong>{form.recall.blockedBatchesCount}</strong>
-				lot{form.recall.blockedBatchesCount > 1 ? 's' : ''} bloqué{form.recall.blockedBatchesCount >
-				1
-					? 's'
-					: ''}
-				· <strong>{form.recall.affectedShipments.length}</strong> expédition{form.recall
-					.affectedShipments.length > 1
-					? 's'
-					: ''} impactée{form.recall.affectedShipments.length > 1 ? 's' : ''}
-			</p>
-
-			{#if form.recall.depthSaturated}
-				<p class="saturation" role="alert">
-					⚠️ Attention — la descendance bloquée peut être incomplète (profondeur de graphe saturée).
-					Vérifiez manuellement les lots liés.
-				</p>
-			{/if}
-
-			{#if form.recall.affectedShipments.length > 0}
-				<ul class="shipments">
-					{#each form.recall.affectedShipments as shipment (shipment.shipmentId)}
-						<li>
-							<strong>{shipment.shipmentRef}</strong> — {shipment.customerName}
-							({shipment.statutLivraison}) · {shipment.batchIds.length}
-							lot{shipment.batchIds.length > 1 ? 's' : ''} · transporteur {shipment.transporteur}
-						</li>
-					{/each}
-				</ul>
-			{:else}
-				<p class="no-shipment">Aucune expédition déjà partie ne contient ces lots.</p>
-			{/if}
-		</div>
+		<RecallResult recall={form.recall} />
 	{/if}
 </section>
 
@@ -205,46 +173,6 @@
 		margin: 0.75rem 0 0;
 		font-size: 0.875rem;
 		color: #b91c1c;
-	}
-
-	.saturation {
-		margin: 0 0 0.5rem;
-		padding: 0.5rem 0.75rem;
-		border-radius: 0.375rem;
-		background: #fffbeb;
-		color: #92400e;
-		font-size: 0.8125rem;
-	}
-
-	.result {
-		margin-top: 1rem;
-		padding: 0.875rem 1rem;
-		border: 1px solid #bbf7d0;
-		border-radius: 0.5rem;
-		background: #f0fdf4;
-	}
-
-	.result-head {
-		margin: 0 0 0.5rem;
-		font-size: 0.875rem;
-		color: var(--nc-text);
-	}
-
-	.shipments {
-		margin: 0;
-		padding-left: 1.25rem;
-		font-size: 0.8125rem;
-		color: var(--nc-text-muted);
-	}
-
-	.shipments li {
-		margin-bottom: 0.25rem;
-	}
-
-	.no-shipment {
-		margin: 0;
-		font-size: 0.8125rem;
-		color: var(--nc-text-muted);
 	}
 
 	.list {
