@@ -50,6 +50,16 @@
 			<section class="trace">
 				<h3>Origine du produit</h3>
 				<p>{data.scan.trace.message}</p>
+				{#if (data.scan.trace.origines?.length ?? 0) > 0}
+					<ul class="farms">
+						{#each data.scan.trace.origines ?? [] as origin (origin.ferme)}
+							<li>
+								<span class="farm-label">Ferme</span>
+								<strong>{origin.ferme}</strong>
+							</li>
+						{/each}
+					</ul>
+				{/if}
 				{#if data.scan.trace.etapes_details.length > 0}
 					<ul>
 						{#each data.scan.trace.etapes_details as step (step.produit + step.date)}
@@ -159,6 +169,14 @@
 		list-style: none;
 	}
 
+	.trace ul.farms {
+		margin: 0 0 0.75rem;
+		padding: 0.65rem 0.85rem;
+		border-radius: 0.5rem;
+		background: #f0fdf9;
+		border: 1px solid #ccfbf1;
+	}
+
 	.trace li {
 		display: flex;
 		justify-content: space-between;
@@ -166,6 +184,22 @@
 		padding: 0.5rem 0;
 		border-top: 1px solid #f1f5f9;
 		font-size: 0.875rem;
+	}
+
+	.trace ul.farms li {
+		justify-content: flex-start;
+		align-items: baseline;
+		gap: 0.5rem;
+		padding: 0.25rem 0;
+		border-top: none;
+	}
+
+	.farm-label {
+		font-size: 0.75rem;
+		font-weight: 600;
+		text-transform: uppercase;
+		letter-spacing: 0.04em;
+		color: var(--nc-brand-dark, #1b6b5c);
 	}
 
 	.trace span {

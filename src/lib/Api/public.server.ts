@@ -12,6 +12,8 @@ export type PublicScanData = {
 		etapes: number;
 		message: string;
 		etapes_details: { produit: string; date: string }[];
+		/** Noms commerciaux des fermes d’origine — jamais de contact ni d’adresse. */
+		origines?: { ferme: string }[];
 	};
 };
 
