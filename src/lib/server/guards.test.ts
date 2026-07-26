@@ -1,6 +1,11 @@
 import { describe, it, expect } from 'vitest';
 import { isHttpError } from '@sveltejs/kit';
-import { exigerAdministrateur, refusAdministration, refusDecisionQualite } from './guards';
+import {
+	exigerAdministrateur,
+	refusAdministration,
+	refusDecisionQualite,
+	refusEcriture
+} from './guards';
 import type { SessionUser } from '$lib/types/session';
 import type { KnownRole } from '$lib/config/roles';
 
@@ -70,5 +75,15 @@ describe('refusAdministration — garde d’ACTION', () => {
 
 	it.each(['quality', 'operator', 'viewer'] as const)('refuse le rôle %s', (role) => {
 		expect(refusAdministration(utilisateur(role))).not.toBeNull();
+	});
+});
+
+describe('refusEcriture — garde d’ACTION logistique', () => {
+	it.each(['owner', 'admin', 'operator'] as const)('laisse passer le rôle %s', (role) => {
+		expect(refusEcriture(utilisateur(role))).toBeNull();
+	});
+
+	it.each(['quality', 'viewer'] as const)('refuse le rôle %s', (role) => {
+		expect(refusEcriture(utilisateur(role))).not.toBeNull();
 	});
 });

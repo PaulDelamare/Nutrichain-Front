@@ -58,6 +58,10 @@
 	description="Événements GS1/EPCIS produits par l'organisation — réception, transformation, expédition."
 />
 
+<p class="export-row">
+	<a class="export" href={resolve('/(app)/export-epcis')}>Exporter CSV (connecteur)</a>
+</p>
+
 <div class="filters">
 	<label for="event-type-filter">Type d'événement</label>
 	<select
@@ -157,6 +161,21 @@
 {/if}
 
 <style>
+	.export-row {
+		margin: 0 0 0.75rem;
+	}
+
+	.export {
+		font-size: 0.8125rem;
+		font-weight: 500;
+		color: var(--nc-brand);
+		text-decoration: none;
+	}
+
+	.export:hover {
+		text-decoration: underline;
+	}
+
 	.banner,
 	.empty {
 		margin: 0;

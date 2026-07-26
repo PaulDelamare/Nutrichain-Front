@@ -1,154 +1,132 @@
 <script lang="ts">
 	import { resolve } from '$app/paths';
+	import { enhance } from '$app/forms';
 	import PageHead from '$lib/components/page/PageHead.svelte';
 	import BarcodeScanner from '$lib/components/scan/BarcodeScanner.svelte';
-	import StatusBadge from '$lib/components/lots/StatusBadge.svelte';
-	import type { LotRow } from '$lib/types/lot';
-	import type { PageData } from './$types';
+	import type { ActionData } from './$types';
 
-	let { data }: { data: PageData } = $props();
+	let { form }: { form: ActionData } = $props();
 
 	let manual = $state('');
-	let scanned = $state<string | null>(null);
+	let pending = $state(false);
 
-	function normalize(value: string): string {
-		return value.trim().toLowerCase();
-	}
-
-	const matches = $derived.by<LotRow[]>(() => {
-		const code = normalize(scanned ?? '');
-		if (!code) return [];
-
-		const byId = data.lots.filter((lot) => normalize(lot.id) === code);
-		if (byId.length > 0) return byId;
-
-		return data.lots.filter((lot) => normalize(lot.gtin) === code);
+	$effect(() => {
+		if (form?.code) manual = form.code;
 	});
 
-	function submitManual(event: SubmitEvent) {
-		event.preventDefault();
-		if (manual.trim()) scanned = manual.trim();
-	}
-
 	function onDetect(code: string) {
-		scanned = code;
 		manual = code;
-	}
-
-	function reset() {
-		scanned = null;
-		manual = '';
+		const formEl = document.getElementById('scan-resolve') as HTMLFormElement | null;
+		formEl?.requestSubmit();
 	}
 </script>
 
 <PageHead
 	heading="Scan de code-barres"
-	description="Scannez un GTIN ou un identifiant de lot pour accéder instantanément à sa fiche."
+	description="Scannez un numéro de lot GS1 (ou un GTIN) pour ouvrir la fiche via l’API."
 />
-
-{#if data.error}
-	<p class="warn">API indisponible — {data.error}</p>
-{/if}
 
 <div class="layout">
 	<section class="panel">
 		<h3>Caméra</h3>
 		<BarcodeScanner ondetect={onDetect} />
 
-		<form class="manual" onsubmit={submitManual}>
+		<form
+			id="scan-resolve"
+			method="POST"
+			action="?/resolve"
+			class="manual"
+			use:enhance={() => {
+				pending = true;
+				return async ({ update }) => {
+					pending = false;
+					await update();
+				};
+			}}
+		>
 			<label for="code">Saisie manuelle</label>
 			<div class="row">
 				<input
 					id="code"
+					name="code"
 					type="text"
-					inputmode="numeric"
-					placeholder="GTIN ou identifiant de lot"
+					placeholder="N° de lot ou GTIN"
 					bind:value={manual}
 					autocomplete="off"
+					required
 				/>
-				<button type="submit" class="btn">Rechercher</button>
+				<button type="submit" class="btn" disabled={pending}>
+					{pending ? 'Recherche…' : 'Rechercher'}
+				</button>
 			</div>
 		</form>
 	</section>
 
 	<section class="panel">
-		<div class="result-head">
-			<h3>Résultat</h3>
-			{#if scanned}
-				<button type="button" class="link" onclick={reset}>Réinitialiser</button>
-			{/if}
-		</div>
-
-		{#if !scanned}
-			<p class="empty">Aucun code scanné pour le moment.</p>
+		<h3>Résultat</h3>
+		{#if form?.resolveError}
+			<p class="empty">{form.resolveError}</p>
 		{:else}
-			<p class="code">Code : <strong>{scanned}</strong></p>
+			<p class="empty">Scannez ou saisissez un code pour ouvrir la fiche lot.</p>
+		{/if}
 
-			{#if matches.length === 0}
-				<p class="empty">Aucun lot ne correspond à ce code dans votre organisation.</p>
-			{:else}
-				<ul class="hits">
-					{#each matches as lot (lot.id)}
-						<li class="hit">
-							<div>
-								<p class="hit-produit">{lot.produit}</p>
-								<p class="hit-meta">Lot {lot.id} · GTIN {lot.gtin}</p>
-							</div>
-							<div class="hit-right">
-								<StatusBadge statut={lot.statut} />
-								<a
-									class="btn"
-									href={resolve('/(app)/fiche-lot/[lotId]', {
-										lotId: encodeURIComponent(lot.id)
-									})}>Ouvrir la fiche</a
-								>
-							</div>
-						</li>
-					{/each}
-				</ul>
-			{/if}
+		{#if form?.candidates?.length}
+			<ul class="hits">
+				{#each form.candidates as lot (lot.id)}
+					<li class="hit">
+						<div>
+							<p class="hit-produit">{lot.produit}</p>
+							<p class="hit-meta">Lot {lot.lotNumber} · GTIN {lot.gtin}</p>
+						</div>
+						<a
+							class="btn"
+							href={resolve('/(app)/fiche-lot/[lotId]', {
+								lotId: encodeURIComponent(lot.id)
+							})}
+						>
+							Ouvrir
+						</a>
+					</li>
+				{/each}
+			</ul>
 		{/if}
 	</section>
 </div>
 
 <style>
-	.warn {
-		margin: 0 0 0.75rem;
-		padding: 0.5rem 0.75rem;
-		border-radius: 0.375rem;
-		background: #fef9c3;
-		color: #854d0e;
-		font-size: 0.8125rem;
-	}
-
 	.layout {
 		display: grid;
-		grid-template-columns: repeat(auto-fit, minmax(20rem, 1fr));
-		gap: 1.25rem;
+		grid-template-columns: 1fr 1fr;
+		gap: 1rem;
+	}
+
+	@media (max-width: 900px) {
+		.layout {
+			grid-template-columns: 1fr;
+		}
 	}
 
 	.panel {
-		padding: 1.25rem 1.5rem;
+		padding: 1rem 1.25rem;
 		border: 1px solid #e2e8f0;
 		border-radius: 0.5rem;
 		background: #fff;
 	}
 
 	.panel h3 {
-		margin: 0 0 1rem;
-		font-size: 1rem;
-		font-weight: 600;
-		color: var(--nc-text);
+		margin: 0 0 0.75rem;
+		font-size: 0.9375rem;
 	}
 
 	.manual {
-		margin-top: 1.25rem;
+		margin-top: 1rem;
 	}
 
 	.manual label {
 		display: block;
 		margin-bottom: 0.35rem;
-		font-size: 0.8125rem;
+		font-size: 0.75rem;
+		font-weight: 600;
 		color: var(--nc-text-muted);
 	}
 
@@ -159,51 +137,28 @@
 
 	.row input {
 		flex: 1;
-		padding: 0.5rem 0.75rem;
-		border: 1px solid #cbd5e1;
+		padding: 0.45rem 0.55rem;
+		border: 1px solid #e2e8f0;
 		border-radius: 0.375rem;
 		font-size: 0.875rem;
-		color: var(--nc-text);
-		background: #fff;
-	}
-
-	.row input:focus {
-		outline: none;
-		border-color: var(--nc-brand-border-focus);
-		box-shadow: 0 0 0 3px var(--nc-brand-ring);
 	}
 
 	.btn {
-		display: inline-flex;
-		align-items: center;
-		padding: 0.5rem 1rem;
+		padding: 0.45rem 0.75rem;
 		border: none;
 		border-radius: 0.375rem;
 		background: var(--nc-brand-dark);
 		color: #fff;
-		font-size: 0.875rem;
+		font-size: 0.8125rem;
 		font-weight: 500;
 		cursor: pointer;
 		text-decoration: none;
 		white-space: nowrap;
 	}
 
-	.btn:hover {
-		background: var(--nc-brand-hover);
-	}
-
-	.result-head {
-		display: flex;
-		align-items: center;
-		justify-content: space-between;
-	}
-
-	.link {
-		border: none;
-		background: none;
-		color: var(--nc-brand);
-		font-size: 0.8125rem;
-		cursor: pointer;
+	.btn:disabled {
+		opacity: 0.6;
+		cursor: wait;
 	}
 
 	.empty {
@@ -212,51 +167,30 @@
 		color: var(--nc-text-muted);
 	}
 
-	.code {
-		margin: 0 0 1rem;
-		font-size: 0.875rem;
-		color: var(--nc-text-muted);
-	}
-
-	.code strong {
-		color: var(--nc-text);
-	}
-
 	.hits {
-		list-style: none;
-		margin: 0;
+		margin: 0.75rem 0 0;
 		padding: 0;
-		display: flex;
-		flex-direction: column;
-		gap: 0.75rem;
+		list-style: none;
 	}
 
 	.hit {
 		display: flex;
-		align-items: center;
 		justify-content: space-between;
-		gap: 1rem;
-		padding: 0.75rem 1rem;
-		border: 1px solid #e2e8f0;
-		border-radius: 0.5rem;
+		align-items: center;
+		gap: 0.75rem;
+		padding: 0.65rem 0;
+		border-top: 1px solid #f1f5f9;
 	}
 
 	.hit-produit {
-		margin: 0 0 0.15rem;
-		font-size: 0.9375rem;
-		font-weight: 600;
-		color: var(--nc-text);
+		margin: 0;
+		font-size: 0.875rem;
+		font-weight: 500;
 	}
 
 	.hit-meta {
-		margin: 0;
-		font-size: 0.8125rem;
+		margin: 0.15rem 0 0;
+		font-size: 0.75rem;
 		color: var(--nc-text-muted);
-	}
-
-	.hit-right {
-		display: flex;
-		align-items: center;
-		gap: 0.75rem;
 	}
 </style>

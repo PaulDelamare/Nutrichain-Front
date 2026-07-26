@@ -231,6 +231,52 @@ const routes: [nom: string, appel: () => unknown, methode: string, chemin: strin
 		'POST',
 		'/api/logistics/batches/lot-1/release'
 	],
+	[
+		'createReceipt',
+		() =>
+			logistics.createReceipt(fetchEspion, cookies, {
+				id_fournisseur: 'f1',
+				shipment_id: 'BL-1',
+				id_produit: 'p1',
+				quantite_actuelle: 10,
+				unite_code: 'KG',
+				statut_controle: 'OK'
+			}),
+		'POST',
+		'/api/logistics/receipts'
+	],
+	[
+		'createShipment',
+		() =>
+			logistics.createShipment(fetchEspion, cookies, {
+				id_client: 'c1',
+				shipment_id: 'AUTO',
+				transporteur: 'Chrono',
+				destination_adresse: '12 rue Test, Rennes',
+				lots: [{ id_lot: 'lot-1', quantite_expediee: 5 }]
+			}),
+		'POST',
+		'/api/logistics/shipments'
+	],
+	[
+		'resolveBatchByLotNumber',
+		() => logistics.resolveBatchByLotNumber(fetchEspion, cookies, 'LOT-1'),
+		'GET',
+		'/api/logistics/batches/resolve?lot_number=LOT-1'
+	],
+	[
+		'createTransformation',
+		() =>
+			trace.createTransformation(fetchEspion, cookies, {
+				id_produit_fini: 'p1',
+				id_materiel: 'e1',
+				quantite_produite: 10,
+				unite_code: 'KG',
+				inputs: [{ id_lot_parent: 'lot-1', quantite_prelevee: 10, unite: 'KG' }]
+			}),
+		'POST',
+		'/api/traceability/transformations'
+	],
 
 	// Plateforme
 	[
@@ -423,7 +469,30 @@ describe('choix du mode d’authentification', () => {
 		],
 		['importProductsCsv', () => connectors.importProductsCsv(fetchEspion, cookies, 'csv')],
 		['getBatchById', () => logistics.getBatchById(fetchEspion, cookies, 'lot-1')],
-		['getAlertBatches', () => alerts.getAlertBatches(fetchEspion, cookies, 'alert-1')]
+		['getAlertBatches', () => alerts.getAlertBatches(fetchEspion, cookies, 'alert-1')],
+		[
+			'createReceipt',
+			() =>
+				logistics.createReceipt(fetchEspion, cookies, {
+					id_fournisseur: 'f1',
+					shipment_id: 'BL-1',
+					id_produit: 'p1',
+					quantite_actuelle: 1,
+					unite_code: 'KG',
+					statut_controle: 'OK'
+				})
+		],
+		[
+			'createTransformation',
+			() =>
+				trace.createTransformation(fetchEspion, cookies, {
+					id_produit_fini: 'p1',
+					id_materiel: 'e1',
+					quantite_produite: 1,
+					unite_code: 'KG',
+					inputs: [{ id_lot_parent: 'l1', quantite_prelevee: 1, unite: 'KG' }]
+				})
+		]
 	])('%s s’authentifie par session, sans clé API', async (_nom, appel) => {
 		await appel();
 		expect(cleApiEnvoyee()).toBe(false);

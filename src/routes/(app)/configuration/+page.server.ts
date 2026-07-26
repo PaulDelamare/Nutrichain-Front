@@ -7,6 +7,7 @@ import {
 	getProductsForConfig,
 	getEquipment,
 	createSupplier,
+	updateSupplier,
 	setSupplierActive,
 	createLocation,
 	updateLocation,
@@ -83,6 +84,33 @@ export const actions = {
 		);
 		if (!res.ok) return fail(res.status, { supplierError: res.message });
 		return { supplierToggled: res.data };
+	},
+
+	updateSupplier: async ({ request, fetch, cookies, locals }) => {
+		const form = await request.formData();
+		const id = champ(form, 'id');
+		const nom_ferme = champ(form, 'nom_ferme');
+		const adresse_siege = champ(form, 'adresse_siege');
+		const type_produit = champ(form, 'type_produit');
+		const contact_qualite = champ(form, 'contact_qualite');
+
+		const refus = refusAdministration(locals.user);
+		if (refus) return fail(403, { supplierError: refus, nom_ferme });
+		if (!id || nom_ferme.length < 2 || adresse_siege.length < 2) {
+			return fail(400, {
+				supplierError: 'Identifiant, nom et adresse du fournisseur requis.',
+				nom_ferme
+			});
+		}
+
+		const res = await updateSupplier(fetch, cookies, id, {
+			nom_ferme,
+			adresse_siege,
+			...(type_produit ? { type_produit } : {}),
+			...(contact_qualite ? { contact_qualite } : {})
+		});
+		if (!res.ok) return fail(res.status, { supplierError: res.message, nom_ferme });
+		return { supplierUpdated: res.data };
 	},
 
 	createLocation: async ({ request, fetch, cookies, locals }) => {

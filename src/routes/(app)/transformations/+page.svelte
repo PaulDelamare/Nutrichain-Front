@@ -1,7 +1,8 @@
 <script lang="ts">
+	import { resolve } from '$app/paths';
 	import PageHead from '$lib/components/page/PageHead.svelte';
-	import Placeholder from '$lib/components/page/Placeholder.svelte';
 	import { peutEcrire } from '$lib/config/roles';
+	import { UNIT_OPTIONS } from '$lib/utils/units';
 	import type { ActionData, PageData } from './$types';
 
 	let { data, form }: { data: PageData; form: ActionData } = $props();
@@ -10,8 +11,8 @@
 </script>
 
 <PageHead
-	heading="Expéditions"
-	description="Flux sortants — destination, statut de livraison, lots embarqués."
+	heading="Transformations"
+	description="Production — consommer des lots parents pour créer un lot enfant tracé."
 />
 
 {#if data.error}
@@ -19,39 +20,42 @@
 {/if}
 
 <section class="create">
-	<h2>Créer une expédition</h2>
+	<h2>Enregistrer une transformation</h2>
 	{#if peutCreer}
 		<form method="POST" action="?/create" class="form">
 			<label>
-				Client
-				<select name="id_client" required>
+				Produit fini
+				<select name="id_produit_fini" required>
 					<option value="">—</option>
-					{#each data.customers as c (c.id)}
-						<option value={c.id}>{c.nom_enseigne}</option>
+					{#each data.products as p (p.id)}
+						<option value={p.id}>{p.nom}</option>
 					{/each}
 				</select>
 			</label>
 			<label>
-				Référence (AUTO = SSCC serveur)
-				<input name="shipment_id" maxlength="100" placeholder="AUTO" value="AUTO" />
+				Matériel / cuve
+				<select name="id_materiel" required>
+					<option value="">—</option>
+					{#each data.equipment as e (e.id)}
+						<option value={e.id}>{e.nom}</option>
+					{/each}
+				</select>
 			</label>
 			<label>
-				Transporteur
-				<input name="transporteur" required minlength="2" maxlength="100" />
+				Quantité produite
+				<input name="quantite_produite" type="number" step="0.01" min="0.01" required />
+			</label>
+			<label>
+				Unité produite
+				<select name="unite_code" required>
+					{#each UNIT_OPTIONS as u (u.code)}
+						<option value={u.code}>{u.label}</option>
+					{/each}
+				</select>
 			</label>
 			<label class="wide">
-				Adresse de destination
-				<input
-					name="destination_adresse"
-					required
-					minlength="5"
-					maxlength="255"
-					placeholder="Adresse de livraison"
-				/>
-			</label>
-			<label class="wide">
-				Lot à expédier
-				<select name="id_lot" required>
+				Lot parent consommé
+				<select name="id_lot_parent" required>
 					<option value="">—</option>
 					{#each data.lots as lot (lot.id)}
 						<option value={lot.id}>{lot.label}</option>
@@ -59,13 +63,34 @@
 				</select>
 			</label>
 			<label>
-				Quantité
-				<input name="quantite_expediee" type="number" step="any" min="0.01" required />
+				Quantité prélevée
+				<input name="quantite_prelevee" type="number" step="0.01" min="0.01" required />
 			</label>
-			<button type="submit">Expédier</button>
+			<label>
+				Unité prélevée
+				<select name="unite_input" required>
+					{#each UNIT_OPTIONS as u (u.code)}
+						<option value={u.code}>{u.label}</option>
+					{/each}
+				</select>
+			</label>
+			<label>
+				DLC (optionnel)
+				<input name="date_peremption" type="date" />
+			</label>
+			<button type="submit">Produire</button>
 		</form>
 		{#if form?.created}
-			<p class="ok" role="status">Expédition créée — réf. {form.created.shipment_id}</p>
+			<p class="ok" role="status">
+				Transformation créée —
+				<a
+					href={resolve('/(app)/fiche-lot/[lotId]', {
+						lotId: form.created.lot_enfant_id
+					})}
+				>
+					ouvrir le lot enfant
+				</a>
+			</p>
 		{:else if form?.createError}
 			<p class="err" role="status">{form.createError}</p>
 		{/if}
@@ -73,35 +98,6 @@
 		<p class="hint">Réservé aux opérateurs, administrateurs et propriétaires.</p>
 	{/if}
 </section>
-
-{#if data.shipments.length > 0}
-	<div class="table-wrap">
-		<table>
-			<thead>
-				<tr>
-					<th>Référence</th>
-					<th>Client</th>
-					<th>Statut</th>
-					<th>Date envoi</th>
-					<th>Lots</th>
-				</tr>
-			</thead>
-			<tbody>
-				{#each data.shipments as row (row.id)}
-					<tr>
-						<td class="mono">{row.ref}</td>
-						<td>{row.client}</td>
-						<td>{row.statut}</td>
-						<td>{row.date}</td>
-						<td>{row.lots}</td>
-					</tr>
-				{/each}
-			</tbody>
-		</table>
-	</div>
-{:else if !data.error}
-	<Placeholder message="Aucune expédition enregistrée pour le moment." />
-{/if}
 
 <style>
 	.banner {
@@ -114,7 +110,6 @@
 	}
 
 	.create {
-		margin: 0 0 1.5rem;
 		padding: 1rem 1.25rem;
 		border: 1px solid #e2e8f0;
 		border-radius: 0.5rem;
@@ -181,36 +176,5 @@
 		margin: 0;
 		font-size: 0.875rem;
 		color: var(--nc-text-muted);
-	}
-
-	.table-wrap {
-		overflow-x: auto;
-		border: 1px solid #e2e8f0;
-		border-radius: 0.5rem;
-		background: #fff;
-	}
-
-	table {
-		width: 100%;
-		border-collapse: collapse;
-		font-size: 0.875rem;
-	}
-
-	th,
-	td {
-		padding: 0.75rem 1rem;
-		border-bottom: 1px solid #f1f5f9;
-		text-align: left;
-	}
-
-	th {
-		font-size: 0.75rem;
-		font-weight: 600;
-		color: var(--nc-text-muted);
-		background: #f8fafc;
-	}
-
-	.mono {
-		font-variant-numeric: tabular-nums;
 	}
 </style>
