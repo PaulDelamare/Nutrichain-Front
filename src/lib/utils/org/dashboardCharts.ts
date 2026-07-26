@@ -1,32 +1,6 @@
 import type { ApiAlert, ApiMovement, ApiQualityControl } from '$lib/Api/organization.server';
 import type { ApiBatch } from '$lib/Api/traceability.server';
 import type { ChartSegment, DashboardCharts } from '$lib/types/dashboard-charts';
-import { normalizeQualityResult } from './quality';
-
-const LOT_STATUS_LABELS: Record<string, string> = {
-	EN_STOCK: 'En stock',
-	EN_ATTENTE_QC: 'En attente de contrôle',
-	SURVEILLANCE: 'Surveillance',
-	QUARANTAINE: 'Quarantaine',
-	QUARANTINE: 'Quarantaine',
-	BLOQUE: 'Bloqué',
-	PRET: 'Prêt',
-	EXPEDIE: 'Expédié',
-	PERIME: 'Périmé'
-};
-
-const LOT_STATUS_COLORS: Record<string, string> = {
-	EN_STOCK: '#1b6b5c',
-	EN_ATTENTE_QC: '#6366f1',
-	SURVEILLANCE: '#5aafa0',
-	QUARANTAINE: '#f59e0b',
-	QUARANTINE: '#f59e0b',
-	BLOQUE: '#ef4444',
-	PRET: '#8fd4c5',
-	EXPEDIE: '#64748b',
-	PERIME: '#94a3b8'
-};
-
 import {
 	MOVEMENT_CHART_COLORS,
 	MOVEMENT_CHART_LABELS,
@@ -34,22 +8,13 @@ import {
 	normalizeMovementType,
 	type MovementChartType
 } from '$lib/utils/movements/labels';
-
-const SEVERITY_LABELS: Record<string, string> = {
-	CRITIQUE: 'Critique',
-	PANIC: 'Critique',
-	HAUTE: 'Haute',
-	MOYENNE: 'Moyenne',
-	FAIBLE: 'Faible'
-};
-
-const SEVERITY_COLORS: Record<string, string> = {
-	CRITIQUE: '#ef4444',
-	PANIC: '#ef4444',
-	HAUTE: '#f59e0b',
-	MOYENNE: '#5aafa0',
-	FAIBLE: '#94a3b8'
-};
+import {
+	alertSeverityColor,
+	alertSeverityLabel,
+	normalizeAlertSeverity
+} from '$lib/vocab/alertSeverity';
+import { batchStatusColor, batchStatusLabel } from '$lib/vocab/batchStatus';
+import { normalizeQualityResult } from './quality';
 
 const QUALITY_LABELS: Record<string, string> = {
 	CONFORME: 'Conforme',
@@ -82,9 +47,9 @@ function countBy<T>(items: T[], keyFn: (item: T) => string): ChartSegment[] {
 function lotStatusChart(batches: ApiBatch[]): ChartSegment[] {
 	const segments = countBy(batches, (b) => b.statut);
 	return segments.map((s) => ({
-		label: LOT_STATUS_LABELS[s.label] ?? s.label.replace(/_/g, ' ').toLowerCase(),
+		label: batchStatusLabel(s.label),
 		value: s.value,
-		color: LOT_STATUS_COLORS[s.label] ?? '#94a3b8'
+		color: batchStatusColor(s.label)
 	}));
 }
 
@@ -137,10 +102,10 @@ function weeklyMovementsChart(movements: ApiMovement[]): DashboardCharts['weekly
 function alertSeverityChart(alerts: ApiAlert[]): ChartSegment[] {
 	const active = alerts.filter((a) => a.statut === 'ACTIVE');
 
-	return countBy(active, (a) => a.niveau_gravite).map((s) => ({
-		label: SEVERITY_LABELS[s.label] ?? s.label,
+	return countBy(active, (a) => normalizeAlertSeverity(a.niveau_gravite)).map((s) => ({
+		label: alertSeverityLabel(s.label),
 		value: s.value,
-		color: SEVERITY_COLORS[s.label] ?? '#94a3b8'
+		color: alertSeverityColor(s.label)
 	}));
 }
 

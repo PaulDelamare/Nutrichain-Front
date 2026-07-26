@@ -15,8 +15,9 @@
 	class:attente={statut === 'attente_qc'}
 	class:surveillance={statut === 'surveillance'}
 	class:quarantaine={statut === 'quarantaine'}
-	class:perime={statut === 'perime'}
-	class:neutre={statut === 'expedie' || statut === 'inconnu'}
+	class:production={statut === 'en_production'}
+	class:perime={statut === 'perime' || statut === 'rebut'}
+	class:neutre={statut === 'expedie' || statut === 'epuise' || statut === 'inconnu'}
 >
 	{lotStatusLabel(statut)}
 </span>
@@ -48,6 +49,11 @@
 	.quarantaine {
 		background: #fee2e2;
 		color: #991b1b;
+	}
+
+	.production {
+		background: #ccfbf1;
+		color: #115e59;
 	}
 
 	.perime {

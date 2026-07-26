@@ -152,6 +152,50 @@ describe('buildDashboardCharts — mouvements de la semaine', () => {
 		expect(charts.weeklyMovements.series.map((s) => s.name)).toEqual(['Réceptions', 'Expéditions']);
 	});
 
+	// L'API n'émet plus TRANSFORMATION / QUARANTAINE seuls — sans normalisation, ces séries restaient à 0.
+	it('compte les types API réels (TRANSFORMATION_*, QUARANTAINE_FROID)', () => {
+		const charts = buildDashboardCharts(
+			[],
+			[],
+			[
+				movement('TRANSFORMATION_ENTREE', ilYAJours(0)),
+				movement('TRANSFORMATION_SORTIE', ilYAJours(1)),
+				movement('QUARANTAINE_FROID', ilYAJours(0)),
+				movement('LEVEE_QUARANTAINE', ilYAJours(2))
+			],
+			[]
+		);
+
+		expect(charts.weeklyMovements.series.map((s) => s.name).sort()).toEqual([
+			'Quarantaines',
+			'Transformations'
+		]);
+		expect(charts.weeklyMovements.series.find((s) => s.name === 'Transformations')?.data[6]).toBe(
+			1
+		);
+		expect(
+			charts.weeklyMovements.series
+				.find((s) => s.name === 'Quarantaines')
+				?.data.reduce((a, b) => a + b, 0)
+		).toBe(2);
+	});
+
+	it('affiche ALERTE / EN_PRODUCTION / EPUISE avec leurs libellés API', () => {
+		const charts = buildDashboardCharts(
+			[batch('a', 'ALERTE'), batch('b', 'EN_PRODUCTION'), batch('c', 'EPUISE')],
+			[],
+			[],
+			[]
+		);
+		expect(charts.lotStatus.map((s) => s.label).sort()).toEqual([
+			'En production',
+			'Sous rappel',
+			'Épuisé'
+		]);
+		expect(charts.lotStatus.find((s) => s.label === 'Sous rappel')?.color).toBe('#f59e0b');
+		expect(charts.lotStatus.find((s) => s.label === 'En production')?.color).toBe('#8fd4c5');
+	});
+
 	it('range chaque mouvement sur son jour', () => {
 		const charts = buildDashboardCharts([], [], [movement('RECEPTION', ilYAJours(0))], []);
 		const receptions = charts.weeklyMovements.series[0].data;
