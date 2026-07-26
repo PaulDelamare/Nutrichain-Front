@@ -116,6 +116,12 @@ describe('alertsToCold', () => {
 		const { rows } = alertsToCold([alert({ niveau_gravite: 'PANIC' })], []);
 		expect(rows[0].statut).toBe('critique');
 	});
+
+	it('conserve l’UUID API pour permettre la clôture', () => {
+		const { rows } = alertsToCold([alert({ id: 'aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee' })], []);
+		expect(rows[0].alertId).toBe('aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee');
+		expect(rows[0].id).not.toBe(rows[0].alertId);
+	});
 });
 
 describe('alertsToRappels', () => {

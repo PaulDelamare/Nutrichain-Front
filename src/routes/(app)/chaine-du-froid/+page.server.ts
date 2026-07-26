@@ -1,6 +1,9 @@
-import type { PageServerLoad } from './$types';
+import { fail } from '@sveltejs/kit';
+import type { Actions, PageServerLoad } from './$types';
+import { resolveAlert } from '$lib/Api/alerts.server';
 import { getAlerts, getEquipment, getQuarantineBatches } from '$lib/Api/organization.server';
 import { getSensorHistory } from '$lib/Api/iot.server';
+import { refusDecisionQualite } from '$lib/server/guards';
 import { alertsToCold } from '$lib/utils/org/mappers';
 
 export const load: PageServerLoad = async ({ fetch, cookies, url }) => {
@@ -53,3 +56,34 @@ export const load: PageServerLoad = async ({ fetch, cookies, url }) => {
 
 	return { incident, alerts: rows, error: null, telemetry, selectedSensor: targetSensor };
 };
+
+export const actions = {
+	resolve: async ({ request, fetch, cookies, locals }) => {
+		const refus = refusDecisionQualite(locals.user);
+		if (refus) return fail(403, { resolveError: refus, alertId: '' });
+
+		const fd = await request.formData();
+		const alertId = String(fd.get('alertId') ?? '').trim();
+		const note = String(fd.get('note') ?? '').trim();
+
+		if (!alertId) {
+			return fail(400, { resolveError: 'Alerte à clôturer manquante.', alertId: '' });
+		}
+		if (note.length < 3) {
+			return fail(400, {
+				resolveError: 'Motif de clôture requis (au moins 3 caractères).',
+				alertId
+			});
+		}
+		if (note.length > 500) {
+			return fail(400, {
+				resolveError: 'Motif trop long (500 caractères max).',
+				alertId
+			});
+		}
+
+		const res = await resolveAlert(fetch, cookies, alertId, note);
+		if (!res.ok) return fail(res.status, { resolveError: res.message, alertId });
+		return { resolved: true as const, alertId };
+	}
+} satisfies Actions;

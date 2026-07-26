@@ -6,9 +6,9 @@
 	import Placeholder from '$lib/components/page/Placeholder.svelte';
 	import { usePageSearch } from '$lib/context/pageSearch.svelte';
 	import { filterRowsByText } from '$lib/utils/pageSearch/filterByText';
-	import type { PageData } from './$types';
+	import type { ActionData, PageData } from './$types';
 
-	let { data }: { data: PageData } = $props();
+	let { data, form }: { data: PageData; form: ActionData } = $props();
 
 	const pageSearch = usePageSearch();
 
@@ -55,7 +55,7 @@
 
 {#if data.alerts.length > 0}
 	{#if alerts.length > 0}
-		<ColdAlertTable rows={alerts} />
+		<ColdAlertTable rows={alerts} role={data.user.role} {form} />
 	{:else}
 		<Placeholder message="Aucune alerte ne correspond à la recherche." />
 	{/if}

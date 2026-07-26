@@ -1,13 +1,25 @@
 <script lang="ts">
 	import { resolve } from '$app/paths';
 	import ColdStatusBadge from './ColdStatusBadge.svelte';
+	import ActionReservee from '$lib/components/ui/ActionReservee.svelte';
+	import { peutDeciderQualite, type KnownRole } from '$lib/config/roles';
 	import type { ColdAlertRow } from '$lib/types/cold';
+
+	type ResolveFeedback = {
+		resolved?: boolean;
+		resolveError?: string;
+		alertId?: string;
+	};
 
 	type Props = {
 		rows: ColdAlertRow[];
+		role: KnownRole;
+		form?: ResolveFeedback | null;
 	};
 
-	let { rows }: Props = $props();
+	let { rows, role, form = null }: Props = $props();
+
+	const peutCloturer = $derived(peutDeciderQualite(role));
 </script>
 
 <div class="table-wrap">
@@ -21,10 +33,11 @@
 				<th>Lots impactés</th>
 				<th>Depuis</th>
 				<th>Statut</th>
+				<th>Action</th>
 			</tr>
 		</thead>
 		<tbody>
-			{#each rows as row (row.id)}
+			{#each rows as row (row.alertId)}
 				<tr>
 					<td class="id">{row.id}</td>
 					<td>{row.site}</td>
@@ -47,11 +60,37 @@
 					</td>
 					<td>{row.depuis}</td>
 					<td><ColdStatusBadge statut={row.statut} /></td>
+					<td class="action">
+						{#if peutCloturer}
+							<form method="POST" action="?/resolve" class="resolve">
+								<input type="hidden" name="alertId" value={row.alertId} />
+								<input
+									type="text"
+									name="note"
+									placeholder="Motif de clôture"
+									required
+									minlength="3"
+									maxlength="500"
+									aria-label="Motif de clôture pour {row.id}"
+								/>
+								<button type="submit">Clôturer</button>
+							</form>
+						{/if}
+						{#if form?.resolved && form.alertId === row.alertId}
+							<p class="feedback ok" role="status">Alerte clôturée.</p>
+						{:else if form?.resolveError && form.alertId === row.alertId}
+							<p class="feedback err" role="status">{form.resolveError}</p>
+						{/if}
+					</td>
 				</tr>
 			{/each}
 		</tbody>
 	</table>
 </div>
+
+{#if !peutCloturer && rows.length > 0}
+	<ActionReservee action="La clôture d'une alerte froid" {role} />
+{/if}
 
 <style>
 	.table-wrap {
@@ -112,5 +151,54 @@
 
 	.none {
 		color: var(--nc-text-subtle);
+	}
+
+	.action {
+		min-width: 14rem;
+	}
+
+	.resolve {
+		display: flex;
+		flex-wrap: wrap;
+		gap: 0.4rem;
+		align-items: center;
+	}
+
+	.resolve input {
+		flex: 1 1 8rem;
+		min-width: 0;
+		padding: 0.35rem 0.5rem;
+		border: 1px solid #e2e8f0;
+		border-radius: 0.375rem;
+		font-size: 0.8125rem;
+	}
+
+	.resolve button {
+		padding: 0.35rem 0.7rem;
+		border: none;
+		border-radius: 0.375rem;
+		background: var(--nc-brand-dark);
+		color: #fff;
+		font-size: 0.8125rem;
+		font-weight: 500;
+		cursor: pointer;
+		white-space: nowrap;
+	}
+
+	.resolve button:hover {
+		background: var(--nc-brand-hover);
+	}
+
+	.feedback {
+		margin: 0.35rem 0 0;
+		font-size: 0.75rem;
+	}
+
+	.feedback.ok {
+		color: #166534;
+	}
+
+	.feedback.err {
+		color: #b91c1c;
 	}
 </style>
