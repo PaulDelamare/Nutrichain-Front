@@ -1,16 +1,17 @@
 <script lang="ts">
 	import { resolve } from '$app/paths';
+	import type { ApiRecallResult } from '$lib/Api/traceability.server';
+	import type { LotStatus } from '$lib/types/lot';
+	import { peutDeciderQualite, type KnownRole } from '$lib/config/roles';
+	import ActionReservee from '$lib/components/ui/ActionReservee.svelte';
+	import RecallResult from '$lib/components/recall/RecallResult.svelte';
 
 	interface ActionFeedback {
 		released?: boolean;
 		releaseError?: string;
-		recall?: { blockedBatchesCount: number; affectedShipments: unknown[] };
+		recall?: ApiRecallResult;
 		recallError?: string;
 	}
-
-	import type { LotStatus } from '$lib/types/lot';
-	import { peutDeciderQualite, type KnownRole } from '$lib/config/roles';
-	import ActionReservee from '$lib/components/ui/ActionReservee.svelte';
 
 	let {
 		lotId,
@@ -56,7 +57,7 @@
 				<p class="feedback err" role="status">❌ {form.releaseError}</p>
 			{/if}
 		</div>
-	{:else if statut === 'surveillance'}
+	{:else if statut === 'surveillance' && !form?.recall}
 		<div class="action">
 			<p class="action-title">Rappel en cours</p>
 			<p class="action-hint">
@@ -64,7 +65,7 @@
 				la page Rappels produits.
 			</p>
 		</div>
-	{:else}
+	{:else if statut !== 'surveillance'}
 		<div class="action">
 			<p class="action-title">Déclencher un rappel</p>
 			<p class="action-hint">
@@ -92,10 +93,7 @@
 	{/if}
 
 	{#if form?.recall}
-		<p class="feedback ok" role="status">
-			✅ Rappel exécuté — {form.recall.blockedBatchesCount} lot(s) impacté(s), {form.recall
-				.affectedShipments.length} expédition(s) à notifier. Le lot est maintenant sous rappel.
-		</p>
+		<RecallResult recall={form.recall} />
 	{/if}
 
 	<form method="GET" action={resolve('/tracabilite')} class="trace-form">
