@@ -95,6 +95,7 @@ export function alertsToCold(
 
 		return {
 			id: shortRef(a.id),
+			alertId: a.id,
 			site: equip?.lieu?.nom ?? '—',
 			zone: equip?.nom ?? '—',
 			tempActuelle: temp,
