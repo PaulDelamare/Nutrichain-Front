@@ -146,4 +146,21 @@ describe('movementsToLotEvents — étapes de transformation', () => {
 		]);
 		expect(e.detail).toBe('500 KG');
 	});
+
+	it('nomme un déplacement entre deux équipements', () => {
+		const [e] = movementsToLotEvents([
+			mvt({ type_action: 'DEPLACEMENT', metadata: { from: 'frigo-1', to: 'frigo-2' } })
+		]);
+		expect(e.title).toBe('Déplacement');
+		expect(e.detail).toContain('De frigo-1 vers frigo-2');
+	});
+
+	it('expose le motif d’une mise au rebut', () => {
+		const [e] = movementsToLotEvents([
+			mvt({ type_action: 'MISE_AU_REBUT', metadata: { motif: 'DLC dépassée' } })
+		]);
+		expect(e.title).toBe('Mise au rebut');
+		expect(e.tone).toBe('danger');
+		expect(e.detail).toContain('Motif : DLC dépassée');
+	});
 });

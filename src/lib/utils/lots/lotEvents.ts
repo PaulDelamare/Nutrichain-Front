@@ -78,6 +78,25 @@ const SHAPES: Record<string, EventShape> = {
 			const motif = str(m, 'motif');
 			return motif ? `Motif : ${motif}` : '';
 		}
+	},
+	DEPLACEMENT: {
+		title: 'Déplacement',
+		tone: 'neutral',
+		context: (m) => {
+			const from = str(m, 'from');
+			const to = str(m, 'to');
+			if (from && to) return `De ${from} vers ${to}`;
+			if (to) return `Vers ${to}`;
+			return '';
+		}
+	},
+	MISE_AU_REBUT: {
+		title: 'Mise au rebut',
+		tone: 'danger',
+		context: (m) => {
+			const motif = str(m, 'motif');
+			return motif ? `Motif : ${motif}` : '';
+		}
 	}
 };
 

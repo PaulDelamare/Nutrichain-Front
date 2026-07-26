@@ -186,8 +186,8 @@ describe('auditLogsToBatchMouvements', () => {
 		};
 	}
 
-	// Les levées de quarantaine et rappels n'écrivent pas de Batch_Mouvement : sans cette
-	// traduction, l'historique du lot reste muet sur les décisions qualité.
+	// Repli pour une API antérieure à l'écriture systématique des Batch_Mouvement : l'audit
+	// conserve encore les décisions qualité (levée, rappel) sous un autre vocabulaire.
 	it('traduit une action d’audit en étape d’historique', () => {
 		const [m] = auditLogsToBatchMouvements([log()]);
 		expect(m).toMatchObject({ type_action: 'LEVEE_QUARANTAINE', created_at: log().horodatage });
@@ -233,6 +233,26 @@ describe('movementToBatchMouvement', () => {
 			created_at: '2026-07-12T09:00:00.000Z',
 			user: { name: 'Paul' },
 			metadata: null
+		});
+	});
+
+	/**
+	 * ⚠️ Cœur de #30 côté front. L'API écrit déjà le motif dans `metadata` ; le jeter ici
+	 * rendait la frise muette après une levée — le jury voyait « rien n'a bougé ».
+	 */
+	it('conserve le motif d’une levée de quarantaine', () => {
+		const m = movementToBatchMouvement({
+			id: 8,
+			type_action: 'LEVEE_QUARANTAINE',
+			quantite: 500,
+			unite: 'KG',
+			created_at: '2026-07-12T11:00:00.000Z',
+			metadata: { motif: '2e contrôle conforme', statut_resultant: 'EN_STOCK' }
+		});
+
+		expect(m.metadata).toEqual({
+			motif: '2e contrôle conforme',
+			statut_resultant: 'EN_STOCK'
 		});
 	});
 });
