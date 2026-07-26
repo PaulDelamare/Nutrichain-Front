@@ -6,6 +6,7 @@ vi.mock('$env/dynamic/private', () => ({
 }));
 
 const org = await import('./organization.server');
+const alerts = await import('./alerts.server');
 const trace = await import('./traceability.server');
 const logistics = await import('./logistics.server');
 const platform = await import('./platform.server');
@@ -60,6 +61,12 @@ const routes: [nom: string, appel: () => unknown, methode: string, chemin: strin
 		'/api/organization/members/m1/revoke'
 	],
 	['getAlerts', () => org.getAlerts(fetchEspion, cookies), 'GET', '/api/organization/alerts'],
+	[
+		'getAlertBatches',
+		() => alerts.getAlertBatches(fetchEspion, cookies, 'alert-1'),
+		'GET',
+		'/api/alerts/alert-1/batches'
+	],
 	[
 		'getQualityControls',
 		() => org.getQualityControls(fetchEspion, cookies),
@@ -415,7 +422,8 @@ describe('choix du mode d’authentification', () => {
 				})
 		],
 		['importProductsCsv', () => connectors.importProductsCsv(fetchEspion, cookies, 'csv')],
-		['getBatchById', () => logistics.getBatchById(fetchEspion, cookies, 'lot-1')]
+		['getBatchById', () => logistics.getBatchById(fetchEspion, cookies, 'lot-1')],
+		['getAlertBatches', () => alerts.getAlertBatches(fetchEspion, cookies, 'alert-1')]
 	])('%s s’authentifie par session, sans clé API', async (_nom, appel) => {
 		await appel();
 		expect(cleApiEnvoyee()).toBe(false);

@@ -94,21 +94,84 @@ describe('alertsToCold', () => {
 		expect(rows[0].zone).toBe('—');
 	});
 
-	it('relie l’alerte aux lots en quarantaine SUR LE MÊME équipement', () => {
+	it('prend uniquement les lots renvoyés par /alerts/:id/batches pour cette alerte', () => {
+		const alertId = '11111111-2222-3333-4444-555555555555';
 		const { rows } = alertsToCold(
-			[alert({ id_materiel: 'frigo-1' })],
+			[alert({ id: alertId, id_materiel: 'frigo-1' })],
 			[{ id: 'frigo-1', nom: 'Frigo A', lieu: { nom: 'Quai' } } as never],
-			[
-				{ id: 'lot-a', produit: { nom: 'Beurre' }, id_materiel_actuel: 'frigo-1' },
-				{ id: 'lot-b', produit: { nom: 'Lait' }, id_materiel_actuel: 'AUTRE-frigo' }
-			] as never
+			{
+				[alertId]: [
+					{
+						id: 'lot-a',
+						lot_number: 'L1',
+						quantite_actuelle: '10',
+						unite_code: 'KG',
+						produit: { nom: 'Beurre' },
+						levable: true,
+						motif_blocage: null
+					}
+				]
+			}
 		);
 
-		expect(rows[0].lotsImpactes).toEqual([{ id: 'lot-a', produit: 'Beurre' }]);
+		expect(rows[0].lotsImpactes).toEqual([
+			{ id: 'lot-a', produit: 'Beurre', levable: true, motifBlocage: null }
+		]);
 	});
 
-	it('ne rattache aucun lot quand aucun n’est en quarantaine sur cet équipement', () => {
-		const { rows } = alertsToCold([alert({ id_materiel: 'frigo-1' })], [], []);
+	it('n’attribue pas à une alerte les lots d’une autre, même frigo', () => {
+		const a1 = 'aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee';
+		const a2 = 'ffffffff-1111-2222-3333-444444444444';
+		const { rows } = alertsToCold(
+			[
+				alert({ id: a1, id_materiel: 'frigo-1' }),
+				alert({ id: a2, id_materiel: 'frigo-1', message: 'autre' })
+			],
+			[{ id: 'frigo-1', nom: 'Frigo A', lieu: { nom: 'Quai' } } as never],
+			{
+				[a1]: [
+					{
+						id: 'lot-a',
+						lot_number: 'L1',
+						quantite_actuelle: '1',
+						unite_code: 'U',
+						produit: { nom: 'Beurre' },
+						levable: true,
+						motif_blocage: null
+					}
+				],
+				[a2]: []
+			}
+		);
+
+		expect(rows[0].lotsImpactes.map((l) => l.id)).toEqual(['lot-a']);
+		expect(rows[1].lotsImpactes).toEqual([]);
+	});
+
+	it('propage levable=false et le motif de blocage', () => {
+		const alertId = '11111111-2222-3333-4444-555555555555';
+		const { rows } = alertsToCold([alert({ id: alertId })], [], {
+			[alertId]: [
+				{
+					id: 'lot-x',
+					lot_number: 'LX',
+					quantite_actuelle: '1',
+					unite_code: 'U',
+					produit: { nom: 'Yaourt' },
+					levable: false,
+					motif_blocage: 'CONTROLE_NON_CONFORME'
+				}
+			]
+		});
+
+		expect(rows[0].lotsImpactes[0]).toMatchObject({
+			levable: false,
+			motifBlocage: 'contrôle non conforme'
+		});
+	});
+
+	it('ne rattache aucun lot quand l’endpoint n’en renvoie pas', () => {
+		const { rows } = alertsToCold([alert({ id_materiel: 'frigo-1' })], [], {});
 		expect(rows[0].lotsImpactes).toEqual([]);
 	});
 

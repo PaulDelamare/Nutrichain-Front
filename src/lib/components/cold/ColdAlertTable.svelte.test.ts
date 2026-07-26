@@ -14,7 +14,9 @@ function alerte(partial: Partial<ColdAlertRow> = {}): ColdAlertRow {
 		tempActuelle: '9,4 °C',
 		depuis: 'depuis 42 min',
 		statut: 'critique',
-		lotsImpactes: [{ id: 'lot-1', produit: 'Bouteille de Lait 1L' }],
+		lotsImpactes: [
+			{ id: 'lot-1', produit: 'Bouteille de Lait 1L', levable: true, motifBlocage: null }
+		],
 		...partial
 	};
 }
@@ -71,5 +73,22 @@ describe('ColdAlertTable', () => {
 		renderTable([alerte()], 'operator');
 		await expect.element(page.getByPlaceholder('Motif de clôture')).not.toBeInTheDocument();
 		await expect.element(page.getByText(/clôture d'une alerte froid/i)).toBeInTheDocument();
+	});
+
+	it('signale un lot non levable avec son motif', async () => {
+		renderTable([
+			alerte({
+				lotsImpactes: [
+					{
+						id: 'lot-nc',
+						produit: 'Crème',
+						levable: false,
+						motifBlocage: 'contrôle non conforme'
+					}
+				]
+			})
+		]);
+		await expect.element(page.getByText(/non levable/i)).toBeInTheDocument();
+		await expect.element(page.getByText(/contrôle non conforme/i)).toBeInTheDocument();
 	});
 });

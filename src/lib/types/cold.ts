@@ -1,6 +1,13 @@
 export type ColdAlertStatus = 'critique' | 'investigation';
 
-export type ColdAlertLot = { id: string; produit: string };
+export type ColdAlertLot = {
+	id: string;
+	produit: string;
+	/** Faux si un contrôle qualité NON_CONFORME postérieur empêche la levée via cette alerte. */
+	levable: boolean;
+	/** Libellé français du motif quand `levable` est faux. */
+	motifBlocage: string | null;
+};
 
 export type ColdAlertRow = {
 	/** Référence courte affichée (pas l’UUID API). */

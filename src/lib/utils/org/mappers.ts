@@ -1,11 +1,11 @@
+import type { ApiAlertBatch } from '$lib/Api/alerts.server';
 import type {
 	ApiAlert,
 	ApiAuditLog,
 	ApiEquipment,
 	ApiMember,
 	ApiMovement,
-	ApiQualityControl,
-	ApiQuarantineBatch
+	ApiQualityControl
 } from '$lib/Api/organization.server';
 import type { ApiBatch, ApiGenealogy } from '$lib/Api/traceability.server';
 import type { Kpi, EpcisEvent, TaskItem } from '$lib/types/dashboard';
@@ -69,13 +69,38 @@ function mapColdSeverity(niveau: string): 'critique' | 'investigation' {
 	return 'investigation';
 }
 
+const MOTIF_BLOCAGE_LABEL: Record<string, string> = {
+	CONTROLE_NON_CONFORME: 'contrôle non conforme'
+};
+
+export function listActiveColdAlerts(alerts: ApiAlert[]): ApiAlert[] {
+	return alerts.filter((a) => COLD_ALERT_TYPES.includes(a.type) && a.statut === 'ACTIVE');
+}
+
+/** Mappe les lots renvoyés par GET /api/alerts/:id/batches — jamais une reconstitution par frigo. */
+export function mapAlertBatchesToLots(batches: ApiAlertBatch[]): ColdAlertLot[] {
+	return batches.map((b) => ({
+		id: b.id,
+		produit: b.produit?.nom ?? '—',
+		levable: b.levable,
+		motifBlocage: b.motif_blocage ? (MOTIF_BLOCAGE_LABEL[b.motif_blocage] ?? b.motif_blocage) : null
+	}));
+}
+
+/**
+ * @param batchesByAlertId lots isolés par alerte (clé = UUID Alert), issus de
+ *   GET /api/alerts/:id/batches — ne pas dériver de quarantine-batches × équipement.
+ */
 export function alertsToCold(
 	alerts: ApiAlert[],
 	equipment: ApiEquipment[],
-	quarantineBatches: ApiQuarantineBatch[] = []
+	batchesByAlertId: ReadonlyMap<string, ApiAlertBatch[]> | Record<string, ApiAlertBatch[]> = {}
 ): { incident: ColdIncident | null; rows: ColdAlertRow[] } {
-	const cold = alerts.filter((a) => COLD_ALERT_TYPES.includes(a.type) && a.statut === 'ACTIVE');
+	const cold = listActiveColdAlerts(alerts);
 	if (cold.length === 0) return { incident: null, rows: [] };
+
+	const lookup =
+		batchesByAlertId instanceof Map ? batchesByAlertId : new Map(Object.entries(batchesByAlertId));
 
 	const incident: ColdIncident = {
 		id: shortRef(cold[0].id),
@@ -87,12 +112,6 @@ export function alertsToCold(
 		const temp = equip?.temp_actuelle != null ? `${equip.temp_actuelle} °C` : '—';
 		const statut = mapColdSeverity(a.niveau_gravite);
 
-		const lotsImpactes: ColdAlertLot[] = a.id_materiel
-			? quarantineBatches
-					.filter((b) => b.id_materiel_actuel === a.id_materiel)
-					.map((b) => ({ id: b.id, produit: b.produit?.nom ?? '—' }))
-			: [];
-
 		return {
 			id: shortRef(a.id),
 			alertId: a.id,
@@ -101,7 +120,7 @@ export function alertsToCold(
 			tempActuelle: temp,
 			depuis: fmtRelative(a.created_at),
 			statut,
-			lotsImpactes
+			lotsImpactes: mapAlertBatchesToLots(lookup.get(a.id) ?? [])
 		};
 	});
 
