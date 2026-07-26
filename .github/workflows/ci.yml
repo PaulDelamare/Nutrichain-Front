@@ -85,17 +85,155 @@ jobs:
       - run: npm ci
       - run: npm run build
 
+  # Ce job s'annonçait « e2e » mais ne jouait que les smoke tests : `E2E_API` n'était défini nulle
+  # part, donc `e2e/parcours-api.test.ts` se sautait tout seul et le job restait vert en permanence
+  # sans jamais toucher l'API (#61). Il démarre désormais la vraie pile — PostgreSQL + MongoDB +
+  # API NutriChain + front servi — et joue le parcours de bout en bout. Le fichier de parcours
+  # refuse maintenant d'être sauté quand `CI` est défini : si l'API manque, le job rougit.
+  #
+  # NE PAS ajouter de `name:` à ce job. GitHub publie le check sous le nom d'affichage quand il
+  # existe, et sous l'identifiant du job sinon : un `name:` descriptif renomme donc le check en
+  # « E2E (…) », alors que la protection de branche de `develop` exige un check nommé « e2e ».
+  # Celui-ci n'arrive alors jamais et la PR reste bloquée sur « Expected — Waiting for status to be
+  # reported » avec, pourtant, tous les jobs au vert. Le nom `e2e` ne ment plus : il joue bien un
+  # parcours e2e complet. Pour le rendre plus explicite, il faut mettre à jour les checks requis
+  # dans Settings → Branches AVANT de renommer le job.
   e2e:
     runs-on: ubuntu-latest
     needs: build
+    timeout-minutes: 20
+
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: nutrichain
+          POSTGRES_PASSWORD: nutrichain
+          POSTGRES_DB: nutrichain
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U nutrichain"
+          --health-interval 10s --health-timeout 5s --health-retries 5
+      # L'API ouvre une connexion Mongo au démarrage (journal des requêtes) : sans ce service, elle
+      # ne se met jamais à l'écoute et le health-check ci-dessous expire.
+      mongo:
+        image: mongo:7
+        ports:
+          - 27017:27017
+        options: >-
+          --health-cmd "mongosh --quiet --eval 'db.runCommand({ping:1})'"
+          --health-interval 10s --health-timeout 5s --health-retries 5
+
     steps:
       - uses: actions/checkout@v4
+
+      # Dépôt public : le GITHUB_TOKEN par défaut suffit, aucun secret à provisionner.
+      # On suit `develop` volontairement — c'est ce que le front consomme réellement. En contrepartie
+      # une régression d'API peut rougir la CI du front : c'est le but d'un test d'intégration, et le
+      # `ref` est isolé ici pour pouvoir l'épingler sur un tag le jour de la soutenance.
+      - name: 📥 Checkout de l'API NutriChain
+        uses: actions/checkout@v4
+        with:
+          repository: PaulDelamare/Nutrichain-Api
+          ref: develop
+          path: api
+
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
           cache: 'npm'
+          cache-dependency-path: |
+            package-lock.json
+            api/package-lock.json
+
       - run: npm ci
+      - name: 📦 Dépendances de l'API
+        working-directory: api
+        run: npm ci
+
+      # Valeurs de TEST (bases éphémères du runner) — aucun secret de production. SMTP pointe vers
+      # un port fermé : les envois échouent vite et proprement, sans jamais sortir sur le réseau.
+      # FRONTEND_URL vise 4173, le port servi par le webServer de Playwright.
+      - name: 🔐 Écrire le .env de test de l'API
+        working-directory: api
+        run: |
+          cat > .env <<'EOF'
+          DATABASE_URL=postgresql://nutrichain:nutrichain@localhost:5432/nutrichain?schema=public
+          MONGO_URI=mongodb://localhost:27017/nutrichain-logs
+          API_KEY=secret-key-pour-les-tests
+          IOT_API_KEY=iot-key-pour-les-tests
+          API_KEY_ORG_ID=usine-laitiere-paris
+          BETTER_AUTH_SECRET=secret-de-test-au-moins-32-caracteres-xyz
+          BETTER_AUTH_URL=http://localhost:3000
+          API_URL=http://localhost:3000
+          FRONTEND_URL=http://localhost:4173
+          SMTP_HOST=localhost
+          SMTP_PORT=1
+          SMTP_SECURE=false
+          SMTP_USER=test
+          SMTP_PASS=test
+          SMTP_FROM="NutriChain Test <no-reply@test.local>"
+          NODE_ENV=test
+          EOF
+
+      - name: 🗄️ Migrations + client Prisma
+        working-directory: api
+        run: |
+          npx prisma generate
+          npx prisma migrate deploy
+
+      # Seed de base : l'organisation et les comptes connectables par rôle (le parcours se connecte
+      # avec l'owner `admin@nutrichain.local`). Seed de démonstration : sites, matériels, lots,
+      # généalogie et rappels — sans lui, les écrans de rappel et de traçabilité sont vides.
+      - name: 🌱 Seeds (comptes par rôle + jeu de démonstration)
+        working-directory: api
+        run: |
+          npx prisma db seed
+          npm run seed:demo
+
+      - name: 🚀 Démarrer l'API en arrière-plan
+        working-directory: api
+        run: |
+          npx tsx src/server.ts > server.log 2>&1 &
+          echo $! > server.pid
+          for i in $(seq 1 30); do
+            if curl -sf http://localhost:3000/api/health > /dev/null; then
+              echo "API prête après ${i} tentative(s)."; exit 0
+            fi
+            sleep 2
+          done
+          echo "::error::L'API n'a pas démarré à temps"; cat server.log; exit 1
+
       - run: npx playwright install --with-deps chromium
-      # Le webServer de playwright.config.ts build et sert l'app sur 4173.
-      # Sans API, seuls les smoke tests tournent (le parcours API est gated par E2E_API=1).
-      - run: npm run test:e2e
+
+      # Le webServer de playwright.config.ts build et sert le front sur 4173. `API_URL`/`API_KEY`
+      # sont lus côté serveur SvelteKit ; `E2E_API=1` active le parcours réel.
+      - name: 🧪 Parcours e2e sur données API réelles
+        env:
+          E2E_API: '1'
+          API_URL: http://localhost:3000
+          API_KEY: secret-key-pour-les-tests
+        run: npm run test:e2e
+
+      - name: 📦 Archiver le rapport Playwright
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: rapport-e2e-front
+          path: |
+            playwright-report/
+            test-results/
+          if-no-files-found: ignore
+          retention-days: 14
+
+      # Sans ça, un échec du parcours ne dit pas si la faute vient du front ou de l'API.
+      - name: 🪵 Journal de l'API en cas d'échec
+        if: failure()
+        working-directory: api
+        run: tail -100 server.log || true
+
+      - name: 🛑 Arrêter l'API
+        if: always()
+        working-directory: api
+        run: if [ -f server.pid ]; then kill "$(cat server.pid)" || true; fi

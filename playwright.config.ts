@@ -7,5 +7,10 @@ export default defineConfig({
 		reuseExistingServer: !process.env.CI,
 		timeout: 180_000
 	},
-	testDir: 'e2e'
+	testDir: 'e2e',
+	// Un job e2e qui échoue sans laisser de preuve oblige à rejouer le scénario à l'aveugle.
+	// En CI on archive donc un rapport HTML et la trace des tests tombés (DOM, réseau, captures).
+	// Pas de `retries` : une reprise automatique masquerait justement l'instabilité qu'on cherche.
+	reporter: process.env.CI ? [['list'], ['html', { open: 'never' }]] : 'list',
+	use: { trace: 'retain-on-failure' }
 });
