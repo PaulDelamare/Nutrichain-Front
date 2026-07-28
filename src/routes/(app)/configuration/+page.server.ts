@@ -1,9 +1,9 @@
 import { fail } from '@sveltejs/kit';
 import type { Actions, PageServerLoad } from './$types';
 import {
-	getSuppliers,
+	getSuppliersForConfig,
 	getLocations,
-	getCustomers,
+	getCustomersForConfig,
 	getProductsForConfig,
 	getEquipment,
 	createSupplier,
@@ -28,9 +28,9 @@ export const load: PageServerLoad = async ({ fetch, cookies, locals }) => {
 
 	// includeArchived : l'écran d'administration montre TOUT, y compris les archivés, pour réactiver.
 	const [suppliers, locations, customers, products, equipment] = await Promise.all([
-		getSuppliers(fetch, cookies, true),
+		getSuppliersForConfig(fetch, cookies),
 		getLocations(fetch, cookies, true),
-		getCustomers(fetch, cookies, true),
+		getCustomersForConfig(fetch, cookies),
 		getProductsForConfig(fetch, cookies, true),
 		getEquipment(fetch, cookies)
 	]);

@@ -34,7 +34,9 @@ export const load: PageServerLoad = async ({ fetch, cookies }) => {
 			lots: s.liaisons?.map((l) => l.lot.id.slice(0, 8)).join(', ') ?? '—'
 		})),
 		error: null,
-		customers: customers.ok ? customers.data.filter((c) => c.is_active) : [],
+		// Pas de refiltrage sur `is_active` : déjà fait par l'API, et absent de la projection servie
+		// aux rôles terrain — le sélecteur Client était vide pour eux (#82).
+		customers: customers.ok ? customers.data : [],
 		lots: batches.ok
 			? batches.data
 					.filter((b) => EXPEDIABLE.has(b.statut))

@@ -66,9 +66,21 @@ export type ApiMovement = {
 	metadata?: Record<string, unknown> | null;
 };
 
+/**
+ * Ce que TOUT rôle reçoit d'un fournisseur — l'identité métier, rien de plus.
+ *
+ * L'API restreint sa projection hors administration (`organization.service.ts` : `select: { id,
+ * nom_ferme }`) : ni adresse du siège, ni contact qualité, ni `is_active`. Le type le dit, pour que
+ * la prochaine tentative de refiltrer sur `is_active` soit une erreur de compilation et non un
+ * sélecteur vide en production (#82).
+ */
 export type ApiSupplier = {
 	id: string;
 	nom_ferme: string;
+};
+
+/** Fournisseur complet — réservé à l'administration (`PERSONAL_DATA_ROLES` côté API). */
+export type ApiSupplierComplet = ApiSupplier & {
 	adresse_siege: string;
 	type_produit?: string | null;
 	contact_qualite?: string | null;
@@ -87,10 +99,19 @@ export type ApiLocation = {
 	is_active: boolean;
 };
 
+/**
+ * Ce que TOUT rôle reçoit d'un client. L'adresse de livraison en fait partie : c'est une donnée
+ * d'EXPLOITATION, elle pré-remplit la destination de l'expédition. Le contact d'urgence, l'e-mail,
+ * les notes et `is_active` restent réservés à l'administration (#82).
+ */
 export type ApiCustomer = {
 	id: string;
 	nom_enseigne: string;
 	adresse_livraison: string;
+};
+
+/** Client complet — réservé à l'administration (`PERSONAL_DATA_ROLES` côté API). */
+export type ApiCustomerComplet = ApiCustomer & {
 	contact_urgence?: string | null;
 	email?: string | null;
 	notes?: string | null;
@@ -210,13 +231,18 @@ export const getMovements = (
 	);
 };
 
-export const getSuppliers = (
-	fetch: typeof globalThis.fetch,
-	cookies: Cookies,
-	includeArchived = false
-) =>
-	orgApi(fetch, cookies).get<ApiSupplier[]>(
-		`/api/organization/suppliers${includeArchived ? '?includeArchived=true' : ''}`
+/** Fournisseurs actifs — l'API a déjà écarté les archivés. À ne pas refiltrer (#82). */
+export const getSuppliers = (fetch: typeof globalThis.fetch, cookies: Cookies) =>
+	orgApi(fetch, cookies).get<ApiSupplier[]>('/api/organization/suppliers');
+
+/**
+ * Écran d'administration : les archivés AUSSI, pour pouvoir les réactiver — et la fiche complète.
+ * N'a de sens qu'appelé derrière `exigerAdministrateur` : c'est le rôle, côté API, qui décide de la
+ * projection. Un rôle terrain recevrait ici une charge utile plus pauvre que le type ne l'annonce.
+ */
+export const getSuppliersForConfig = (fetch: typeof globalThis.fetch, cookies: Cookies) =>
+	orgApi(fetch, cookies).get<ApiSupplierComplet[]>(
+		'/api/organization/suppliers?includeArchived=true'
 	);
 
 export const createSupplier = (
@@ -301,13 +327,14 @@ export const setLocationActive = (
 		{ active }
 	);
 
-export const getCustomers = (
-	fetch: typeof globalThis.fetch,
-	cookies: Cookies,
-	includeArchived = false
-) =>
-	orgApi(fetch, cookies).get<ApiCustomer[]>(
-		`/api/organization/customers${includeArchived ? '?includeArchived=true' : ''}`
+/** Clients actifs — l'API a déjà écarté les archivés. À ne pas refiltrer (#82). */
+export const getCustomers = (fetch: typeof globalThis.fetch, cookies: Cookies) =>
+	orgApi(fetch, cookies).get<ApiCustomer[]>('/api/organization/customers');
+
+/** Écran d'administration : les archivés aussi, et la fiche complète. Voir `getSuppliersForConfig`. */
+export const getCustomersForConfig = (fetch: typeof globalThis.fetch, cookies: Cookies) =>
+	orgApi(fetch, cookies).get<ApiCustomerComplet[]>(
+		'/api/organization/customers?includeArchived=true'
 	);
 
 export const createCustomer = (
