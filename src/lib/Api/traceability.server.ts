@@ -159,8 +159,20 @@ export async function getBatchList(
 	return res.ok ? { ...res, data: res.data.data } : res;
 }
 
+/**
+ * Généalogie amont/aval d'un lot — SEULE fonction pour cet endpoint.
+ *
+ * Il en existait deux, `getGenealogy` et `getBatchGenealogy`, avec la même signature et le même
+ * chemin, mais deux comportements différents : l'une envoyait la clé API, l'autre non. C'est cette
+ * duplication qui a produit le défaut de #78 — l'encodage a été ajouté à l'une et oublié à l'autre,
+ * et une relecture de la fonction « corrigée » ne montrait rien d'anormal.
+ *
+ * `useApiKey: false` est le comportement retenu, parce que c'est le correct : côté API, la route est
+ * gardée par `requireAuth` + `requireOrgRole(ALL_ROLES)`, sans `checkApiKey`. La clé n'y sert à
+ * rien, et l'envoyer expédiait un secret serveur sur un appel qui ne le demande pas.
+ */
 export function getGenealogy(fetch: typeof globalThis.fetch, cookies: Cookies, lotId: string) {
-	return api(fetch, cookies).get<ApiGenealogy>(
+	return api(fetch, cookies, { useApiKey: false }).get<ApiGenealogy>(
 		`/api/traceability/batches/${encodeURIComponent(lotId)}/genealogy`
 	);
 }
@@ -179,12 +191,6 @@ export function triggerRecall(
 
 export function getProducts(fetch: typeof globalThis.fetch, cookies: Cookies) {
 	return api(fetch, cookies).get<ApiProduct[]>('/api/traceability/products');
-}
-
-export function getBatchGenealogy(fetch: typeof globalThis.fetch, cookies: Cookies, id: string) {
-	return api(fetch, cookies, { useApiKey: false }).get<ApiGenealogy>(
-		`/api/traceability/batches/${id}/genealogy`
-	);
 }
 
 export type ApiEpcisEvent = {

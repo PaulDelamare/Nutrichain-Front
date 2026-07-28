@@ -25,6 +25,6 @@ export const inviteOrganizationOwner = (
 	email: string
 ) =>
 	api(fetch, cookies).post<{ invitationId: string; expiresAt: string }>(
-		`/api/platform/organizations/${organizationId}/owner`,
+		`/api/platform/organizations/${encodeURIComponent(organizationId)}/owner`,
 		{ email }
 	);
