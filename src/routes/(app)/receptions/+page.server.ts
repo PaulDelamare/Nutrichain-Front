@@ -33,8 +33,13 @@ export const load: PageServerLoad = async ({ fetch, cookies }) => {
 		})),
 		total: receipts.data.pagination.total,
 		error: null,
-		suppliers: suppliers.ok ? suppliers.data.filter((s) => s.is_active) : [],
-		products: products.ok ? products.data.filter((p) => p.is_active) : [],
+		// Aucun refiltrage sur `is_active` : l'API l'applique déjà dans son `where`, et sa projection
+		// pour un rôle terrain ne contient même pas le champ — le filtre vidait donc le sélecteur
+		// pour tout compte non administrateur (#82).
+		suppliers: suppliers.ok ? suppliers.data : [],
+		products: products.ok ? products.data : [],
+		// Le matériel, lui, n'est PAS filtré par l'API : écarter les frigos en panne est une règle
+		// métier du front, pas une redondance.
 		equipment: equipment.ok ? equipment.data.filter((e) => e.statut !== 'HORS_SERVICE') : []
 	};
 };

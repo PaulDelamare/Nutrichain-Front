@@ -20,7 +20,8 @@ export const load: PageServerLoad = async ({ fetch, cookies }) => {
 	]);
 
 	return {
-		products: products.ok ? products.data.filter((p) => p.is_active) : [],
+		// Même redondance qu'en réception : l'API n'envoie déjà que les produits actifs (#82).
+		products: products.ok ? products.data : [],
 		equipment: equipment.ok ? equipment.data : [],
 		lots: batches.ok
 			? batches.data

@@ -407,17 +407,28 @@ describe('construction des paramètres de requête', () => {
 		await org.getSuppliers(fetchEspion, cookies);
 		expect(chemin()).toBe('/api/organization/suppliers');
 
-		await org.getSuppliers(fetchEspion, cookies, true);
-		expect(chemin()).toBe('/api/organization/suppliers?includeArchived=true');
+		await org.getCustomers(fetchEspion, cookies);
+		expect(chemin()).toBe('/api/organization/customers');
 
 		await org.getLocations(fetchEspion, cookies, true);
 		expect(chemin()).toBe('/api/organization/locations?includeArchived=true');
 
-		await org.getCustomers(fetchEspion, cookies, true);
-		expect(chemin()).toBe('/api/organization/customers?includeArchived=true');
-
 		await org.getProductsForConfig(fetchEspion, cookies, true);
 		expect(chemin()).toBe('/api/traceability/products?includeArchived=true');
+	});
+
+	/**
+	 * #82 — Fournisseurs et clients ont DEUX lectures, parce que l'API en sert deux charges utiles
+	 * différentes selon le rôle. Les confondre derrière un booléen laissait croire au front qu'il
+	 * recevait toujours `is_active` : il refiltrait dessus, et vidait le sélecteur pour les rôles
+	 * terrain.
+	 */
+	it('l’administration demande explicitement les archivés, les écrans terrain jamais', async () => {
+		await org.getSuppliersForConfig(fetchEspion, cookies);
+		expect(chemin()).toBe('/api/organization/suppliers?includeArchived=true');
+
+		await org.getCustomersForConfig(fetchEspion, cookies);
+		expect(chemin()).toBe('/api/organization/customers?includeArchived=true');
 	});
 
 	it('getReceipts pagine dès la première page', async () => {
