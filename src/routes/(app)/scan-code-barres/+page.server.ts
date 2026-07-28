@@ -1,3 +1,4 @@
+import { numeroLot } from '$lib/utils/lots/lotLabel';
 import { fail, redirect } from '@sveltejs/kit';
 import type { Actions, PageServerLoad } from './$types';
 import { resolveBatchByLotNumber } from '$lib/Api/logistics.server';
@@ -35,7 +36,7 @@ export const actions = {
 				code,
 				candidates: search.data.data.map((b) => ({
 					id: b.id,
-					lotNumber: b.lot_number ?? b.id.slice(0, 8),
+					lotNumber: numeroLot(b),
 					produit: b.produit?.nom ?? '—',
 					gtin: b.produit?.code_gtin ?? '—'
 				}))

@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { enhance } from '$app/forms';
 	import PageHead from '$lib/components/page/PageHead.svelte';
+	import SearchSelect from '$lib/components/ui/SearchSelect.svelte';
 	import type { PageData, ActionData } from './$types';
 
 	let { data, form }: { data: PageData; form: ActionData } = $props();
@@ -8,8 +9,11 @@
 	let lotId = $state('');
 	let submitting = $state(false);
 
+	const lotOptions = $derived(data.lots.map((l) => ({ value: l.id, label: l.label })));
+
+	// Le lot source est nommé comme dans le sélecteur : l'opérateur relit exactement ce qu'il a choisi.
 	const sourceProduit = $derived(
-		data.lots.find((l) => l.id === (form?.simulated ? form.sourceLotId : lotId))?.produit ?? '—'
+		data.lots.find((l) => l.id === (form?.simulated ? form.sourceLotId : lotId))?.label ?? '—'
 	);
 
 	const impactedCount = $derived(form?.simulated ? form.downstream.length + 1 : 0);
@@ -37,13 +41,19 @@
 				};
 			}}
 		>
-			<label for="lot">Sélectionnez le lot à l'origine du rappel</label>
-			<select id="lot" name="lotId" bind:value={lotId} required>
-				<option value="" disabled>— Choisir un lot —</option>
-				{#each data.lots as lot (lot.id)}
-					<option value={lot.id}>{lot.produit} — {lot.id}</option>
-				{/each}
-			</select>
+			<!-- Le même composant filtrable que `/rappels-produits`, enveloppé dans le même `<label>` :
+			     avec des dizaines de lots, une liste déroulante native oblige à faire défiler pour
+			     retrouver un numéro qu'on a en main. Le `<label>` nomme le bouton du composant (premier
+			     descendant étiquetable), comme le faisait le `<select>` natif remplacé ici. -->
+			<label class="picker">
+				<span>Sélectionnez le lot à l'origine du rappel</span>
+				<SearchSelect
+					name="lotId"
+					options={lotOptions}
+					bind:value={lotId}
+					placeholder="— Choisir un lot —"
+				/>
+			</label>
 
 			<button type="submit" class="btn" disabled={!lotId || submitting}>
 				{submitting ? 'Simulation…' : 'Simuler le rappel'}
@@ -75,7 +85,7 @@
 				</div>
 			</div>
 
-			<p class="src">Lot source : <strong>{sourceProduit}</strong> ({form.sourceLotId})</p>
+			<p class="src">Lot source : <strong>{sourceProduit}</strong></p>
 
 			{#if form.downstream.length === 0}
 				<p class="empty">Aucun lot descendant — le rappel se limiterait au lot source.</p>
@@ -84,7 +94,7 @@
 					{#each form.downstream as lot (lot.id)}
 						<li class="hit">
 							<span class="hit-produit">{lot.produit}</span>
-							<span class="hit-meta">{lot.id} · {lot.statut}</span>
+							<span class="hit-meta">{lot.lotNumber} · {lot.statut}</span>
 						</li>
 					{/each}
 				</ul>
@@ -129,24 +139,13 @@
 		gap: 0.5rem;
 	}
 
-	label {
+	/* `SearchSelect` porte son propre habillage : ne reste ici que l'intitulé au-dessus du champ. */
+	.picker {
+		display: flex;
+		flex-direction: column;
+		gap: 0.35rem;
 		font-size: 0.8125rem;
 		color: var(--nc-text-muted);
-	}
-
-	select {
-		padding: 0.5rem 0.75rem;
-		border: 1px solid #cbd5e1;
-		border-radius: 0.375rem;
-		font-size: 0.875rem;
-		color: var(--nc-text);
-		background: #fff;
-	}
-
-	select:focus {
-		outline: none;
-		border-color: var(--nc-brand-border-focus);
-		box-shadow: 0 0 0 3px var(--nc-brand-ring);
 	}
 
 	.btn {
