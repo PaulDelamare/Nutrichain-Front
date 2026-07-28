@@ -6,6 +6,8 @@
 	let { data, form }: { data: PageData; form: ActionData } = $props();
 </script>
 
+<svelte:head><title>Création de compte — {APP_NAME}</title></svelte:head>
+
 <main class="register-page">
 	<section class="card">
 		<div class="brand">

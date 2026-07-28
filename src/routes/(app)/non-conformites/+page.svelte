@@ -19,8 +19,10 @@
 	const openNc = $derived(
 		filterRowsByText(data.openNc, pageSearch.query, (r) => [r.id, r.type, r.lot, r.statut])
 	);
+	// On filtre sur ce qui est affiché : le numéro d'étiquette, plus l'UUID que la liste ne montre
+	// plus (#81) — sinon une recherche « trouve » une ligne où rien ne correspond à l'œil.
 	const quarantineLots = $derived(
-		filterRowsByText(data.quarantineLots, pageSearch.query, (l) => [l.lot, l.detail])
+		filterRowsByText(data.quarantineLots, pageSearch.query, (l) => [l.numero, l.detail])
 	);
 	const pendingQc = $derived(
 		filterRowsByText(data.pendingQc, pageSearch.query, (l) => [l.lot, l.produit, l.quantite])
@@ -28,7 +30,7 @@
 
 	function exportList() {
 		const header = 'Lot;Détail';
-		const lines = data.quarantineLots.map((l) => `${l.lot};${l.detail.replaceAll(';', ',')}`);
+		const lines = data.quarantineLots.map((l) => `${l.numero};${l.detail.replaceAll(';', ',')}`);
 		const csv = [header, ...lines].join('\n');
 		const blob = new Blob([csv], { type: 'text/csv;charset=utf-8' });
 		const url = URL.createObjectURL(blob);

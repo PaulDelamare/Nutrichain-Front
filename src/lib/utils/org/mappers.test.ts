@@ -18,6 +18,7 @@ import type {
 	ApiAlert,
 	ApiAuditLog,
 	ApiMember,
+	ApiMovement,
 	ApiQualityControl
 } from '$lib/Api/organization.server';
 import type { ApiBatch, ApiGenealogy } from '$lib/Api/traceability.server';
@@ -67,19 +68,93 @@ describe('auditLogsToRows', () => {
 		expect(row.detail).toBe('2e contrôle conforme');
 	});
 
-	it('affiche le changement de statut quand il n’y a pas de motif', () => {
+	/**
+	 * #81 — Le journal affichait « EN_ATTENTE_QC → BLOQUE ». C'est la piste WORM qu'on montre pour
+	 * prouver l'inviolabilité de la traçabilité : elle doit se lire, pas se déchiffrer.
+	 */
+	it('nomme la transition de statut dans le vocabulaire de l’application (#81)', () => {
 		const [row] = auditLogsToRows([
 			auditLog({
 				ancienne_valeur: { statut: 'EN_STOCK' },
 				nouvelle_valeur: { statut: 'ALERTE' }
 			})
 		]);
-		expect(row.detail).toBe('EN_STOCK → ALERTE');
+		expect(row.detail).toBe('Conforme → Sous rappel');
 	});
 
 	it('laisse le détail vide sans motif ni changement de statut', () => {
 		const [row] = auditLogsToRows([auditLog({})]);
 		expect(row.detail).toBe('');
+	});
+
+	/**
+	 * #81 — Le repli sur le code brut est une roue de secours, pas une traduction : `CREATE_SHIPMENT`,
+	 * `CREATE_QUALITY_CONTROL` et `MOVE_BATCH` y tombaient et s'affichaient tels quels, entre deux
+	 * lignes correctement traduites.
+	 *
+	 * La liste est celle des actions réellement écrites par l'API (les marqueurs `IT_*` des tests
+	 * d'intégration en sont exclus) : ce test échoue le jour où l'API en ajoute une.
+	 */
+	it('traduit chaque action que l’API sait écrire (#81)', () => {
+		const ACTIONS_API = [
+			'ADD',
+			'ALERT_RESOLVED',
+			'ARCHIVE_CUSTOMER',
+			'ARCHIVE_LOCATION',
+			'ARCHIVE_PRODUCT',
+			'ARCHIVE_SUPPLIER',
+			'BATCH_RECALL_TRIGGERED',
+			'CHANGE_MEMBER_ROLE',
+			'CONTROLE_QUALITE',
+			'CREATE',
+			'CREATE_CUSTOMER',
+			'CREATE_EQUIPMENT',
+			'CREATE_IOT_GATEWAY',
+			'CREATE_LOCATION',
+			'CREATE_ORGANIZATION',
+			'CREATE_PRODUCT',
+			'CREATE_QUALITY_CONTROL',
+			'CREATE_RECEIPT',
+			'CREATE_RECEIPT_VIA_SYNC',
+			'CREATE_SHIPMENT',
+			'CREATE_SUPPLIER',
+			'DEPLACEMENT',
+			'EXPEDITION',
+			'IMPORT_CREATE_CUSTOMER',
+			'IMPORT_CREATE_PRODUCT',
+			'IMPORT_UPDATE_CUSTOMER',
+			'IMPORT_UPDATE_PRODUCT',
+			'INIT',
+			'LEVEE_QUARANTAINE',
+			'LIFT_BATCH_QUARANTINE',
+			'MISE_AU_REBUT',
+			'MOVE_BATCH',
+			'OBSERVE',
+			'QUARANTAINE_FROID',
+			'REACTIVATE_CUSTOMER',
+			'REACTIVATE_LOCATION',
+			'REACTIVATE_SUPPLIER',
+			'RECEPTION',
+			'REVOKE_IOT_GATEWAY',
+			'REVOKE_MEMBER',
+			'SCRAP_BATCH',
+			'TEMP_EXCURSION_DETECTED',
+			'TRANSFER_OWNERSHIP',
+			'TRANSFORM_CONSUME',
+			'TRANSFORM_CREATE',
+			'UPDATE',
+			'UPDATE_CUSTOMER',
+			'UPDATE_LOCATION',
+			'UPDATE_PRODUCT',
+			'UPDATE_SUPPLIER',
+			'USER_ANONYMIZED'
+		];
+
+		const brutes = auditLogsToRows(ACTIONS_API.map((action) => auditLog({ action })))
+			.filter((row) => row.actionLabel === row.action)
+			.map((row) => row.action);
+
+		expect(brutes).toEqual([]);
 	});
 });
 
@@ -232,8 +307,43 @@ describe('buildDashboardTasks', () => {
 });
 
 describe('movementsToEvents', () => {
+	const mouvement = (partial: Partial<ApiMovement> = {}): ApiMovement =>
+		({
+			id: 'mvt-1',
+			type_action: 'EXPEDITION',
+			created_at: '2026-07-11T10:00:00.000Z',
+			lot: {
+				id: '2a71fc4a-76e6-423f-8b00-05941af0b8ca',
+				produit: { nom: 'Plaquette de Beurre Doux 250g' }
+			},
+			...partial
+		}) as ApiMovement;
+
 	it('ne rend aucun événement quand il n’y a aucun mouvement', () => {
 		expect(movementsToEvents([])).toEqual([]);
+	});
+
+	/**
+	 * #81 — L'activité récente du tableau de bord — le premier écran de la démonstration — annonçait
+	 * « Lot 2a71fc4a-76e6-423f-8b00-05941af0b8ca ». L'API ne joint pas le numéro à ses mouvements
+	 * (`organization.service.ts` ne sélectionne que `{ id, produit }`) : on le retrouve dans le
+	 * catalogue de lots que la page charge déjà pour son camembert.
+	 */
+	it('nomme le lot par son numéro d’étiquette (#81)', () => {
+		const [event] = movementsToEvents(
+			[mouvement()],
+			[{ id: '2a71fc4a-76e6-423f-8b00-05941af0b8ca', lot_number: '260726-IXWL0H' }]
+		);
+
+		expect(event.meta).toBe('Lot 260726-IXWL0H · Plaquette de Beurre Doux 250g');
+	});
+
+	it('se replie sur un préfixe court quand le lot est hors du catalogue chargé', () => {
+		// Le catalogue est plafonné : un mouvement peut porter sur un lot plus ancien. Mieux vaut
+		// huit caractères que trente-six.
+		const [event] = movementsToEvents([mouvement()], []);
+
+		expect(event.meta).toBe('Lot 2a71fc4a · Plaquette de Beurre Doux 250g');
 	});
 });
 
@@ -320,26 +430,52 @@ describe('genealogyToGraph', () => {
 		expect(graph.selected.title).toBe('Lait pasteurisé — C-3');
 	});
 
-	it('retombe sur l’identifiant technique quand le lot n’a pas de numéro GS1', () => {
+	// #80/#81 — Le repli est un préfixe court, jamais l'UUID entier : il déborde de la carte et
+	// n'apprend rien. C'est la règle de `numeroLot`, la même que dans les six autres écrans.
+	it('retombe sur un préfixe court quand le lot n’a pas de numéro GS1', () => {
+		const graph = genealogyToGraph(
+			{
+				batchId: '2a71fc4a-76e6-423f-8b00-05941af0b8ca',
+				upstream: [
+					{
+						id: '9f3e1d20-1111-2222-3333-444455556666',
+						nom_produit: 'Lait cru',
+						statut: 'EXPEDIE'
+					}
+				],
+				downstream: []
+			},
+			{ id: '2a71fc4a-76e6-423f-8b00-05941af0b8ca', statut: 'EN_STOCK' } as ApiBatch
+		);
+
+		expect(graph.upstream[0].title).toBe('Lait cru — 9f3e1d20');
+		expect(graph.selected.title).toBe('Produit — 2a71fc4a');
+	});
+
+	/**
+	 * #81 — L'arbre affichait « Statut EPUISE » et un badge « BLOQUE » là où la recherche de lots
+	 * disait « Épuisé » et « Quarantaine » pour les mêmes lots. Deux écrans du parcours qualité, deux
+	 * vocabulaires : le jury lit deux choses différentes sur un même lot.
+	 */
+	it('nomme les statuts dans le vocabulaire de l’application, pas en code API (#81)', () => {
 		const graph = genealogyToGraph(
 			{
 				batchId: 'lot-1',
-				upstream: [{ id: 'p1', nom_produit: 'Lait cru', statut: 'EXPEDIE' }],
-				downstream: []
+				upstream: [{ id: 'p1', nom_produit: 'Lait cru', statut: 'EPUISE', lot_number: 'A-1' }],
+				downstream: [
+					{ id: 'd1', nom_produit: 'Yaourt', statut: 'EN_ATTENTE_QC', lot_number: 'B-2' }
+				]
 			},
-			{ id: 'lot-1', statut: 'EN_STOCK' } as ApiBatch
+			{ id: 'lot-1', statut: 'BLOQUE', lot_number: 'C-3' } as ApiBatch
 		);
 
-		expect(graph.upstream[0].title).toBe('Lait cru — p1');
-		expect(graph.selected.title).toBe('Produit — lot-1');
-	});
-
-	it('affiche le statut réel du lot analysé', () => {
-		const graph = genealogyToGraph({ batchId: 'lot-1', upstream: [], downstream: [] }, {
-			id: 'lot-1',
-			statut: 'BLOQUE'
-		} as ApiBatch);
-		expect(graph.selected.badge).toEqual({ label: 'BLOQUE', variant: 'green' });
+		expect(graph.upstream[0].detail).toBe('Statut Épuisé');
+		expect(graph.downstream[0].detail).toBe('Statut En attente de contrôle');
+		expect(graph.downstream[0].badge).toEqual({
+			label: 'En attente de contrôle',
+			variant: 'blue'
+		});
+		expect(graph.selected.badge).toEqual({ label: 'Quarantaine', variant: 'green' });
 	});
 });
 
@@ -380,16 +516,54 @@ describe('membersToUsers', () => {
 });
 
 describe('batchesToQuarantine', () => {
-	it('rend le statut technique lisible', () => {
+	/**
+	 * #81 — Ce test entérinait « Beurre — en attente_qc » sous le nom de « statut lisible ». Le
+	 * panneau « Lots en quarantaine » affichait donc `bloque` là où le reste de l'application dit
+	 * « Quarantaine » — et l'ancien format n'échappait même que le PREMIER souligné.
+	 */
+	it('nomme le statut dans le vocabulaire de l’application', () => {
 		const [lot] = batchesToQuarantine([
-			{ id: 'lot-1', produit: { nom: 'Beurre' }, statut: 'EN_ATTENTE_QC' }
+			{
+				id: '2a71fc4a-76e6-423f-8b00-05941af0b8ca',
+				lot_number: '260726-IXWL0H',
+				produit: { nom: 'Beurre' },
+				statut: 'EN_ATTENTE_QC'
+			}
 		]);
-		expect(lot.detail).toBe('Beurre — en attente_qc');
+		expect(lot.detail).toBe('Beurre — En attente de contrôle');
 	});
 
 	it('ne laisse pas le produit vide quand l’API ne le joint pas', () => {
-		const [lot] = batchesToQuarantine([{ id: 'lot-1', statut: 'BLOQUE' }]);
-		expect(lot.detail).toBe('Lot — bloque');
+		const [lot] = batchesToQuarantine([
+			{ id: '2a71fc4a-76e6-423f-8b00-05941af0b8ca', statut: 'BLOQUE' }
+		]);
+		expect(lot.detail).toBe('Lot — Quarantaine');
+	});
+
+	/**
+	 * #81 — Le panneau affichait l'UUID comme intitulé du lien vers la fiche. L'identifiant reste
+	 * nécessaire (lien et formulaire de levée), mais ce n'est pas ce qu'on montre : l'opérateur a le
+	 * numéro d'étiquette en main.
+	 */
+	it('sépare l’identifiant technique du numéro que lit l’opérateur (#81)', () => {
+		const [lot] = batchesToQuarantine([
+			{
+				id: '2a71fc4a-76e6-423f-8b00-05941af0b8ca',
+				lot_number: '260726-IXWL0H',
+				produit: { nom: 'Beurre' },
+				statut: 'BLOQUE'
+			}
+		]);
+
+		expect(lot.id).toBe('2a71fc4a-76e6-423f-8b00-05941af0b8ca');
+		expect(lot.numero).toBe('260726-IXWL0H');
+	});
+
+	it('se replie sur un préfixe court quand le lot n’a pas de numéro', () => {
+		const [lot] = batchesToQuarantine([
+			{ id: '2a71fc4a-76e6-423f-8b00-05941af0b8ca', statut: 'BLOQUE' }
+		]);
+		expect(lot.numero).toBe('2a71fc4a');
 	});
 });
 

@@ -5,6 +5,8 @@
 	let { form }: { form: ActionData } = $props();
 </script>
 
+<svelte:head><title>Connexion — {APP_NAME}</title></svelte:head>
+
 <main class="login-page">
 	<section class="card">
 		<div class="brand">

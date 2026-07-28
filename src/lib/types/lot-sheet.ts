@@ -13,6 +13,8 @@ export type LotEvent = {
 
 export type LotSheet = {
 	id: string;
+	/** Le numéro lu sur l'étiquette — c'est lui qu'on affiche, pas `id` (#81). */
+	lotNumber: string;
 	produit: string;
 	gtin: string;
 	dlc: string;

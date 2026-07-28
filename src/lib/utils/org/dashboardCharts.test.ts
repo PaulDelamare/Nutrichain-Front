@@ -71,9 +71,11 @@ describe('buildDashboardCharts — répartition des lots', () => {
 			[]
 		);
 
+		// #81 — Le vocabulaire est celui des badges de lot : le camembert disait « En stock » et
+		// « Bloqué » là où la recherche de lots affichait « Conforme » et « Quarantaine ».
 		expect(charts.lotStatus.map((s) => s.label)).toEqual([
-			'En stock',
-			'Bloqué',
+			'Conforme',
+			'Quarantaine',
 			'En attente de contrôle'
 		]);
 		expect(charts.lotStatus[0].value).toBe(2);
@@ -81,7 +83,7 @@ describe('buildDashboardCharts — répartition des lots', () => {
 
 	it('rend lisible un statut hors référentiel au lieu d’afficher le code brut', () => {
 		const charts = buildDashboardCharts([batch('l1', 'STATUT_EXOTIQUE')], [], [], []);
-		expect(charts.lotStatus[0]).toMatchObject({ label: 'statut exotique', color: '#94a3b8' });
+		expect(charts.lotStatus[0]).toMatchObject({ label: 'Statut exotique', color: '#94a3b8' });
 	});
 });
 

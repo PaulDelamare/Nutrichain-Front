@@ -4,7 +4,9 @@ import { render, type SvelteComponentOptions } from 'vitest-browser-svelte';
 import QuarantinePanel from './QuarantinePanel.svelte';
 import type { KnownRole } from '$lib/config/roles';
 
-const LOTS = [{ lot: 'LOT-A', detail: 'Beurre — bloque' }];
+const LOTS = [
+	{ id: 'a26b8f1f-f569-44be-b907-9a6d45b5a00b', numero: 'LOT-A', detail: 'Beurre — Quarantaine' }
+];
 
 function renderPanel(role: KnownRole) {
 	render(QuarantinePanel, {

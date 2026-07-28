@@ -41,7 +41,9 @@ export const load: PageServerLoad = async ({ fetch, cookies }) => {
 			totalBatches > batchList.length
 				? `Par statut — ${batchList.length} lots les plus récents sur ${totalBatches}`
 				: 'Par statut opérationnel',
-		recentEvents: movementsToEvents(movementList.slice(0, 5)),
+		// Le catalogue sert aussi à nommer les lots de l'activité récente : l'API ne joint pas le
+		// numéro d'étiquette à ses mouvements, et la page affichait donc des UUID (#81).
+		recentEvents: movementsToEvents(movementList.slice(0, 5), batchList),
 		tasks: buildDashboardTasks(alertList, openIssues),
 		error
 	};

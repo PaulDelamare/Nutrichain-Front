@@ -2,16 +2,18 @@
 	import PageHead from '$lib/components/page/PageHead.svelte';
 	import TraceGenealogy from '$lib/components/trace/TraceGenealogy.svelte';
 	import SearchSelect from '$lib/components/ui/SearchSelect.svelte';
+	import { batchStatusLabel } from '$lib/vocab/batchStatus';
 	import type { PageData } from './$types';
 
 	let { data }: { data: PageData } = $props();
 
 	let picker = $state<HTMLFormElement>();
 
+	// Le sélecteur affichait le code API entre parenthèses — « (EN_ATTENTE_QC) » (#81).
 	const lotOptions = $derived(
 		data.batches.map((b) => ({
 			value: b.id,
-			label: `${b.nom} — ${b.lotNumber} (${b.statut})`
+			label: `${b.nom} — ${b.lotNumber} (${batchStatusLabel(b.statut)})`
 		}))
 	);
 </script>

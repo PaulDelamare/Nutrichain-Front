@@ -5,6 +5,7 @@ import { resolveLotMapLocation } from '$lib/utils/lots/resolveLotMapLocation';
 import type { LotSheet } from '$lib/types/lot-sheet';
 import type { LotRow } from '$lib/types/lot';
 import { toLotStatus } from '$lib/vocab/batchStatus';
+import { numeroLot } from '$lib/utils/lots/lotLabel';
 
 const AUDIT_TO_MOVEMENT: Record<string, string> = {
 	CREATE_RECEIPT: 'RECEPTION',
@@ -47,7 +48,7 @@ export function batchToRow(
 
 	return {
 		id: batch.id,
-		lotNumber: batch.lot_number ?? batch.id.slice(0, 8),
+		lotNumber: numeroLot(batch),
 		produit: batch.produit?.nom ?? '—',
 		gtin: batch.produit?.code_gtin ?? '—',
 		site: batch.materiel?.lieu?.nom ?? '—',
@@ -80,6 +81,9 @@ export function batchToSheet(batch: ApiBatch): LotSheet {
 
 	return {
 		id: batch.id,
+		// L'identifiant technique reste pour l'URL et les actions ; le numéro d'étiquette est ce
+		// qu'on montre — la fiche était titrée avec l'UUID (#81).
+		lotNumber: numeroLot(batch),
 		produit: batch.produit?.nom ?? '—',
 		gtin: batch.produit?.code_gtin ?? '—',
 		dlc: fmtDate(batch.date_peremption),
