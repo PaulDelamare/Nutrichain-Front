@@ -1,3 +1,4 @@
+import { numeroLot } from '$lib/utils/lots/lotLabel';
 import { fail } from '@sveltejs/kit';
 import type { Actions, PageServerLoad } from './$types';
 import { getEquipment, getProductsForConfig } from '$lib/Api/organization.server';
@@ -26,7 +27,7 @@ export const load: PageServerLoad = async ({ fetch, cookies }) => {
 					.filter((b) => CONSOMMABLE.has(b.statut))
 					.map((b) => ({
 						id: b.id,
-						label: `${b.lot_number ?? b.id.slice(0, 8)} — ${b.produit?.nom ?? '—'} (${b.quantite_actuelle} ${b.unite_code})`,
+						label: `${numeroLot(b)} — ${b.produit?.nom ?? '—'} (${b.quantite_actuelle} ${b.unite_code})`,
 						unite: b.unite_code
 					}))
 			: [],

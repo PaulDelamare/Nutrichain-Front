@@ -1,3 +1,4 @@
+import { numeroLot } from '$lib/utils/lots/lotLabel';
 import { fail } from '@sveltejs/kit';
 import type { Actions, PageServerLoad } from './$types';
 import { createShipment } from '$lib/Api/logistics.server';
@@ -39,7 +40,7 @@ export const load: PageServerLoad = async ({ fetch, cookies }) => {
 					.filter((b) => EXPEDIABLE.has(b.statut))
 					.map((b) => ({
 						id: b.id,
-						label: `${b.lot_number ?? b.id.slice(0, 8)} — ${b.produit?.nom ?? '—'} (${b.quantite_actuelle} ${b.unite_code})`,
+						label: `${numeroLot(b)} — ${b.produit?.nom ?? '—'} (${b.quantite_actuelle} ${b.unite_code})`,
 						max: Number(b.quantite_actuelle)
 					}))
 			: []

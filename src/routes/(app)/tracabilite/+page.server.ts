@@ -1,4 +1,5 @@
 import type { PageServerLoad } from './$types';
+import { numeroLot } from '$lib/utils/lots/lotLabel';
 import { getBatchList, getGenealogy } from '$lib/Api/traceability.server';
 import { genealogyToGraph } from '$lib/utils/org/mappers';
 
@@ -13,7 +14,7 @@ export const load: PageServerLoad = async ({ fetch, cookies, url }) => {
 	const batchOptions = batches.data.map((b) => ({
 		id: b.id,
 		nom: b.produit?.nom ?? 'Produit',
-		lotNumber: b.lot_number ?? b.id.slice(0, 8),
+		lotNumber: numeroLot(b),
 		statut: b.statut
 	}));
 

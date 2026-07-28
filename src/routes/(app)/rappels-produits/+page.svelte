@@ -6,6 +6,7 @@
 	import SearchSelect from '$lib/components/ui/SearchSelect.svelte';
 	import ActionReservee from '$lib/components/ui/ActionReservee.svelte';
 	import { peutDeciderQualite } from '$lib/config/roles';
+	import { libelleLotRappel } from '$lib/utils/lots/lotLabel';
 	import { usePageSearch } from '$lib/context/pageSearch.svelte';
 	import { filterRowsByText } from '$lib/utils/pageSearch/filterByText';
 	import type { ActionData, PageData } from './$types';
@@ -15,7 +16,7 @@
 	const lotOptions = $derived(
 		data.batches.map((b) => ({
 			value: b.id,
-			label: `${b.produit?.nom ?? 'Produit'} — ${b.lot_number ?? b.id.slice(0, 8)} (${b.statut})`
+			label: libelleLotRappel(b)
 		}))
 	);
 
