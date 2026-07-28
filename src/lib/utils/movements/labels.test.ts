@@ -51,4 +51,31 @@ describe('movementEventLabel', () => {
 	it('dégrade sur un ObjectEvent générique pour un type non répertorié', () => {
 		expect(movementEventLabel('AUDIT_MANUEL')).toBe('ObjectEvent — AUDIT_MANUEL');
 	});
+
+	/**
+	 * #81 — Le repli générique est une roue de secours, pas une traduction : il recrache le code de
+	 * l'API tel quel. Deux types réels y tombaient (`DEPLACEMENT`, `MISE_AU_REBUT`), et le tableau
+	 * de bord affichait « ObjectEvent — DEPLACEMENT » dans l'activité récente.
+	 *
+	 * La liste est celle de l'API (`logistics.constants.ts` → `MOVEMENT_TYPES`), recopiée ici faute
+	 * de dépôt commun : ce test échoue le jour où l'API en ajoute un et qu'on l'oublie ici.
+	 */
+	it('traduit chaque type de mouvement émis par l’API (#81)', () => {
+		const TYPES_API = [
+			'RECEPTION',
+			'CONTROLE_QUALITE',
+			'TRANSFORMATION_ENTREE',
+			'TRANSFORMATION_SORTIE',
+			'EXPEDITION',
+			'QUARANTAINE_FROID',
+			'LEVEE_QUARANTAINE',
+			'RAPPEL',
+			'DEPLACEMENT',
+			'MISE_AU_REBUT'
+		];
+
+		for (const type of TYPES_API) {
+			expect(movementEventLabel(type), `type ${type} non traduit`).not.toContain(type);
+		}
+	});
 });

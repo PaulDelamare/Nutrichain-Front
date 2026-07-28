@@ -8,6 +8,9 @@ export type NcRow = {
 };
 
 export type QuarantineLot = {
-	lot: string;
+	/** Identifiant technique — lien vers la fiche et formulaire de levée. Jamais affiché (#81). */
+	id: string;
+	/** Le numéro lu sur l'étiquette : c'est ce que voit l'opérateur. */
+	numero: string;
 	detail: string;
 };

@@ -24,9 +24,11 @@ describe('pendingQcToLots', () => {
 		expect(lot.lot).toBe('260713-000203');
 	});
 
+	// #81 — Le repli est celui de `numeroLot`, comme dans les autres écrans : cette fonction en
+	// gardait une variante qui, elle, passait le préfixe en majuscules.
 	it('retombe sur un identifiant court quand le lot n’a pas de numéro GS1', () => {
 		const [lot] = pendingQcToLots([batch({ lot_number: null })]);
-		expect(lot.lot).toBe('AAAAAAAA');
+		expect(lot.lot).toBe('aaaaaaaa');
 		expect(lot.lot).not.toContain('-');
 	});
 

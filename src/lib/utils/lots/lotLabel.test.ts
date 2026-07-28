@@ -43,29 +43,40 @@ describe('libelleLotRappel', () => {
  * #80 — La règle « numéro de lot, ou repli court » était recopiée dans cinq écrans et oubliée dans
  * un sixième. Le défaut n'était pas une faute de frappe : c'était une règle métier sans propriétaire.
  *
- * Ce test échoue si un écran la réécrit à la main au lieu d'appeler `numeroLot`.
+ * #81 — La garde ne surveillait que `src/routes`, et seulement la forme `?? id.slice(0, 8)`. Quatre
+ * autres copies vivaient dans `src/lib`, dont trois SANS troncature : l'arbre de traçabilité
+ * affichait l'UUID entier. Elle couvre désormais tout le code applicatif et toute réécriture de la
+ * règle, quelle qu'en soit la variante.
+ *
+ * Ce test échoue si un fichier la réécrit à la main au lieu d'appeler `numeroLot`.
  */
 describe('la règle de nommage d’un lot n’est écrite qu’une fois (#80)', () => {
-	it('aucun écran ne recopie le repli sur l’identifiant', () => {
-		const racine = path.join(process.cwd(), 'src', 'routes');
+	it('aucun fichier ne recopie le repli sur l’identifiant', () => {
 		const fautifs: string[] = [];
+		const proprietaire = path.join('src', 'lib', 'utils', 'lots', 'lotLabel.ts');
 
 		const parcourir = (dossier: string) => {
 			for (const entree of readdirSync(dossier)) {
 				const chemin = path.join(dossier, entree);
+				const relatif = path.relative(process.cwd(), chemin);
+
 				if (statSync(chemin).isDirectory()) parcourir(chemin);
-				else if (/\.(ts|svelte)$/.test(chemin) && !chemin.includes('.test.')) {
+				else if (
+					/\.(ts|svelte)$/.test(chemin) &&
+					!chemin.includes('.test.') &&
+					relatif !== proprietaire
+				) {
 					readFileSync(chemin, 'utf-8')
 						.split('\n')
 						.forEach((ligne, index) => {
-							if (/lot_number\s*\?\?[^\n]*\.slice\(\s*0\s*,\s*8\s*\)/.test(ligne)) {
-								fautifs.push(`${path.relative(process.cwd(), chemin)}:${index + 1}`);
-							}
+							if (/lot_number\s*\?\?/.test(ligne)) fautifs.push(`${relatif}:${index + 1}`);
 						});
 				}
 			}
 		};
-		parcourir(racine);
+
+		parcourir(path.join(process.cwd(), 'src', 'routes'));
+		parcourir(path.join(process.cwd(), 'src', 'lib'));
 
 		expect(fautifs).toEqual([]);
 	});

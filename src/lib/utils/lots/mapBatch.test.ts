@@ -110,6 +110,22 @@ describe('batchToSheet — la fiche lot', () => {
 		});
 	});
 
+	/**
+	 * #81 — La fiche était titrée « Fiche lot aaaaaaaa-bbbb-… » alors que l'utilisateur venait d'y
+	 * arriver en cliquant sur « 260711-000201 ». L'identifiant technique reste dans l'URL ; le
+	 * numéro d'étiquette doit exister dans la fiche pour pouvoir la titrer.
+	 */
+	it('porte le numéro d’étiquette en plus de l’identifiant technique (#81)', () => {
+		const sheet = batchToSheet(batchComplet());
+
+		expect(sheet.id).toBe('aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee');
+		expect(sheet.lotNumber).toBe('260711-000201');
+	});
+
+	it('se replie sur un préfixe court quand le lot n’a pas de numéro', () => {
+		expect(batchToSheet(batchComplet({ lot_number: null })).lotNumber).toBe('aaaaaaaa');
+	});
+
 	it('retombe sur le code unité quand l’unité n’a pas de nom', () => {
 		expect(batchToSheet(batchComplet({ unite: undefined })).quantite).toBe('500 KG');
 	});

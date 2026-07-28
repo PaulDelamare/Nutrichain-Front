@@ -40,6 +40,10 @@ export const MOVEMENT_CHART_COLORS: Record<MovementChartType, string> = {
 	AUTRE: '#94a3b8'
 };
 
+/**
+ * Doit couvrir tout `MOVEMENT_TYPES` de l'API (`logistics.constants.ts`) : ce qui manque ici sort
+ * tel quel dans l'activité récente du tableau de bord — « ObjectEvent — DEPLACEMENT » (#81).
+ */
 export const MOVEMENT_EVENT_LABELS: Record<string, string> = {
 	RECEPTION: 'ObjectEvent — réception',
 	EXPEDITION: 'TransactionEvent — expédition',
@@ -50,7 +54,9 @@ export const MOVEMENT_EVENT_LABELS: Record<string, string> = {
 	TRANSFORMATION_SORTIE: 'TransformationEvent — consommation',
 	CONTROLE_QUALITE: 'ObjectEvent — contrôle qualité',
 	LEVEE_QUARANTAINE: 'ObjectEvent — levée de quarantaine',
-	RAPPEL: 'TransactionEvent — rappel produit'
+	RAPPEL: 'TransactionEvent — rappel produit',
+	DEPLACEMENT: 'ObjectEvent — changement d’emplacement',
+	MISE_AU_REBUT: 'ObjectEvent — mise au rebut'
 };
 
 export function movementEventLabel(type: string): string {

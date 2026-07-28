@@ -38,8 +38,10 @@
 		Retour
 	</a>
 
+	<!-- L'UUID reste dans l'URL. Le titre reprend le numéro sur lequel l'utilisateur vient de
+	     cliquer depuis la recherche (#81). -->
 	<PageHead
-		heading="Fiche lot {data.sheet.id}"
+		heading="Fiche lot {data.sheet.lotNumber}"
 		description="Produit, dates, statut, historique, température, évènements EPCIS, localisation et carte."
 	/>
 </header>

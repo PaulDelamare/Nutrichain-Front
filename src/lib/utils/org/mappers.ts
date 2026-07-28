@@ -16,7 +16,9 @@ import type { AppUser } from '$lib/types/user';
 import type { TraceGraph } from '$lib/types/trace';
 import type { StoreStat, StoreBrief } from '$lib/types/portail';
 import { movementEventLabel } from '$lib/utils/movements/labels';
+import { numeroLot } from '$lib/utils/lots/lotLabel';
 import { toColdAlertUiStatus } from '$lib/vocab/alertSeverity';
+import { batchStatusLabel } from '$lib/vocab/batchStatus';
 import { normalizeQualityResult, openQualityIssues } from './quality';
 
 const ROLE_LABELS: Record<string, string> = {
@@ -142,12 +144,18 @@ export function qualityToNc(rows: ApiQualityControl[]): NcRow[] {
 	});
 }
 
+/**
+ * Le panneau « Lots en quarantaine » affichait l'UUID en guise d'intitulé et « bloque » en guise de
+ * statut (#81). L'identifiant reste nécessaire — lien vers la fiche, formulaire de levée — mais il
+ * ne s'affiche plus : c'est `numero` que l'opérateur a sous les yeux sur l'étiquette.
+ */
 export function batchesToQuarantine(
-	batches: { id: string; produit?: { nom: string }; statut: string }[]
+	batches: { id: string; lot_number?: string | null; produit?: { nom: string }; statut: string }[]
 ): QuarantineLot[] {
 	return batches.map((b) => ({
-		lot: b.id,
-		detail: `${b.produit?.nom ?? 'Lot'} — ${b.statut.toLowerCase().replace('_', ' ')}`
+		id: b.id,
+		numero: numeroLot(b),
+		detail: `${b.produit?.nom ?? 'Lot'} — ${batchStatusLabel(b.statut)}`
 	}));
 }
 
@@ -186,12 +194,30 @@ export function alertsToRappels(alerts: ApiAlert[]): Recall[] {
 		});
 }
 
-export function movementsToEvents(movements: ApiMovement[]): EpcisEvent[] {
-	return movements.map((m) => ({
-		when: fmtWhen(m.created_at),
-		title: movementEventLabel(m.type_action),
-		meta: `Lot ${m.lot?.id ?? '—'} · ${m.lot?.produit?.nom ?? ''}`.trim()
-	}));
+/**
+ * L'activité récente annonçait « Lot a26b8f1f-f569-44be-… » — un UUID sur le premier écran de la
+ * démonstration (#81). L'API ne joint pas le numéro d'étiquette à ses mouvements
+ * (`organization.service.ts` ne sélectionne que `{ id, produit }`) : on le retrouve dans le
+ * catalogue que la page charge déjà pour son camembert, et à défaut on tronque.
+ */
+export function movementsToEvents(
+	movements: ApiMovement[],
+	catalogue: { id: string; lot_number?: string | null }[] = []
+): EpcisEvent[] {
+	// On indexe les numéros bruts et on ne calcule le repli qu'à la lecture : inutile de tronquer
+	// 500 identifiants pour en afficher cinq.
+	const numeroParLot = new Map(catalogue.map((b) => [b.id, b.lot_number]));
+
+	return movements.map((m) => {
+		const id = m.lot?.id;
+		const numero = id ? (numeroParLot.get(id) ?? numeroLot({ id })) : '—';
+
+		return {
+			when: fmtWhen(m.created_at),
+			title: movementEventLabel(m.type_action),
+			meta: `Lot ${numero} · ${m.lot?.produit?.nom ?? ''}`.trim()
+		};
+	});
 }
 
 /**
@@ -256,6 +282,12 @@ export function buildDashboardTasks(alerts: ApiAlert[], qualityCount: number): T
 	return tasks;
 }
 
+/**
+ * L'arbre parlait sa propre langue : « Statut EPUISE » et un badge « BLOQUE » là où la recherche de
+ * lots affichait « Épuisé » et « Quarantaine » pour les mêmes lots, et l'UUID entier en guise de
+ * numéro quand l'API n'en joignait pas (#81). Un écran de traçabilité qui ne nomme pas les choses
+ * comme le reste de l'application donne l'impression de parler d'autres lots.
+ */
 export function genealogyToGraph(
 	genealogy: ApiGenealogy,
 	selected: ApiBatch | undefined
@@ -263,40 +295,94 @@ export function genealogyToGraph(
 	return {
 		upstream: genealogy.upstream.map((b) => ({
 			phase: 'Lot parent',
-			title: `${b.nom_produit} — ${b.lot_number ?? b.id}`,
-			detail: `Statut ${b.statut}`,
+			title: `${b.nom_produit} — ${numeroLot(b)}`,
+			detail: `Statut ${batchStatusLabel(b.statut)}`,
 			icon: 'amont' as const
 		})),
 		selected: {
 			phase: 'Lot analysé',
 			title: selected
-				? `${selected.produit?.nom ?? 'Produit'} — ${selected.lot_number ?? selected.id}`
+				? `${selected.produit?.nom ?? 'Produit'} — ${numeroLot(selected)}`
 				: genealogy.batchId,
-			badge: selected ? { label: selected.statut, variant: 'green' } : undefined,
+			badge: selected ? { label: batchStatusLabel(selected.statut), variant: 'green' } : undefined,
 			icon: 'transform'
 		},
 		downstream: genealogy.downstream.map((b) => ({
 			phase: 'Lot issu',
-			title: `${b.nom_produit} — ${b.lot_number ?? b.id}`,
-			detail: `Statut ${b.statut}`,
-			badge: { label: b.statut, variant: 'blue' },
+			title: `${b.nom_produit} — ${numeroLot(b)}`,
+			detail: `Statut ${batchStatusLabel(b.statut)}`,
+			badge: { label: batchStatusLabel(b.statut), variant: 'blue' },
 			icon: 'aval' as const
 		}))
 	};
 }
 
+/**
+ * Doit couvrir toutes les actions que l'API sait écrire : le journal d'audit affichait
+ * « CREATE_SHIPMENT » et « MOVE_BATCH » entre deux lignes correctement traduites (#81). C'est la
+ * piste WORM qu'on montre pour prouver l'inviolabilité de la traçabilité — elle doit se lire.
+ *
+ * Les marqueurs `IT_*` écrits par les tests d'intégration de l'API n'y figurent pas : ils ne
+ * doivent jamais apparaître dans le journal d'une organisation réelle.
+ */
 const AUDIT_ACTION_LABELS: Record<string, string> = {
 	ADD: 'Ajout',
 	CREATE: 'Création',
+	UPDATE: 'Modification',
+	INIT: 'Initialisation',
 	OBSERVE: 'Observation',
+
+	CREATE_ORGANIZATION: 'Organisation créée',
+	TRANSFER_OWNERSHIP: 'Transfert de propriété',
+	CHANGE_MEMBER_ROLE: 'Rôle modifié',
+	REVOKE_MEMBER: 'Accès révoqué',
+	USER_ANONYMIZED: 'Utilisateur anonymisé',
+
 	CREATE_EQUIPMENT: 'Matériel créé',
+	CREATE_IOT_GATEWAY: 'Passerelle IoT créée',
+	REVOKE_IOT_GATEWAY: 'Passerelle IoT révoquée',
+	CREATE_LOCATION: 'Emplacement créé',
+	UPDATE_LOCATION: 'Emplacement modifié',
+	ARCHIVE_LOCATION: 'Emplacement archivé',
+	REACTIVATE_LOCATION: 'Emplacement réactivé',
+
+	CREATE_PRODUCT: 'Produit créé',
+	UPDATE_PRODUCT: 'Produit modifié',
+	ARCHIVE_PRODUCT: 'Produit archivé',
+	IMPORT_CREATE_PRODUCT: 'Produit créé (import)',
+	IMPORT_UPDATE_PRODUCT: 'Produit modifié (import)',
+
+	CREATE_SUPPLIER: 'Fournisseur créé',
+	UPDATE_SUPPLIER: 'Fournisseur modifié',
+	ARCHIVE_SUPPLIER: 'Fournisseur archivé',
+	REACTIVATE_SUPPLIER: 'Fournisseur réactivé',
+
+	CREATE_CUSTOMER: 'Client créé',
+	UPDATE_CUSTOMER: 'Client modifié',
+	ARCHIVE_CUSTOMER: 'Client archivé',
+	REACTIVATE_CUSTOMER: 'Client réactivé',
+	IMPORT_CREATE_CUSTOMER: 'Client créé (import)',
+	IMPORT_UPDATE_CUSTOMER: 'Client modifié (import)',
+
+	RECEPTION: 'Réception',
 	CREATE_RECEIPT: 'Réception enregistrée',
 	CREATE_RECEIPT_VIA_SYNC: 'Réception (mobile)',
+	CREATE_SHIPMENT: 'Expédition créée',
+	EXPEDITION: 'Expédition',
+	DEPLACEMENT: 'Changement d’emplacement',
+	MOVE_BATCH: 'Lot déplacé',
+	SCRAP_BATCH: 'Lot mis au rebut',
+	MISE_AU_REBUT: 'Mise au rebut',
+
+	CONTROLE_QUALITE: 'Contrôle qualité',
+	CREATE_QUALITY_CONTROL: 'Contrôle qualité enregistré',
 	LIFT_BATCH_QUARANTINE: 'Levée de quarantaine',
+	LEVEE_QUARANTAINE: 'Levée de quarantaine',
+	QUARANTAINE_FROID: 'Quarantaine froid',
 	BATCH_RECALL_TRIGGERED: 'Rappel déclenché',
 	ALERT_RESOLVED: 'Alerte résolue',
-	EXPEDITION: 'Expédition',
 	TEMP_EXCURSION_DETECTED: 'Excursion de température',
+
 	TRANSFORM_CONSUME: 'Transformation — consommation',
 	TRANSFORM_CREATE: 'Transformation — production',
 	TRANSFORMATION_ENTREE: 'Transformation — entrée',
@@ -307,7 +393,10 @@ function auditDetail(l: ApiAuditLog): string {
 	const nv = l.nouvelle_valeur;
 	const ov = l.ancienne_valeur;
 	if (nv && typeof nv.motif === 'string' && nv.motif.trim()) return nv.motif.trim();
-	if (ov?.statut && nv?.statut && ov.statut !== nv.statut) return `${ov.statut} → ${nv.statut}`;
+	// « EN_ATTENTE_QC → BLOQUE » se lisait tel quel dans le journal (#81).
+	if (ov?.statut && nv?.statut && ov.statut !== nv.statut) {
+		return `${batchStatusLabel(String(ov.statut))} → ${batchStatusLabel(String(nv.statut))}`;
+	}
 	return '';
 }
 

@@ -22,17 +22,19 @@
 		<p class="empty">Aucun lot en quarantaine.</p>
 	{:else}
 		<ul>
-			{#each lots as item (item.lot)}
+			{#each lots as item (item.id)}
 				<li>
 					<p class="lot">
-						<a href={resolve('/(app)/fiche-lot/[lotId]', { lotId: encodeURIComponent(item.lot) })}>
-							{item.lot}
+						<!-- L'identifiant technique voyage dans le lien et le formulaire ; ce qui s'affiche
+						     est le numéro d'étiquette (#81). -->
+						<a href={resolve('/(app)/fiche-lot/[lotId]', { lotId: encodeURIComponent(item.id) })}>
+							{item.numero}
 						</a>
 						— {item.detail}
 					</p>
 					{#if peutLever}
 						<form method="POST" action="?/release" class="release">
-							<input type="hidden" name="lotId" value={item.lot} />
+							<input type="hidden" name="lotId" value={item.id} />
 							<input
 								type="text"
 								name="motif"

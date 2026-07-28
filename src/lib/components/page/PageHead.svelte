@@ -7,6 +7,15 @@
 	let { heading, description }: Props = $props();
 </script>
 
+<!--
+	Le titre de l'onglet est composé ici, pas écran par écran : l'intitulé est déjà passé au
+	composant, le répéter dans chaque page, c'est vingt occasions de le laisser diverger. Avant, il
+	n'y en avait aucun (#81) — trois onglets ouverts en démonstration étaient indiscernables.
+-->
+<svelte:head>
+	<title>{heading} — NutriChain</title>
+</svelte:head>
+
 <header class="page-head">
 	<h2>{heading}</h2>
 	{#if description}

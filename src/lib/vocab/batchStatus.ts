@@ -1,4 +1,5 @@
 import type { LotStatus } from '$lib/types/lot';
+import { lotStatusLabel } from '$lib/utils/lots/lotStatusLabel';
 
 /**
  * Statuts de lot émis par l’API (`logistics.constants.ts` → `BATCH_STATUSES`).
@@ -17,24 +18,6 @@ export const BATCH_STATUSES = {
 
 export type ApiBatchStatus = (typeof BATCH_STATUSES)[keyof typeof BATCH_STATUSES];
 
-/** Libellés du donut « répartition des lots » (codes API bruts). */
-export const BATCH_STATUS_LABELS: Record<string, string> = {
-	[BATCH_STATUSES.EN_STOCK]: 'En stock',
-	[BATCH_STATUSES.EN_PRODUCTION]: 'En production',
-	[BATCH_STATUSES.EN_ATTENTE_QC]: 'En attente de contrôle',
-	[BATCH_STATUSES.BLOQUE]: 'Bloqué',
-	[BATCH_STATUSES.ALERTE]: 'Sous rappel',
-	[BATCH_STATUSES.EXPEDIE]: 'Expédié',
-	[BATCH_STATUSES.EPUISE]: 'Épuisé',
-	[BATCH_STATUSES.REBUT]: 'Mis au rebut',
-	// Alias historiques encore rencontrés en démo / anciennes données
-	QUARANTAINE: 'Bloqué',
-	QUARANTINE: 'Bloqué',
-	SURVEILLANCE: 'Sous rappel',
-	PRET: 'En stock',
-	PERIME: 'Périmé'
-};
-
 export const BATCH_STATUS_COLORS: Record<string, string> = {
 	[BATCH_STATUSES.EN_STOCK]: '#1b6b5c',
 	[BATCH_STATUSES.EN_PRODUCTION]: '#8fd4c5',
@@ -51,8 +34,25 @@ export const BATCH_STATUS_COLORS: Record<string, string> = {
 	PERIME: '#94a3b8'
 };
 
+/**
+ * Libellé humain d'un statut renvoyé par l'API.
+ *
+ * Il n'y a QU'UNE table de libellés dans le front, celle des badges de lot (`lotStatusLabel`) :
+ * cette fonction n'est que le chemin qui y mène depuis un code API. Il y en avait deux — le
+ * camembert du tableau de bord disait « Bloqué » là où la recherche disait « Quarantaine » pour le
+ * même lot, et « En stock » là où elle disait « Conforme » (#81).
+ */
 export function batchStatusLabel(statut: string): string {
-	return BATCH_STATUS_LABELS[statut] ?? statut.replace(/_/g, ' ').toLowerCase();
+	const projete = toLotStatus(statut);
+
+	// Un code que le front ne connaît pas encore : on le rend lisible plutôt que de le noyer sous
+	// un « Inconnu » commun, qui donnerait deux parts de camembert portant la même légende.
+	if (projete === 'inconnu') {
+		const mots = statut.replace(/_/g, ' ').toLowerCase();
+		return mots.charAt(0).toUpperCase() + mots.slice(1);
+	}
+
+	return lotStatusLabel(projete);
 }
 
 export function batchStatusColor(statut: string): string {
