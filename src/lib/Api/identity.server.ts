@@ -21,5 +21,7 @@ export function sendInvitation(
 }
 
 export function getInvitationPreview(fetch: typeof globalThis.fetch, token: string) {
-	return api(fetch).get<InvitationPreview>(`/api/identity/invitations/${token}/preview`);
+	return api(fetch).get<InvitationPreview>(
+		`/api/identity/invitations/${encodeURIComponent(token)}/preview`
+	);
 }

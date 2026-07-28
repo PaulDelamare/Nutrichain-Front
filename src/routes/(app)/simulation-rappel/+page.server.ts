@@ -1,6 +1,6 @@
 import type { PageServerLoad, Actions } from './$types';
 import { fail } from '@sveltejs/kit';
-import { getBatchList, getBatchGenealogy } from '$lib/Api/traceability.server';
+import { getBatchList, getGenealogy } from '$lib/Api/traceability.server';
 
 type LotOption = { id: string; produit: string };
 
@@ -28,7 +28,7 @@ export const actions: Actions = {
 			return fail(400, { message: 'Sélectionnez un lot à simuler.' });
 		}
 
-		const res = await getBatchGenealogy(fetch, cookies, lotId);
+		const res = await getGenealogy(fetch, cookies, lotId);
 
 		if (!res.ok) {
 			return fail(res.status, { message: res.message });

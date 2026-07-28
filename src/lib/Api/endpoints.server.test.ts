@@ -206,12 +206,6 @@ const routes: [nom: string, appel: () => unknown, methode: string, chemin: strin
 		'/api/traceability/batches/lot-1/genealogy'
 	],
 	[
-		'getBatchGenealogy',
-		() => trace.getBatchGenealogy(fetchEspion, cookies, 'lot-1'),
-		'GET',
-		'/api/traceability/batches/lot-1/genealogy'
-	],
-	[
 		'triggerRecall',
 		() => trace.triggerRecall(fetchEspion, cookies, 'lot-1', 'Listeria'),
 		'POST',
@@ -470,6 +464,11 @@ describe('choix du mode d’authentification', () => {
 		['importProductsCsv', () => connectors.importProductsCsv(fetchEspion, cookies, 'csv')],
 		['getBatchById', () => logistics.getBatchById(fetchEspion, cookies, 'lot-1')],
 		['getAlertBatches', () => alerts.getAlertBatches(fetchEspion, cookies, 'alert-1')],
+		// La route API est gardée par `requireAuth` + `requireOrgRole` : la clé n'y sert à rien, et
+		// l'envoyer expédiait un secret serveur sur un appel qui ne le demande pas. Deux fonctions
+		// frappaient cet endpoint, l'une avec la clé et l'autre sans — c'est cette duplication qui
+		// avait laissé passer le défaut d'encodage de #78.
+		['getGenealogy', () => trace.getGenealogy(fetchEspion, cookies, 'lot-1')],
 		[
 			'createReceipt',
 			() =>
@@ -507,5 +506,86 @@ describe('choix du mode d’authentification', () => {
 describe('batchLabelPath', () => {
 	it('encode l’identifiant du lot dans le lien d’étiquette', () => {
 		expect(logistics.batchLabelPath('lot/1')).toBe('/fiche-lot/lot%2F1/label');
+	});
+});
+
+/**
+ * #78 — Le jeton d'invitation était interpolé dans le chemin sans encodage, sur une page
+ * ACCESSIBLE SANS AUTHENTIFICATION et sans validation de forme. Un jeton contenant `../` sortait
+ * donc du préfixe de la route : la requête partait ailleurs, avec l'en-tête `x-api-key` du front —
+ * un secret serveur que le visiteur ne possède pas. Il choisissait le chemin d'un GET émis sous
+ * l'identité applicative du front.
+ *
+ * L'assertion porte sur la NORMALISATION réelle d'une URL, pas sur une comparaison de chaîne :
+ * c'est `fetch` qui résout `..`, et c'est donc son résultat qui doit rester dans le préfixe.
+ */
+describe('traversée de chemin par un identifiant hostile (#78)', () => {
+	const HOSTILE = '../../auth/sign-up/email';
+
+	const cheminNormalise = () => new URL(chemin(), 'http://api.test').pathname;
+
+	it('le jeton d’invitation ne peut pas sortir de sa route', async () => {
+		await identity.getInvitationPreview(fetchEspion, HOSTILE);
+
+		expect(cheminNormalise()).toMatch(/^\/api\/identity\/invitations\//);
+		expect(cheminNormalise()).not.toContain('/api/auth/');
+	});
+
+	/**
+	 * Même classe, mêmes conséquences, et ces appels partagent le fichier avec des fonctions qui,
+	 * elles, encodaient déjà : la règle était connue et appliquée à moitié.
+	 */
+	it('la généalogie par identifiant ne peut pas sortir de sa route', async () => {
+		await trace.getGenealogy(fetchEspion, cookies, HOSTILE);
+
+		expect(cheminNormalise()).toMatch(/^\/api\/traceability\/batches\//);
+	});
+
+	it('un identifiant de membre ne peut pas sortir de sa route', async () => {
+		await org.revokeMember(fetchEspion, cookies, HOSTILE);
+
+		expect(cheminNormalise()).toMatch(/^\/api\/organization\/members\//);
+	});
+
+	it('un identifiant de lot logistique ne peut pas sortir de sa route', async () => {
+		await logistics.getBatchById(fetchEspion, cookies, HOSTILE);
+
+		expect(cheminNormalise()).toMatch(/^\/api\/logistics\/batches\//);
+	});
+});
+
+/**
+ * #78 — Le défaut n'était pas l'ignorance de la règle : six appels de ce dossier encodaient déjà
+ * leur identifiant. Elle était appliquée à MOITIÉ — au point que deux fonctions frappaient le MÊME
+ * endpoint de généalogie, l'une en encodant et l'autre non. Le doublon a depuis été fusionné.
+ *
+ * Une revue ne rattrape pas ça de façon fiable. Ce test relit les clients d'API et échoue si un
+ * segment de chemin est interpolé sans encodage. C'est ce qui empêche la quatrième occurrence.
+ */
+describe('tout segment de chemin est encodé (#78)', () => {
+	it('aucun client d’API n’interpole un identifiant brut dans un chemin', async () => {
+		const { readdirSync, readFileSync } = await import('fs');
+		const { join } = await import('path');
+
+		const dossier = join(process.cwd(), 'src', 'lib', 'Api');
+		const fautifs: string[] = [];
+
+		for (const nom of readdirSync(dossier)) {
+			if (!nom.endsWith('.server.ts') || nom.includes('.test.')) continue;
+			const source = readFileSync(join(dossier, nom), 'utf-8');
+
+			source.split('\n').forEach((ligne, index) => {
+				// Un `${…}` précédé d'un `/` DANS un gabarit de chemin `/api/…` : c'est un segment.
+				// Les chaînes de requête (`?limit=${…}`) sont hors sujet — elles ne traversent pas.
+				for (const m of ligne.matchAll(/`\/api\/[^`]*?\/\$\{([^}]+)\}/g)) {
+					const expression = m[1];
+					if (!expression.includes('encodeURIComponent')) {
+						fautifs.push(`${nom}:${index + 1} → \${${expression}}`);
+					}
+				}
+			});
+		}
+
+		expect(fautifs).toEqual([]);
 	});
 });

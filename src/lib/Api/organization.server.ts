@@ -119,13 +119,16 @@ export const changeMemberRole = (
 	memberId: string,
 	role: string
 ) =>
-	api(fetch, cookies, { useApiKey: false }).patch(`/api/organization/members/${memberId}/role`, {
-		role
-	});
+	api(fetch, cookies, { useApiKey: false }).patch(
+		`/api/organization/members/${encodeURIComponent(memberId)}/role`,
+		{
+			role
+		}
+	);
 
 export const revokeMember = (fetch: typeof globalThis.fetch, cookies: Cookies, memberId: string) =>
 	api(fetch, cookies, { useApiKey: false }).post(
-		`/api/organization/members/${memberId}/revoke`,
+		`/api/organization/members/${encodeURIComponent(memberId)}/revoke`,
 		{}
 	);
 
@@ -237,7 +240,11 @@ export const updateSupplier = (
 		type_produit: string;
 		contact_qualite: string;
 	}>
-) => orgApi(fetch, cookies).patch<ApiSupplier>(`/api/organization/suppliers/${id}`, body);
+) =>
+	orgApi(fetch, cookies).patch<ApiSupplier>(
+		`/api/organization/suppliers/${encodeURIComponent(id)}`,
+		body
+	);
 
 export const setSupplierActive = (
 	fetch: typeof globalThis.fetch,
@@ -245,7 +252,10 @@ export const setSupplierActive = (
 	id: string,
 	active: boolean
 ) =>
-	orgApi(fetch, cookies).patch<ApiSupplier>(`/api/organization/suppliers/${id}/active`, { active });
+	orgApi(fetch, cookies).patch<ApiSupplier>(
+		`/api/organization/suppliers/${encodeURIComponent(id)}/active`,
+		{ active }
+	);
 
 export const getLocations = (
 	fetch: typeof globalThis.fetch,
@@ -274,7 +284,11 @@ export const updateLocation = (
 		latitude: number | null;
 		longitude: number | null;
 	}>
-) => orgApi(fetch, cookies).patch<ApiLocation>(`/api/organization/locations/${id}`, body);
+) =>
+	orgApi(fetch, cookies).patch<ApiLocation>(
+		`/api/organization/locations/${encodeURIComponent(id)}`,
+		body
+	);
 
 export const setLocationActive = (
 	fetch: typeof globalThis.fetch,
@@ -282,7 +296,10 @@ export const setLocationActive = (
 	id: string,
 	active: boolean
 ) =>
-	orgApi(fetch, cookies).patch<ApiLocation>(`/api/organization/locations/${id}/active`, { active });
+	orgApi(fetch, cookies).patch<ApiLocation>(
+		`/api/organization/locations/${encodeURIComponent(id)}/active`,
+		{ active }
+	);
 
 export const getCustomers = (
 	fetch: typeof globalThis.fetch,
@@ -305,7 +322,10 @@ export const setCustomerActive = (
 	id: string,
 	active: boolean
 ) =>
-	orgApi(fetch, cookies).patch<ApiCustomer>(`/api/organization/customers/${id}/active`, { active });
+	orgApi(fetch, cookies).patch<ApiCustomer>(
+		`/api/organization/customers/${encodeURIComponent(id)}/active`,
+		{ active }
+	);
 
 export type ApiProductFull = {
 	id: string;
@@ -343,9 +363,12 @@ export const setProductActive = (
 	id: string,
 	active: boolean
 ) =>
-	orgApi(fetch, cookies).patch<ApiProductFull>(`/api/organization/products/${id}/active`, {
-		active
-	});
+	orgApi(fetch, cookies).patch<ApiProductFull>(
+		`/api/organization/products/${encodeURIComponent(id)}/active`,
+		{
+			active
+		}
+	);
 
 export const getShipments = (fetch: typeof globalThis.fetch, cookies: Cookies) =>
 	orgApi(fetch, cookies).get<ApiShipment[]>('/api/organization/shipments');

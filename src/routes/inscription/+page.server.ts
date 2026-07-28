@@ -4,6 +4,9 @@ import { signUp } from '$lib/Api/auth.server';
 import { inviteRoleLabel } from '$lib/config/invite-roles';
 import { getInvitationPreview } from '$lib/Api/identity.server';
 
+/** Le jeton d'invitation EST l'id d'invitation, donc un UUID — même message qu'un jeton inconnu. */
+const EST_UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
 export const load: PageServerLoad = async ({ fetch, url, locals }) => {
 	if (locals.user) {
 		redirect(303, '/tableau-de-bord');
@@ -12,6 +15,13 @@ export const load: PageServerLoad = async ({ fetch, url, locals }) => {
 	const token = url.searchParams.get('token');
 	if (!token) {
 		return { invitation: null as null, token: null as null };
+	}
+
+	// Défense en profondeur (#78). L'encodage côté client d'API suffit à empêcher la traversée de
+	// chemin ; valider la FORME évite en plus qu'une valeur arbitraire parte vers l'API, depuis une
+	// page accessible sans authentification. Le jeton est l'id d'invitation : un UUID, rien d'autre.
+	if (!EST_UUID.test(token)) {
+		error(404, { message: 'Invitation invalide ou expirée.' });
 	}
 
 	const preview = await getInvitationPreview(fetch, token);
