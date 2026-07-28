@@ -7,3 +7,9 @@ bun.lockb
 
 # Miscellaneous
 /static/
+
+# Réglages locaux d'outils, non versionnés (ignorés par le .gitignore global de la machine).
+# Sans cette ligne, `npm run lint` est ROUGE en local pour quiconque utilise l'outil, alors qu'il
+# passe en CI — qui, elle, ne voit jamais ces fichiers. Un lint qui diverge entre le poste et la CI
+# finit par ne plus être lancé en local.
+/.claude/
