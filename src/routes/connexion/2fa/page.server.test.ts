@@ -65,4 +65,43 @@ describe('défi 2FA — vérification du code TOTP', () => {
 		expect(verifyTwoFactorTotp).not.toHaveBeenCalled();
 		expect(result).toMatchObject({ status: 400 });
 	});
+
+	/**
+	 * #77 — Redirection ouverte au point le plus sensible du parcours. L'utilisateur vient de valider
+	 * son second facteur : c'est le moment où il a le plus de raisons de croire qu'il est bien sur
+	 * NutriChain. L'envoyer alors sur un site tiers donne à une page clone une crédibilité maximale
+	 * pour redemander un mot de passe ou un nouveau code TOTP.
+	 *
+	 * La page de connexion assainissait déjà (`safeRedirect`) ; l'écran 2FA, non. La garde existait,
+	 * elle était testée, et elle manquait simplement sur une des deux portes.
+	 */
+	describe('cible de redirection non assainie (#77)', () => {
+		const cibleHostile = async (cible: string) => {
+			verifyTwoFactorTotp.mockResolvedValue({ ok: true });
+			const run = (mod as { actions: { default: (e: unknown) => Promise<unknown> } }).actions
+				.default;
+			const thrown = await run(event({ code: '123456' }, encodeURIComponent(cible))).catch(
+				(e: unknown) => e
+			);
+			return (thrown as { location: string }).location;
+		};
+
+		it('refuse une URL absolue vers un autre domaine', async () => {
+			expect(await cibleHostile('https://exemple-malveillant.tld')).toBe('/tableau-de-bord');
+		});
+
+		it('refuse une URL protocol-relative', async () => {
+			// `//evil.tld` est interprété par le navigateur comme un domaine externe, pas un chemin.
+			expect(await cibleHostile('//exemple-malveillant.tld')).toBe('/tableau-de-bord');
+		});
+
+		it('refuse un schéma exotique', async () => {
+			expect(await cibleHostile('javascript:alert(1)')).toBe('/tableau-de-bord');
+		});
+
+		it('laisse passer un chemin interne, qui reste le cas nominal', async () => {
+			// Le correctif ne doit pas casser la reprise du parcours après le défi 2FA.
+			expect(await cibleHostile('/rappels-produits')).toBe('/rappels-produits');
+		});
+	});
 });
