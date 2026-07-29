@@ -16,7 +16,14 @@
 {/if}
 
 <ul class="h-bars" role="list">
-	{#each segments as segment (segment.label)}
+	<!--
+		Clé = l'index, pas le libellé. Deux segments peuvent légitimement porter le même nom : le
+		tableau de bord affichait deux alertes « Critique », Svelte levait `each_key_duplicate`, et
+		l'exception remontait jusqu'au layout — la barre latérale disparaissait, l'utilisateur
+		arrivait sur la page d'accueil sans aucun menu (#89). Ces segments ne sont ni réordonnés ni
+		filtrés après rendu : l'index est une clé stable ici.
+	-->
+	{#each segments as segment, i (i)}
 		<li>
 			<div class="row-head">
 				<span class="label">{segment.label}</span>
