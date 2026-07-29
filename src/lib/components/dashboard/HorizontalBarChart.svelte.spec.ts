@@ -1,6 +1,6 @@
 import { page } from 'vitest/browser';
 import { describe, expect, it } from 'vitest';
-import { render } from 'vitest-browser-svelte';
+import { render, type SvelteComponentOptions } from 'vitest-browser-svelte';
 import HorizontalBarChart from './HorizontalBarChart.svelte';
 
 /**
@@ -17,7 +17,7 @@ describe('HorizontalBarChart', () => {
 					{ label: 'Modéré', value: 3, color: '#a76e07' }
 				]
 			}
-		});
+		} as unknown as SvelteComponentOptions<typeof HorizontalBarChart>);
 
 		await expect.element(page.getByText('Modéré')).toBeInTheDocument();
 	});
@@ -33,14 +33,16 @@ describe('HorizontalBarChart', () => {
 					{ label: 'Critique', value: 1, color: '#e0a53c' }
 				]
 			}
-		});
+		} as unknown as SvelteComponentOptions<typeof HorizontalBarChart>);
 
 		await expect.element(page.getByText('8')).toBeInTheDocument();
 		await expect.element(page.getByText('1')).toBeInTheDocument();
 	});
 
 	it('annonce l absence de donnees au lieu d afficher un graphique vide', async () => {
-		render(HorizontalBarChart, { props: { segments: [] } });
+		render(HorizontalBarChart, { props: { segments: [] } } as unknown as SvelteComponentOptions<
+			typeof HorizontalBarChart
+		>);
 
 		await expect.element(page.getByText('Aucune donnée.')).toBeInTheDocument();
 	});
