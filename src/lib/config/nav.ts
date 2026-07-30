@@ -104,6 +104,13 @@ export const navGroups: NavGroup[] = [
 				description: 'Flux sortants — destination, statut de livraison, lots embarqués.'
 			},
 			{
+				href: '/palettes',
+				label: 'Palettes',
+				title: 'Palettes',
+				heading: 'Palettes',
+				description: 'Retrouver une palette par son SSCC et imprimer son étiquette.'
+			},
+			{
 				href: '/transformations',
 				label: 'Transformations',
 				title: 'Transformations',
