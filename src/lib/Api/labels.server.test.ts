@@ -6,7 +6,7 @@ vi.mock('$env/dynamic/private', () => ({
 }));
 
 const { fetchEquipmentLabel } = await import('./organization.server');
-const { fetchBatchLabel } = await import('./logistics.server');
+const { fetchBatchLabel, fetchLogisticUnitLabel } = await import('./logistics.server');
 
 const cookies = {
 	getAll: () => [{ name: 'better-auth.session_token', value: 'jeton' }]
@@ -36,6 +36,11 @@ describe.each([
 		'fetchBatchLabel',
 		(fetch: typeof globalThis.fetch) => fetchBatchLabel(fetch, cookies, 'lot/1'),
 		'http://api.test/api/logistics/batches/lot%2F1/label'
+	],
+	[
+		'fetchLogisticUnitLabel',
+		(fetch: typeof globalThis.fetch) => fetchLogisticUnitLabel(fetch, cookies, 'palette/1'),
+		'http://api.test/api/logistics/logistic-units/palette%2F1/label'
 	]
 ])('%s', (_nom, telecharger, urlAttendue) => {
 	it('demande un PNG à la bonne route, identifiant encodé', async () => {

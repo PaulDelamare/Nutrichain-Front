@@ -34,15 +34,57 @@ export function getReceipts(
 	);
 }
 
+/** Une palette et ce qu'elle porte, tels que le scan d'un SSCC les rend. */
+export type ApiLogisticUnit = {
+	id: string;
+	sscc: string;
+	source: string;
+	created_at: string;
+	/** Un lot passé sous rappel APRÈS la palettisation — c'est ce qui rend le rappel actionnable. */
+	contient_lot_rappele: boolean;
+	/** Position déduite des lots. `null` si la palette n'est pas rangée, ou si ses lots divergent. */
+	id_materiel: string | null;
+	positions_divergentes: boolean;
+	lots: Array<{
+		id: string;
+		numero_lot: string;
+		produit: string;
+		gtin: string;
+		quantite: number;
+		unite: string;
+		statut: string;
+		date_peremption: string | null;
+	}>;
+};
+
+export function getLogisticUnitBySscc(
+	fetch: typeof globalThis.fetch,
+	cookies: Cookies,
+	sscc: string
+) {
+	return api(fetch, cookies, { useApiKey: false }).get<ApiLogisticUnit>(
+		`/api/logistics/logistic-units/by-sscc/${encodeURIComponent(sscc)}`
+	);
+}
+
 export function batchLabelPath(lotId: string): string {
 	return `/fiche-lot/${encodeURIComponent(lotId)}/label`;
 }
 
-export async function fetchBatchLabel(
+export type LabelDownload = { ok: true; buffer: ArrayBuffer } | { ok: false; message: string };
+
+/**
+ * Télécharge une étiquette PNG depuis l'API, session comprise.
+ *
+ * Ces téléchargements contournent l'enveloppe JSON du client : la réponse est une image. La
+ * session voyage par le cookie relayé — un `<img>` du navigateur, lui, ne la porterait pas vers
+ * l'API, qui refuserait en 401.
+ */
+async function fetchLabel(
 	fetch: typeof globalThis.fetch,
 	cookies: Cookies,
-	lotId: string
-): Promise<{ ok: true; buffer: ArrayBuffer } | { ok: false; message: string }> {
+	path: string
+): Promise<LabelDownload> {
 	const base = (env.API_URL ?? 'http://localhost:3000').replace(/\/$/, '');
 	const cookieHeader = cookies
 		.getAll()
@@ -50,7 +92,7 @@ export async function fetchBatchLabel(
 		.join('; ');
 
 	try {
-		const res = await fetch(`${base}/api/logistics/batches/${encodeURIComponent(lotId)}/label`, {
+		const res = await fetch(`${base}${path}`, {
 			headers: {
 				Accept: 'image/png',
 				...(cookieHeader ? { Cookie: cookieHeader } : {}),
@@ -69,6 +111,26 @@ export async function fetchBatchLabel(
 	} catch {
 		return { ok: false, message: 'API injoignable.' };
 	}
+}
+
+export function fetchBatchLabel(
+	fetch: typeof globalThis.fetch,
+	cookies: Cookies,
+	lotId: string
+): Promise<LabelDownload> {
+	return fetchLabel(fetch, cookies, `/api/logistics/batches/${encodeURIComponent(lotId)}/label`);
+}
+
+export function fetchLogisticUnitLabel(
+	fetch: typeof globalThis.fetch,
+	cookies: Cookies,
+	unitId: string
+): Promise<LabelDownload> {
+	return fetchLabel(
+		fetch,
+		cookies,
+		`/api/logistics/logistic-units/${encodeURIComponent(unitId)}/label`
+	);
 }
 
 export function releaseQuarantine(
