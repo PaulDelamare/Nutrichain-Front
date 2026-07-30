@@ -1,5 +1,6 @@
 import type { PageServerLoad } from './$types';
 import { getLogisticUnitBySscc } from '$lib/Api/logistics.server';
+import { getEquipment } from '$lib/Api/organization.server';
 import { normaliserSscc } from '$lib/utils/palettes/sscc';
 import type { ResultatPalette } from '$lib/types/palette';
 
@@ -26,5 +27,18 @@ export const load: PageServerLoad = async ({ fetch, cookies, url }) => {
 		};
 	}
 
-	return { resultat: { etat: 'trouvee', palette: res.data } as ResultatPalette, saisie };
+	// Le nom du frigo, pas son identifiant : « rangée » sans dire OÙ ne permet pas à l'opérateur de
+	// vérifier son geste — c'est précisément ce que `id_materiel` existe pour couvrir.
+	let emplacement: string | null = null;
+	if (res.data.id_materiel && !res.data.positions_divergentes) {
+		const materiel = await getEquipment(fetch, cookies);
+		if (materiel.ok) {
+			emplacement = materiel.data.find((e) => e.id === res.data.id_materiel)?.nom ?? null;
+		}
+	}
+
+	return {
+		resultat: { etat: 'trouvee', palette: res.data, emplacement } as ResultatPalette,
+		saisie
+	};
 };

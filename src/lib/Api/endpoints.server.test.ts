@@ -49,6 +49,12 @@ const routes: [nom: string, appel: () => unknown, methode: string, chemin: strin
 	// Organisation
 	['getMembers', () => org.getMembers(fetchEspion, cookies), 'GET', '/api/organization/members'],
 	[
+		'getLogisticUnitBySscc',
+		() => logistics.getLogisticUnitBySscc(fetchEspion, cookies, '034567890000000606'),
+		'GET',
+		'/api/logistics/logistic-units/by-sscc/034567890000000606'
+	],
+	[
 		'changeMemberRole',
 		() => org.changeMemberRole(fetchEspion, cookies, 'm1', 'quality'),
 		'PATCH',
@@ -474,6 +480,10 @@ describe('choix du mode d’authentification', () => {
 		],
 		['importProductsCsv', () => connectors.importProductsCsv(fetchEspion, cookies, 'csv')],
 		['getBatchById', () => logistics.getBatchById(fetchEspion, cookies, 'lot-1')],
+		[
+			'getLogisticUnitBySscc',
+			() => logistics.getLogisticUnitBySscc(fetchEspion, cookies, '034567890000000606')
+		],
 		['getAlertBatches', () => alerts.getAlertBatches(fetchEspion, cookies, 'alert-1')],
 		// La route API est gardée par `requireAuth` + `requireOrgRole` : la clé n'y sert à rien, et
 		// l'envoyer expédiait un secret serveur sur un appel qui ne le demande pas. Deux fonctions

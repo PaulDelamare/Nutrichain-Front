@@ -1,26 +1,10 @@
 <script lang="ts">
 	import { resolve } from '$app/paths';
 	import PageHead from '$lib/components/page/PageHead.svelte';
+	import { badgeLot, grouperSscc } from '$lib/utils/palettes/affichage';
 	import type { PageData } from './$types';
 
 	let { data }: { data: PageData } = $props();
-
-	// Miroir des statuts de lot de l'API. Ce que le quai doit distinguer : ce qui peut partir, et
-	// ce qui ne le peut pas.
-	const STATUT: Record<string, { label: string; classe: string }> = {
-		EN_STOCK: { label: 'En stock', classe: 'ok' },
-		EN_PRODUCTION: { label: 'En transformation', classe: 'neutre' },
-		EN_ATTENTE_QC: { label: 'En attente de contrôle', classe: 'attente' },
-		BLOQUE: { label: 'En quarantaine', classe: 'bloque' },
-		ALERTE: { label: 'Sous rappel', classe: 'bloque' },
-		EXPEDIE: { label: 'Expédié', classe: 'neutre' },
-		EPUISE: { label: 'Épuisé', classe: 'neutre' }
-	};
-
-	const statut = (code: string) => STATUT[code?.toUpperCase()] ?? { label: code, classe: 'neutre' };
-
-	/** 18 chiffres se comparent mal à l'œil : on les groupe pour relire l'étiquette. */
-	const grouper = (sscc: string) => sscc.replace(/(\d{4})(?=\d)/g, '$1 ');
 </script>
 
 <PageHead
@@ -51,16 +35,17 @@
 	<p class="message erreur">{data.resultat.message}</p>
 {:else if data.resultat.etat === 'trouvee'}
 	{@const palette = data.resultat.palette}
+	{@const emplacement = data.resultat.emplacement}
 	<section class="palette">
 		<header>
 			<div>
-				<h2>{grouper(palette.sscc)}</h2>
+				<h2>{grouperSscc(palette.sscc)}</h2>
 				<p class="meta">
 					{palette.lots.length} lot{palette.lots.length > 1 ? 's' : ''}
 					{#if palette.positions_divergentes}
 						· <span class="divergent">emplacements divergents</span>
 					{:else if palette.id_materiel}
-						· rangée
+						· rangée{emplacement ? ` dans ${emplacement}` : ''}
 					{:else}
 						· pas encore rangée
 					{/if}
@@ -100,10 +85,11 @@
 							<td>{lot.produit}</td>
 							<td class="mono">{lot.numero_lot}</td>
 							<td>{lot.quantite} {lot.unite}</td>
-							<td
-								><span class="badge {statut(lot.statut).classe}">{statut(lot.statut).label}</span
-								></td
-							>
+							<td>
+								<span class="badge" style="--couleur: {badgeLot(lot.statut).couleur}">
+									{badgeLot(lot.statut).label}
+								</span>
+							</td>
 						</tr>
 					{/each}
 				</tbody>
@@ -215,21 +201,8 @@
 		border-radius: 999px;
 		font-size: 0.78rem;
 		font-weight: 700;
-	}
-	.badge.ok {
-		background: #d1fae5;
-		color: #047857;
-	}
-	.badge.attente {
-		background: #e0e7ff;
-		color: #3730a3;
-	}
-	.badge.bloque {
-		background: #fee2e2;
-		color: #b91c1c;
-	}
-	.badge.neutre {
-		background: #f3f4f6;
-		color: #6b7280;
+		/* La couleur vient de la source unique du front, pas d une palette locale. */
+		background: color-mix(in srgb, var(--couleur) 18%, white);
+		color: var(--couleur);
 	}
 </style>

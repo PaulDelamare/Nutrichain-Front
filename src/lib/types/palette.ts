@@ -9,7 +9,13 @@ import type { ApiLogisticUnit } from '$lib/Api/logistics.server';
 export type ResultatPalette =
 	| { etat: 'vide' }
 	| { etat: 'invalide'; saisie: string }
-	| { etat: 'trouvee'; palette: ApiLogisticUnit }
+	| {
+			etat: 'trouvee';
+			palette: ApiLogisticUnit;
+			/** Nom de l'emplacement où la palette est rangée. `null` si elle ne l'est pas, ou si le
+			 * matériel n'a pas pu être résolu — mieux vaut ne rien dire que nommer le mauvais frigo. */
+			emplacement: string | null;
+	  }
 	| { etat: 'erreur'; saisie: string; message: string };
 
 export type DonneesPalettes = { resultat: ResultatPalette; saisie: string };
