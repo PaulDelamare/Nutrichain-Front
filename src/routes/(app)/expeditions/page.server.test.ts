@@ -4,7 +4,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 const ok = <T>(data: T) => ({ ok: true as const, status: 200, data });
 const err = (message: string) => ({ ok: false as const, status: 503, message });
 
-const logistics = { createShipment: vi.fn() };
+const logistics = { createShipment: vi.fn(), confirmShipmentDelivery: vi.fn() };
 const organization = { getCustomers: vi.fn(), getShipments: vi.fn() };
 const traceability = { getBatchList: vi.fn() };
 
@@ -12,7 +12,7 @@ vi.mock('$lib/Api/logistics.server', () => logistics);
 vi.mock('$lib/Api/organization.server', () => organization);
 vi.mock('$lib/Api/traceability.server', () => traceability);
 
-const { load } = await import('./+page.server');
+const { load, actions } = await import('./+page.server');
 
 const run = () => (load as any)({ fetch: vi.fn(), cookies: {} });
 
@@ -89,5 +89,101 @@ describe('chargement des expéditions', () => {
 
 		expect(data.error).toBe('API injoignable');
 		expect(data.customers).toEqual([]);
+	});
+});
+
+describe('confirmation de livraison', () => {
+	const requete = (id: string) =>
+		({ formData: async () => new Map([['id', id]]) }) as unknown as Request;
+
+	const executer = (id: string, role: string) =>
+		(actions as any).confirmer({
+			request: requete(id),
+			fetch: vi.fn(),
+			cookies: {},
+			locals: { user: { role } }
+		});
+
+	beforeEach(() => {
+		// Sans ce nettoyage, l'appel du cas precedent fuit et « n'a pas appele l'API » passe alors
+		// que la garde a saute.
+		logistics.confirmShipmentDelivery.mockReset();
+		logistics.confirmShipmentDelivery.mockResolvedValue(
+			ok({
+				id: 'e1',
+				shipment_id: 'BL-1',
+				date_livraison: '2026-07-31T10:00:00.000Z',
+				lots_livres: 2
+			})
+		);
+	});
+
+	it('constate l’arrivée et rend la date retenue', async () => {
+		const res = await executer('e1', 'operator');
+
+		expect(logistics.confirmShipmentDelivery).toHaveBeenCalledWith(
+			expect.anything(),
+			expect.anything(),
+			'e1'
+		);
+		expect(res).toMatchObject({ confirmed: { ref: 'BL-1' } });
+	});
+
+	/**
+	 * La garde d'écriture est doublée côté serveur front : l'API refuse aussi, mais laisser partir
+	 * la requête afficherait un échec réseau là où il s'agit d'un droit manquant.
+	 */
+	it('refuse un rôle en lecture seule sans appeler l’API', async () => {
+		const res = await executer('e1', 'viewer');
+
+		expect(res.status).toBe(403);
+		expect(logistics.confirmShipmentDelivery).not.toHaveBeenCalled();
+	});
+
+	it('refuse une expédition non désignée', async () => {
+		const res = await executer('', 'operator');
+
+		expect(res.status).toBe(400);
+		expect(logistics.confirmShipmentDelivery).not.toHaveBeenCalled();
+	});
+
+	it('relaie le refus de l’API au lieu de le taire', async () => {
+		logistics.confirmShipmentDelivery.mockResolvedValue(err('Expédition introuvable'));
+
+		const res = await executer('e1', 'operator');
+
+		expect(res.status).toBe(503);
+		expect(res.data).toMatchObject({ confirmError: 'Expédition introuvable' });
+	});
+});
+
+describe('lecture de l’arrivée', () => {
+	it('distingue une arrivée constatée d’une arrivée inconnue', async () => {
+		organization.getShipments.mockResolvedValue(
+			ok([
+				{
+					id: 'e1',
+					shipment_id: 'BL-1',
+					statut_livraison: 'LIVRE',
+					date_livraison: '2026-07-31T10:00:00.000Z',
+					date_envoi: '2026-07-30T08:00:00.000Z',
+					liaisons: []
+				},
+				{
+					id: 'e2',
+					shipment_id: 'BL-2',
+					statut_livraison: 'EN_ROUTE',
+					date_livraison: null,
+					date_envoi: '2026-07-30T08:00:00.000Z',
+					liaisons: []
+				}
+			])
+		);
+
+		const data = await run();
+
+		expect(data.shipments[0].dateLivraison).not.toBeNull();
+		// `null` et non une chaîne vide : c'est ce que l'écran teste pour proposer la confirmation.
+		expect(data.shipments[1].dateLivraison).toBeNull();
 	});
 });

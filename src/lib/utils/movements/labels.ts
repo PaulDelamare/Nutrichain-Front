@@ -56,7 +56,10 @@ export const MOVEMENT_EVENT_LABELS: Record<string, string> = {
 	LEVEE_QUARANTAINE: 'ObjectEvent — levée de quarantaine',
 	RAPPEL: 'TransactionEvent — rappel produit',
 	DEPLACEMENT: 'ObjectEvent — changement d’emplacement',
-	MISE_AU_REBUT: 'ObjectEvent — mise au rebut'
+	MISE_AU_REBUT: 'ObjectEvent — mise au rebut',
+	// Pas d'événement EPCIS derrière : l'API n'en émet aucun à la confirmation — l'arrivée appartient
+	// au destinataire. Le libellé ne doit donc pas en annoncer un.
+	LIVRAISON: 'Arrivée constatée chez le client'
 };
 
 export function movementEventLabel(type: string): string {
