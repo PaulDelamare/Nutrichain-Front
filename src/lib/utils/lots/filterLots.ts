@@ -1,8 +1,11 @@
 import type { LotFilters, LotRow } from '$lib/types/lot';
 
 function match(value: string, query: string): boolean {
-	if (!query.trim()) return true;
-	return value.toLowerCase().includes(query.trim().toLowerCase());
+	const q = query.trim();
+	// La recherche texte démarre à 3 caractères : 1-2 caractères ne filtrent pas. Ainsi, éditer une
+	// requête de 3 vers 2 caractères la relâche au lieu de figer l'ancien résultat.
+	if (q.length < 3) return true;
+	return value.toLowerCase().includes(q.toLowerCase());
 }
 
 function matchProduit(produit: string, filter: string): boolean {
