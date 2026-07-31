@@ -1,5 +1,7 @@
 <script lang="ts">
+	import { onDestroy, tick } from 'svelte';
 	import { lotStatutOptions } from '$lib/config/lot-filters';
+	import { debounce } from '$lib/utils/debounce';
 	import type { LotFilters } from '$lib/types/lot';
 
 	type Option = { label: string; value: string };
@@ -17,6 +19,19 @@
 		siteOptions = [{ label: 'Tous les sites', value: 'tous' }],
 		onapply
 	}: Props = $props();
+
+	// Saisie texte : on regroupe les frappes rapprochées en une seule recherche (0,5 s). Le seuil de
+	// 3 caractères est porté par filterLots, donc inutile de le dupliquer ici.
+	const applyDebounced = debounce(() => onapply?.(), 500);
+	onDestroy(() => applyDebounced.cancel());
+
+	// Un select n'a pas de frappe à attendre : on applique aussitôt. `tick()` garantit que
+	// `bind:value` a écrit la nouvelle valeur avant qu'on lise le brouillon.
+	async function applyImmediately() {
+		applyDebounced.cancel();
+		await tick();
+		onapply?.();
+	}
 </script>
 
 <form
@@ -28,12 +43,17 @@
 >
 	<label class="field">
 		<span>N° lot</span>
-		<input type="text" placeholder="L-2025-08912" bind:value={filters.lot} />
+		<input
+			type="text"
+			placeholder="L-2025-08912"
+			bind:value={filters.lot}
+			oninput={() => applyDebounced()}
+		/>
 	</label>
 
 	<label class="field">
 		<span>Produit</span>
-		<select bind:value={filters.produit}>
+		<select bind:value={filters.produit} onchange={applyImmediately}>
 			{#each produitOptions as opt (opt.value)}
 				<option value={opt.value}>{opt.label}</option>
 			{/each}
@@ -42,12 +62,17 @@
 
 	<label class="field">
 		<span>GTIN</span>
-		<input type="text" placeholder="356007…" bind:value={filters.gtin} />
+		<input
+			type="text"
+			placeholder="356007…"
+			bind:value={filters.gtin}
+			oninput={() => applyDebounced()}
+		/>
 	</label>
 
 	<label class="field">
 		<span>Site</span>
-		<select bind:value={filters.site}>
+		<select bind:value={filters.site} onchange={applyImmediately}>
 			{#each siteOptions as opt (opt.value)}
 				<option value={opt.value}>{opt.label}</option>
 			{/each}
@@ -56,7 +81,7 @@
 
 	<label class="field">
 		<span>Statut</span>
-		<select bind:value={filters.statut}>
+		<select bind:value={filters.statut} onchange={applyImmediately}>
 			{#each lotStatutOptions as opt (opt.value)}
 				<option value={opt.value}>{opt.label}</option>
 			{/each}

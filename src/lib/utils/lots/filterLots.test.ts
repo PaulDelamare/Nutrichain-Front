@@ -37,6 +37,17 @@ describe('filterLots', () => {
 		expect(filterLots(rows, { ...emptyLotFilters(), gtin: '45000' })).toHaveLength(1);
 	});
 
+	it('ignore une recherche texte de moins de 3 caractères (la recherche démarre à 3)', () => {
+		const rows = [lot({ lotNumber: '260711-000201' }), lot({ id: 'b', lotNumber: '999999' })];
+		// « 26 » est un préfixe du premier lot : sans le seuil, il ne renverrait que celui-ci.
+		expect(filterLots(rows, { ...emptyLotFilters(), lot: '26' })).toHaveLength(2);
+	});
+
+	it('filtre dès 3 caractères saisis', () => {
+		const rows = [lot({ lotNumber: '260711-000201' }), lot({ id: 'b', lotNumber: '999999' })];
+		expect(filterLots(rows, { ...emptyLotFilters(), lot: '260' })).toHaveLength(1);
+	});
+
 	it('« tous » n’exclut aucun produit, site ni statut', () => {
 		const rows = [lot({ produit: 'Yaourt' }), lot({ id: 'b', site: 'Entrepôt Rennes' })];
 		expect(filterLots(rows, emptyLotFilters())).toHaveLength(2);
