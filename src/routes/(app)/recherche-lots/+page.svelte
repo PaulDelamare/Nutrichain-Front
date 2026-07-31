@@ -66,7 +66,7 @@
 
 <PageHead
 	heading="Recherche de lots"
-	description="Filtres — GTIN, numéro de lot, produit, site et statut."
+	description="Filtres — numéro de lot, produit, GTIN, site et statut."
 />
 
 {#if data.error}
