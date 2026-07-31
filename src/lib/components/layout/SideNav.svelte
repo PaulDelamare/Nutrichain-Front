@@ -23,13 +23,15 @@
 <aside class="sidenav" class:collapsed aria-hidden={collapsed}>
 	<div class="sidenav-inner">
 		<div class="sidenav-brand">
-			<div class="brand-main">
-				<div class="logo" aria-hidden="true">N</div>
-				<div class="brand-text">
+			<a class="brand-main" href={resolve('/tableau-de-bord')} title="Tableau de bord">
+				<span class="logo" aria-hidden="true">
+					<img src="/nutrichain-logo.png" alt="" />
+				</span>
+				<span class="brand-text">
 					<span class="brand-name">{APP_NAME}</span>
 					<span class="brand-tag">{APP_TAGLINE}</span>
-				</div>
-			</div>
+				</span>
+			</a>
 			<button
 				type="button"
 				class="collapse-btn"
@@ -118,7 +120,24 @@
 		align-items: center;
 		gap: 0.75rem;
 		min-width: 0;
-		flex: 1;
+		/* Le bloc marque renvoie au tableau de bord ; padding + marge négative offrent la surbrillance
+		   de survol sans décaler le logo ni la tagline. */
+		padding: 0.375rem 0.5rem;
+		margin: -0.375rem -0.5rem;
+		border-radius: 0.5rem;
+		text-decoration: none;
+		color: inherit;
+		transition: background 0.15s;
+	}
+
+	.brand-main:hover,
+	.brand-main:focus-visible {
+		background: rgba(255, 255, 255, 0.06);
+	}
+
+	.brand-main:focus-visible {
+		outline: 2px solid rgba(255, 255, 255, 0.25);
+		outline-offset: 0;
 	}
 
 	.collapse-btn {
@@ -151,10 +170,13 @@
 		height: 2.25rem;
 		border-radius: 0.5rem;
 		background: var(--nc-brand);
-		color: #fff;
-		font-weight: 700;
-		font-size: 1.125rem;
 		flex-shrink: 0;
+	}
+
+	.logo img {
+		width: 72%;
+		height: 72%;
+		object-fit: contain;
 	}
 
 	.brand-text {
