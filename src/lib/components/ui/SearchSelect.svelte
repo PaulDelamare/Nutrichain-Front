@@ -1,4 +1,6 @@
 <script lang="ts">
+	import { tick } from 'svelte';
+
 	interface Option {
 		value: string;
 		label: string;
@@ -43,9 +45,12 @@
 		query = '';
 	}
 
-	function pick(opt: Option) {
+	async function pick(opt: Option) {
 		value = opt.value;
 		close();
+		// Comme un <select> natif : la valeur est commitée dans le champ caché AVANT de notifier.
+		// Sans ce tick, un onchange qui soumet le <form> (traçabilité) sérialise l'ancienne valeur.
+		await tick();
 		onchange?.(opt.value);
 	}
 
