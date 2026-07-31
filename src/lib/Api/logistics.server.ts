@@ -45,12 +45,34 @@ export type ApiLogisticUnit = {
 	/** Position déduite des lots. `null` si la palette n'est pas rangée, ou si ses lots divergent. */
 	id_materiel: string | null;
 	positions_divergentes: boolean;
+	/**
+	 * Renseignée, la palette a été OUVERTE : elle a cessé d'exister comme unité de manutention, et
+	 * ses lots sont redevenus autonomes. Irréversible.
+	 */
+	ouverture: { date: string } | null;
 	lots: Array<{
 		id: string;
 		numero_lot: string;
 		produit: string;
 		gtin: string;
 		quantite: number;
+		unite: string;
+		statut: string;
+		date_peremption: string | null;
+	}>;
+	/**
+	 * Ce que la palette portait au moment de l'ouverture, avec le statut ACTUEL de chaque lot.
+	 *
+	 * Ce n'est PAS son contenu — `lots` est vide et c'est exact. C'est une trace : la marchandise
+	 * peut être encore posée dessus, et un lot passé sous rappel depuis doit rester visible au quai.
+	 * La quantité est celle de l'ouverture, jamais réactualisée.
+	 */
+	dernier_contenu: Array<{
+		id: string;
+		numero_lot: string;
+		produit: string;
+		gtin: string;
+		quantite_a_l_ouverture: number;
 		unite: string;
 		statut: string;
 		date_peremption: string | null;

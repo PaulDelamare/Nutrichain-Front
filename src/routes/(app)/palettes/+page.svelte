@@ -2,6 +2,7 @@
 	import { resolve } from '$app/paths';
 	import PageHead from '$lib/components/page/PageHead.svelte';
 	import { badgeLot, grouperSscc } from '$lib/utils/palettes/affichage';
+	import { formatDate } from '$lib/Functions/utils/formatDate/formatDate';
 	import type { PageData } from './$types';
 
 	let { data }: { data: PageData } = $props();
@@ -42,7 +43,9 @@
 				<h2>{grouperSscc(palette.sscc)}</h2>
 				<p class="meta">
 					{palette.lots.length} lot{palette.lots.length > 1 ? 's' : ''}
-					{#if palette.positions_divergentes}
+					{#if palette.ouverture}
+						· <span class="ouverte">ouverte le {formatDate(new Date(palette.ouverture.date))}</span>
+					{:else if palette.positions_divergentes}
 						· <span class="divergent">emplacements divergents</span>
 					{:else if palette.id_materiel}
 						· rangée{emplacement ? ` dans ${emplacement}` : ''}
@@ -51,14 +54,19 @@
 					{/if}
 				</p>
 			</div>
-			<a
-				class="imprimer"
-				href={resolve('/(app)/palettes/[id]/label', { id: palette.id })}
-				target="_blank"
-				rel="noopener"
-			>
-				Imprimer l’étiquette
-			</a>
+			<!-- Pas d'étiquette pour une palette ouverte : l'API la refuse, et un second support
+			     physique pour un SSCC qui ne désigne plus d'unité de manutention ferait deux cartons
+			     portant le même code. -->
+			{#if !palette.ouverture}
+				<a
+					class="imprimer"
+					href={resolve('/(app)/palettes/[id]/label', { id: palette.id })}
+					target="_blank"
+					rel="noopener"
+				>
+					Imprimer l’étiquette
+				</a>
+			{/if}
 		</header>
 
 		{#if palette.contient_lot_rappele}
@@ -67,7 +75,43 @@
 			</p>
 		{/if}
 
-		{#if palette.lots.length === 0}
+		{#if palette.ouverture}
+			<p class="message">
+				Cette palette a été ouverte : elle n’est plus une unité de manutention et ne se range, ne
+				s’expédie ni ne s’étiquette plus. Ses lots sont redevenus autonomes.
+			</p>
+			{#if palette.dernier_contenu.length > 0}
+				<h3 class="trace">Dernier contenu connu, à l’ouverture</h3>
+				<p class="meta">
+					La marchandise peut être encore posée dessus. Les quantités sont celles de l’ouverture,
+					les états sont ceux d’aujourd’hui.
+				</p>
+				<table>
+					<thead>
+						<tr>
+							<th>Produit</th>
+							<th>Numéro de lot</th>
+							<th>Quantité à l’ouverture</th>
+							<th>État</th>
+						</tr>
+					</thead>
+					<tbody>
+						{#each palette.dernier_contenu as lot (lot.id)}
+							<tr>
+								<td>{lot.produit}</td>
+								<td class="mono">{lot.numero_lot}</td>
+								<td>{lot.quantite_a_l_ouverture} {lot.unite}</td>
+								<td>
+									<span class="badge" style="--couleur: {badgeLot(lot.statut).couleur}">
+										{badgeLot(lot.statut).label}
+									</span>
+								</td>
+							</tr>
+						{/each}
+					</tbody>
+				</table>
+			{/if}
+		{:else if palette.lots.length === 0}
 			<p class="message">Cette palette ne porte plus aucun lot.</p>
 		{:else}
 			<table>
@@ -156,6 +200,14 @@
 		margin: 0.25rem 0 0;
 		color: #6b7280;
 		font-size: 0.9rem;
+	}
+	.ouverte {
+		color: #b45309;
+		font-weight: 600;
+	}
+	.trace {
+		margin: 1.25rem 0 0;
+		font-size: 0.95rem;
 	}
 	.divergent {
 		color: #b45309;
