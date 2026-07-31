@@ -178,6 +178,24 @@
 		flex: 1;
 		overflow-y: auto;
 		padding: 0.75rem 0.5rem 1rem;
+		/* Barre fine et translucide : elle signale qu'on peut défiler sans trancher sur le fond
+		   sombre, là où la barre native faisait tache. */
+		scrollbar-width: thin; /* Firefox */
+		scrollbar-color: rgba(255, 255, 255, 0.2) transparent; /* pouce / piste */
+	}
+
+	/* Chromium / WebKit : les propriétés ci-dessus n'existent pas, on stylise les pseudo-éléments. */
+	.sidenav-nav::-webkit-scrollbar {
+		width: 6px;
+	}
+
+	.sidenav-nav::-webkit-scrollbar-thumb {
+		background: rgba(255, 255, 255, 0.2);
+		border-radius: 3px;
+	}
+
+	.sidenav-nav::-webkit-scrollbar-thumb:hover {
+		background: rgba(255, 255, 255, 0.32);
 	}
 
 	.group-label {
