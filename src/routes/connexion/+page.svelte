@@ -10,7 +10,9 @@
 <main class="login-page">
 	<section class="card">
 		<div class="brand">
-			<div class="logo" aria-hidden="true">N</div>
+			<div class="logo" aria-hidden="true">
+				<img src="/nutrichain-logo.png" alt="" />
+			</div>
 			<h1>{APP_NAME}</h1>
 			<p>Plateforme de traçabilité — ferme au rayon</p>
 		</div>
@@ -75,8 +77,12 @@
 		height: 2rem;
 		border-radius: 0.5rem;
 		background: var(--nc-brand);
-		color: #fff;
-		font-weight: 700;
+	}
+
+	.logo img {
+		width: 72%;
+		height: 72%;
+		object-fit: contain;
 	}
 
 	h1 {
