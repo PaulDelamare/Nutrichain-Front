@@ -43,4 +43,23 @@ describe('SearchSelect', () => {
 		expect(onchange).toHaveBeenCalledWith('lot-c');
 		await expect.element(page.getByText('Crème — LOT-C')).toBeInTheDocument();
 	});
+
+	// Un consommateur qui soumet un <form> depuis onchange (traçabilité : requestSubmit) lit le
+	// champ caché : il doit déjà porter la nouvelle valeur, comme un <select> natif. Sinon le
+	// formulaire sérialise la valeur précédente et l'URL a un cran de retard.
+	it('a commité la valeur dans le champ caché avant de déclencher onchange', async () => {
+		let hiddenValueAtNotify: string | null = null;
+		const onchange = vi.fn(() => {
+			hiddenValueAtNotify =
+				document.querySelector<HTMLInputElement>('input[type="hidden"][name="lot"]')?.value ?? null;
+		});
+		render(SearchSelect, {
+			props: { name: 'lot', options: OPTIONS, placeholder: '— choisir un lot —', onchange }
+		} as unknown as SvelteComponentOptions<typeof SearchSelect>);
+
+		await page.getByRole('button', { name: '— choisir un lot —' }).click();
+		await page.getByRole('option', { name: 'Crème — LOT-C' }).click();
+
+		expect(hiddenValueAtNotify).toBe('lot-c');
+	});
 });
