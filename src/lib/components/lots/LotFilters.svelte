@@ -27,11 +27,6 @@
 	}}
 >
 	<label class="field">
-		<span>GTIN</span>
-		<input type="text" placeholder="356007…" bind:value={filters.gtin} />
-	</label>
-
-	<label class="field">
 		<span>N° lot</span>
 		<input type="text" placeholder="L-2025-08912" bind:value={filters.lot} />
 	</label>
@@ -43,6 +38,11 @@
 				<option value={opt.value}>{opt.label}</option>
 			{/each}
 		</select>
+	</label>
+
+	<label class="field">
+		<span>GTIN</span>
+		<input type="text" placeholder="356007…" bind:value={filters.gtin} />
 	</label>
 
 	<label class="field">
