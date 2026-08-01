@@ -298,6 +298,16 @@ describe('buildDashboardKpis', () => {
 		expect(kpis.map((k) => k.label)).not.toContain('Sync. intégrations');
 		expect(JSON.stringify(kpis)).not.toContain('99 %');
 	});
+
+	it('associe à chaque indicateur son lien et sa couleur de contour', () => {
+		const kpis = buildDashboardKpis(0, [], 0, 0);
+		expect(kpis.map((k) => ({ label: k.label, href: k.href, accent: k.accent }))).toEqual([
+			{ label: 'Lots suivis', href: '/recherche-lots', accent: 'green' },
+			{ label: 'Alertes chaîne du froid', href: '/chaine-du-froid', accent: 'red' },
+			{ label: 'Rappels en cours', href: '/rappels-produits', accent: 'blue' },
+			{ label: 'Anomalies ouvertes', href: '/non-conformites', accent: 'orange' }
+		]);
+	});
 });
 
 describe('buildDashboardTasks', () => {

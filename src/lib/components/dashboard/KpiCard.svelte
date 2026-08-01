@@ -1,25 +1,62 @@
 <script lang="ts">
+	import { resolve } from '$app/paths';
+	import type { Pathname } from '$app/types';
+	import type { KpiAccent } from '$lib/types/dashboard';
+
 	type Props = {
 		label: string;
 		value: string;
 		detail: string;
+		href: Pathname;
+		accent: KpiAccent;
 	};
 
-	let { label, value, detail }: Props = $props();
+	let { label, value, detail, href, accent }: Props = $props();
 </script>
 
-<article class="kpi">
+<a class="kpi" href={resolve(href as '/')} data-accent={accent}>
 	<p class="kpi-label">{label}</p>
 	<p class="kpi-value">{value}</p>
 	<p class="kpi-detail">{detail}</p>
-</article>
+</a>
 
 <style>
 	.kpi {
+		display: block;
 		padding: 1rem 1.125rem;
-		border: 1px solid #e2e8f0;
+		/* Contour de la couleur liée à l'indicateur (data-accent) ; l'ensemble mène à sa page. */
+		border: 1px solid var(--accent);
 		border-radius: 0.5rem;
 		background: #fff;
+		text-decoration: none;
+		color: inherit;
+		transition:
+			transform 0.15s,
+			box-shadow 0.15s;
+	}
+
+	.kpi[data-accent='green'] {
+		--accent: #16a34a;
+		--accent-glow: rgba(22, 163, 74, 0.25);
+	}
+	.kpi[data-accent='red'] {
+		--accent: #dc2626;
+		--accent-glow: rgba(220, 38, 38, 0.25);
+	}
+	.kpi[data-accent='blue'] {
+		--accent: #2563eb;
+		--accent-glow: rgba(37, 99, 235, 0.25);
+	}
+	.kpi[data-accent='orange'] {
+		--accent: #ea580c;
+		--accent-glow: rgba(234, 88, 12, 0.25);
+	}
+
+	.kpi:hover,
+	.kpi:focus-visible {
+		transform: translateY(-2px);
+		box-shadow: 0 6px 16px var(--accent-glow);
+		outline: none;
 	}
 
 	.kpi-label {
