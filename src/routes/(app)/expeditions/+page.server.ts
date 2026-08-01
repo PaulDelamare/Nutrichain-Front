@@ -1,7 +1,7 @@
 import { numeroLot } from '$lib/utils/lots/lotLabel';
 import { fail } from '@sveltejs/kit';
 import type { Actions, PageServerLoad } from './$types';
-import { createShipment } from '$lib/Api/logistics.server';
+import { confirmShipmentDelivery, createShipment } from '$lib/Api/logistics.server';
 import { getCustomers, getShipments } from '$lib/Api/organization.server';
 import { getBatchList } from '$lib/Api/traceability.server';
 import { refusEcriture } from '$lib/server/guards';
@@ -31,6 +31,9 @@ export const load: PageServerLoad = async ({ fetch, cookies }) => {
 			client: s.client?.nom_enseigne ?? '—',
 			statut: s.statut_livraison,
 			date: new Date(s.date_envoi).toLocaleString('fr-FR'),
+			// `null` tant que l'arrivée n'a pas été constatée. C'est cette absence, et non le statut
+			// seul, qui dit au décideur qu'il ignore où se trouve la marchandise.
+			deliveredAt: s.date_livraison ? new Date(s.date_livraison).toLocaleString('fr-FR') : null,
 			lots: s.liaisons?.map((l) => l.lot.id.slice(0, 8)).join(', ') ?? '—'
 		})),
 		error: null,
@@ -51,8 +54,8 @@ export const load: PageServerLoad = async ({ fetch, cookies }) => {
 
 export const actions = {
 	create: async ({ request, fetch, cookies, locals }) => {
-		const refus = refusEcriture(locals.user);
-		if (refus) return fail(403, { createError: refus });
+		const denial = refusEcriture(locals.user);
+		if (denial) return fail(403, { createError: denial });
 
 		const fd = await request.formData();
 		const id_client = String(fd.get('id_client') ?? '').trim();
@@ -84,5 +87,32 @@ export const actions = {
 
 		if (!res.ok) return fail(res.status, { createError: res.message });
 		return { created: res.data.shipment };
+	},
+
+	/**
+	 * Constater l'arrivée d'une expédition.
+	 *
+	 * Même garde d'écriture que la création : c'est un geste de manutention, pas une décision
+	 * qualité. L'API le refuse aussi de son côté — cette garde-ci évite juste un aller-retour.
+	 */
+	confirm: async ({ request, fetch, cookies, locals }) => {
+		const denial = refusEcriture(locals.user);
+		if (denial) return fail(403, { confirmError: denial });
+
+		const fd = await request.formData();
+		const id = String(fd.get('id') ?? '').trim();
+		if (!id) return fail(400, { confirmError: 'Expédition inconnue.' });
+
+		const res = await confirmShipmentDelivery(fetch, cookies, id);
+		if (!res.ok) return fail(res.status, { confirmError: res.message });
+
+		// Formaté ici comme les dates du tableau : formater dans le gabarit ferait dater la même
+		// arrivée du fuseau du navigateur d'un côté et de celui du serveur de l'autre.
+		return {
+			confirmed: {
+				ref: res.data.shipment_id,
+				date: new Date(res.data.date_livraison).toLocaleString('fr-FR')
+			}
+		};
 	}
 } satisfies Actions;

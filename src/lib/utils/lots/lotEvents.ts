@@ -90,6 +90,11 @@ const SHAPES: Record<string, EventShape> = {
 			return '';
 		}
 	},
+	LIVRAISON: {
+		title: 'Livraison confirmée',
+		tone: 'neutral',
+		context: () => ''
+	},
 	MISE_AU_REBUT: {
 		title: 'Mise au rebut',
 		tone: 'danger',

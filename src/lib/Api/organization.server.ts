@@ -122,6 +122,8 @@ export type ApiShipment = {
 	id: string;
 	shipment_id: string;
 	statut_livraison: string;
+	/** Arrivee constatee. `null` tant que la livraison n a pas ete confirmee. */
+	date_livraison: string | null;
 	date_envoi: string;
 	client?: { nom_enseigne: string };
 	liaisons?: { lot: { id: string } }[];

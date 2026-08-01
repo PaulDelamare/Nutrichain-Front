@@ -259,6 +259,12 @@ const routes: [nom: string, appel: () => unknown, methode: string, chemin: strin
 		'/api/logistics/shipments'
 	],
 	[
+		'confirmShipmentDelivery',
+		() => logistics.confirmShipmentDelivery(fetchEspion, cookies, 'exp-1'),
+		'POST',
+		'/api/logistics/shipments/exp-1/delivered'
+	],
+	[
 		'resolveBatchByLotNumber',
 		() => logistics.resolveBatchByLotNumber(fetchEspion, cookies, 'LOT-1'),
 		'GET',
@@ -479,6 +485,10 @@ describe('choix du mode d’authentification', () => {
 				})
 		],
 		['importProductsCsv', () => connectors.importProductsCsv(fetchEspion, cookies, 'csv')],
+		[
+			'confirmShipmentDelivery',
+			() => logistics.confirmShipmentDelivery(fetchEspion, cookies, 'exp-1')
+		],
 		['getBatchById', () => logistics.getBatchById(fetchEspion, cookies, 'lot-1')],
 		[
 			'getLogisticUnitBySscc',

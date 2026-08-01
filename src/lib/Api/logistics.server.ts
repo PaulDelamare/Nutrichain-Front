@@ -221,6 +221,29 @@ export function createShipment(
 	);
 }
 
+/**
+ * Constate l'arrivée d'une expédition.
+ *
+ * Sans ce geste, `statut_livraison` restait figé à `EN_ROUTE` depuis la création, et le rappel
+ * produit remontait cette information au décideur : toute expédition apparaissait en transit, même
+ * livrée depuis des semaines.
+ *
+ * Idempotent côté API : rejouer rend 200 avec la date déjà retenue.
+ */
+export function confirmShipmentDelivery(
+	fetch: typeof globalThis.fetch,
+	cookies: Cookies,
+	shipmentId: string
+) {
+	return api(fetch, cookies, { useApiKey: false }).post<{
+		id: string;
+		shipment_id: string;
+		statut_livraison: string;
+		date_livraison: string;
+		lots_livres: number;
+	}>(`/api/logistics/shipments/${encodeURIComponent(shipmentId)}/delivered`, {});
+}
+
 /** Résolution exacte par numéro de lot GS1 (AI 10) — équivalent mobile `lookupBatch`. */
 export function resolveBatchByLotNumber(
 	fetch: typeof globalThis.fetch,
