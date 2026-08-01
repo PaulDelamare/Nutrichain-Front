@@ -32,3 +32,24 @@ describe('TopBar — déconnexion', () => {
 		expect(form?.getAttribute('action')).toContain('/deconnexion');
 	});
 });
+
+describe('TopBar — alerte froid', () => {
+	function renderWithAlerts(coldAlerts: number | null) {
+		render(TopBar, {
+			props: { title: 'Tableau de bord', coldAlerts },
+			context: new Map([[PAGE_SEARCH_KEY, new PageSearchContext()]])
+		} as unknown as SvelteComponentOptions<typeof TopBar>);
+	}
+
+	it('mène au listing de la chaîne du froid quand il y a des alertes', async () => {
+		renderWithAlerts(3);
+
+		const lien = page.getByRole('link', { name: /alertes? froid/ });
+		await expect.element(lien).toHaveAttribute('href', '/chaine-du-froid');
+	});
+
+	it('n’affiche aucun lien d’alerte sans alerte', () => {
+		renderWithAlerts(null);
+		expect(document.querySelector('a[href*="chaine-du-froid"]')).toBeNull();
+	});
+});
