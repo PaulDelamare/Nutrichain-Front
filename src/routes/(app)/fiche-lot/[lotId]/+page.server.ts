@@ -1,7 +1,7 @@
 import { error, fail } from '@sveltejs/kit';
 import { refusDecisionQualite } from '$lib/server/guards';
 import type { Actions, PageServerLoad } from './$types';
-import { getBatchById, releaseQuarantine } from '$lib/Api/logistics.server';
+import { getBatchById, releaseQuarantine, scrapBatch } from '$lib/Api/logistics.server';
 import { getAuditLogs, getMovements } from '$lib/Api/organization.server';
 import { getBatchList, getGenealogy, triggerRecall } from '$lib/Api/traceability.server';
 import type { ApiBatch, ApiOrigin } from '$lib/Api/traceability.server';
@@ -112,6 +112,23 @@ export const actions = {
 		const res = await releaseQuarantine(fetch, cookies, params.lotId, motif);
 		if (!res.ok) return fail(res.status, { releaseError: res.message });
 		return { released: true };
+	},
+
+	/**
+	 * Sortie définitive du lot. Même garde qualité que la levée : ce n'est pas de la manutention,
+	 * c'est la décision de détruire de la marchandise, et elle est scellée dans l'audit.
+	 */
+	scrap: async ({ request, fetch, cookies, params, locals }) => {
+		const refus = refusDecisionQualite(locals.user);
+		if (refus) return fail(403, { scrapError: refus });
+
+		const motif = String((await request.formData()).get('motif') ?? '').trim();
+		if (motif.length < 3) {
+			return fail(400, { scrapError: 'Motif de mise au rebut requis (au moins 3 caractères).' });
+		}
+		const res = await scrapBatch(fetch, cookies, params.lotId, motif);
+		if (!res.ok) return fail(res.status, { scrapError: res.message });
+		return { scrapped: true };
 	},
 
 	recall: async ({ request, fetch, cookies, params, locals }) => {

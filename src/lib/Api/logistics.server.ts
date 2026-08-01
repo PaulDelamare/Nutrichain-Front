@@ -167,6 +167,29 @@ export function releaseQuarantine(
 	);
 }
 
+/**
+ * Sortie définitive d'un lot : il quitte la chaîne, sa quantité tombe à zéro.
+ *
+ * L'API ne l'accepte que sur un lot `BLOQUE` ou `ALERTE`. Sans ce geste, un lot bloqué par erreur
+ * n'avait AUCUNE issue — la levée de quarantaine et un contrôle conforme rendent tous deux 409, et
+ * le rebut n'était appelable depuis aucune interface (#254).
+ *
+ * ⚠️ Ce n'est PAS le retrait d'un magasin. Celui-ci porte sur une ligne d'expédition, pas sur le
+ * lot : déclarer ici la destruction détruirait aussi le stock resté à l'usine et celui parti chez
+ * les autres clients.
+ */
+export function scrapBatch(
+	fetch: typeof globalThis.fetch,
+	cookies: Cookies,
+	lotId: string,
+	motif: string
+) {
+	return api(fetch, cookies).post<ApiBatch>(
+		`/api/logistics/batches/${encodeURIComponent(lotId)}/scrap`,
+		{ motif }
+	);
+}
+
 export type CreateReceiptBody = {
 	id_fournisseur: string;
 	shipment_id: string;
