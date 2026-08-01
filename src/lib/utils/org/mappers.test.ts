@@ -193,8 +193,35 @@ describe('alertsToCold', () => {
 		);
 
 		expect(rows[0].lotsImpactes).toEqual([
-			{ id: 'lot-a', produit: 'Beurre', levable: true, motifBlocage: null }
+			{
+				id: 'lot-a',
+				produit: 'Beurre',
+				numeroLot: 'L1',
+				levable: true,
+				motifBlocage: null
+			}
 		]);
+	});
+
+	// Le numéro de lot est la seule chose qui distingue deux lots du même produit — et le repli sur
+	// l'identifiant technique vaut mieux qu'une case vide quand l'API ne le renvoie pas.
+	it('retombe sur l’identifiant abrégé quand le numéro de lot manque', () => {
+		const alertId = '11111111-2222-3333-4444-555555555555';
+		const { rows } = alertsToCold([alert({ id: alertId })], [], {
+			[alertId]: [
+				{
+					id: '0a3f64b1-1111-2222-3333-444444444444',
+					lot_number: null,
+					quantite_actuelle: '1',
+					unite_code: 'U',
+					produit: { nom: 'Beurre' },
+					levable: true,
+					motif_blocage: null
+				} as never
+			]
+		});
+
+		expect(rows[0].lotsImpactes[0].numeroLot).toBe('0a3f64b1');
 	});
 
 	it('n’attribue pas à une alerte les lots d’une autre, même frigo', () => {

@@ -118,6 +118,7 @@ export function mapAlertBatchesToLots(batches: ApiAlertBatch[]): ColdAlertLot[] 
 	return batches.map((b) => ({
 		id: b.id,
 		produit: b.produit?.nom ?? '—',
+		numeroLot: numeroLot(b),
 		levable: b.levable,
 		motifBlocage: b.motif_blocage ? (MOTIF_BLOCAGE_LABEL[b.motif_blocage] ?? b.motif_blocage) : null
 	}));

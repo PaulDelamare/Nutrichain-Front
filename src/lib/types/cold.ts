@@ -3,6 +3,8 @@ export type ColdAlertStatus = 'critique' | 'investigation';
 export type ColdAlertLot = {
 	id: string;
 	produit: string;
+	/** Ce qui distingue deux lots du même produit. Replié sur l'identifiant abrégé si l'API se tait. */
+	numeroLot: string;
 	/** Faux si un contrôle qualité NON_CONFORME postérieur empêche la levée via cette alerte. */
 	levable: boolean;
 	/** Libellé français du motif quand `levable` est faux. */
