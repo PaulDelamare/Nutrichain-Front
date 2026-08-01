@@ -15,7 +15,13 @@ function alerte(partial: Partial<ColdAlertRow> = {}): ColdAlertRow {
 		depuis: 'depuis 42 min',
 		statut: 'critique',
 		lotsImpactes: [
-			{ id: 'lot-1', produit: 'Bouteille de Lait 1L', levable: true, motifBlocage: null }
+			{
+				id: 'lot-1',
+				produit: 'Bouteille de Lait 1L',
+				numeroLot: 'LAIT-2026-014',
+				levable: true,
+				motifBlocage: null
+			}
 		],
 		...partial
 	};
@@ -42,8 +48,43 @@ describe('ColdAlertTable', () => {
 
 	it('renvoie vers la fiche de chaque lot impacté', async () => {
 		renderTable([alerte()]);
-		const lien = page.getByRole('link', { name: 'Bouteille de Lait 1L' });
+		const lien = page.getByRole('link', { name: 'Bouteille de Lait 1L — LAIT-2026-014' });
 		await expect.element(lien).toHaveAttribute('href', expect.stringContaining('lot-1'));
+	});
+
+	/**
+	 * Une excursion bloque souvent plusieurs lots du MÊME produit : la colonne affichait alors
+	 * « Bouteille de Lait 1L Bouteille de Lait 1L », collés et indiscernables. Or le lot est
+	 * précisément ce qu'un responsable qualité doit pouvoir retirer du rayon.
+	 */
+	it('distingue deux lots du même produit par leur numéro', async () => {
+		renderTable([
+			alerte({
+				lotsImpactes: [
+					{
+						id: 'lot-1',
+						produit: 'Bouteille de Lait 1L',
+						numeroLot: 'LAIT-2026-014',
+						levable: true,
+						motifBlocage: null
+					},
+					{
+						id: 'lot-2',
+						produit: 'Bouteille de Lait 1L',
+						numeroLot: 'LAIT-2026-015',
+						levable: true,
+						motifBlocage: null
+					}
+				]
+			})
+		]);
+
+		await expect
+			.element(page.getByRole('link', { name: /LAIT-2026-014/ }))
+			.toHaveAttribute('href', expect.stringContaining('lot-1'));
+		await expect
+			.element(page.getByRole('link', { name: /LAIT-2026-015/ }))
+			.toHaveAttribute('href', expect.stringContaining('lot-2'));
 	});
 
 	it('marque explicitement une alerte sans lot connu plutôt que de laisser la case vide', async () => {
@@ -82,6 +123,7 @@ describe('ColdAlertTable', () => {
 					{
 						id: 'lot-nc',
 						produit: 'Crème',
+						numeroLot: 'CREME-2026-002',
 						levable: false,
 						motifBlocage: 'contrôle non conforme'
 					}

@@ -47,28 +47,32 @@
 						{#if row.lotsImpactes.length === 0}
 							<span class="none">—</span>
 						{:else}
-							{#each row.lotsImpactes as lot (lot.id)}
-								<span class="lot">
-									<a
-										href={resolve('/(app)/fiche-lot/[lotId]', {
-											lotId: encodeURIComponent(lot.id)
-										})}
-									>
-										{lot.produit}
-									</a>
-									{#if !lot.levable}
-										<span
-											class="blocked"
-											title={lot.motifBlocage
-												? `Non levable — ${lot.motifBlocage}`
-												: 'Non levable via cette alerte'}
+							<!-- Une liste, pas une suite de `span` : plusieurs lots du même produit se lisaient
+							     « Bouteille de Lait 1L Bouteille de Lait 1L », collés et indiscernables. -->
+							<ul class="lots-list">
+								{#each row.lotsImpactes as lot (lot.id)}
+									<li class="lot">
+										<a
+											href={resolve('/(app)/fiche-lot/[lotId]', {
+												lotId: encodeURIComponent(lot.id)
+											})}
 										>
-											non levable{#if lot.motifBlocage}
-												({lot.motifBlocage}){/if}
-										</span>
-									{/if}
-								</span>
-							{/each}
+											{lot.produit} — {lot.numeroLot}
+										</a>
+										{#if !lot.levable}
+											<span
+												class="blocked"
+												title={lot.motifBlocage
+													? `Non levable — ${lot.motifBlocage}`
+													: 'Non levable via cette alerte'}
+											>
+												non levable{#if lot.motifBlocage}
+													({lot.motifBlocage}){/if}
+											</span>
+										{/if}
+									</li>
+								{/each}
+							</ul>
 						{/if}
 					</td>
 					<td>{row.depuis}</td>
@@ -150,6 +154,16 @@
 		display: flex;
 		flex-wrap: wrap;
 		gap: 0.35rem;
+	}
+
+	/* Une ligne par lot : côte à côte, deux lots du même produit se lisaient comme un seul libellé. */
+	.lots-list {
+		display: flex;
+		flex-direction: column;
+		gap: 0.25rem;
+		margin: 0;
+		padding: 0;
+		list-style: none;
 	}
 
 	.lot {
