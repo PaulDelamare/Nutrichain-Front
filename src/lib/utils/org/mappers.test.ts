@@ -12,6 +12,7 @@ import {
 	genealogyToGraph,
 	membersToUsers,
 	movementsToEvents,
+	pickTelemetrySensor,
 	qualityToNc
 } from './mappers';
 import type {
@@ -250,6 +251,93 @@ describe('alertsToCold', () => {
 	it('ne rattache aucun lot quand l’endpoint n’en renvoie pas', () => {
 		const { rows } = alertsToCold([alert({ id_materiel: 'frigo-1' })], [], {});
 		expect(rows[0].lotsImpactes).toEqual([]);
+	});
+
+	it('choisit le capteur de l’incident, pas le premier de la liste', () => {
+		const equipment = [
+			{ id: 'frigo-2', nom: 'Groupe 2', sensor_id: 'SENSOR-A2' },
+			{ id: 'frigo-1', nom: 'Groupe 1', sensor_id: 'SENSOR-A1' }
+		] as never[];
+
+		expect(pickTelemetrySensor([alert({ id_materiel: 'frigo-1' })], equipment, null)).toBe(
+			'SENSOR-A1'
+		);
+	});
+
+	it('reste sur le même capteur quand l’ordre du matériel change', () => {
+		const alerts = [alert({ id_materiel: 'frigo-1' })];
+		const a = { id: 'frigo-1', nom: 'Groupe 1', sensor_id: 'SENSOR-A1' } as never;
+		const b = { id: 'frigo-2', nom: 'Groupe 2', sensor_id: 'SENSOR-A2' } as never;
+
+		// La valeur est asserte, pas seulement l'égalité : « rend toujours null » satisferait
+		// une simple comparaison des deux appels.
+		expect(pickTelemetrySensor(alerts, [a, b], null)).toBe('SENSOR-A1');
+		expect(pickTelemetrySensor(alerts, [b, a], null)).toBe('SENSOR-A1');
+	});
+
+	it('ne trace aucune courbe quand le matériel de l’incident n’a pas de capteur', () => {
+		// Le bandeau montrera `a-1`. Tracer SENSOR-A2 ou SENSOR-A3 sous ce titre reviendrait à
+		// illustrer un incident avec la courbe d'une autre chambre — le défaut qu'on ferme.
+		const equipment = [
+			{ id: 'frigo-3', nom: 'Hors incident', sensor_id: 'SENSOR-A3' },
+			{ id: 'frigo-1', nom: 'Sans capteur', sensor_id: null },
+			{ id: 'frigo-2', nom: 'Groupe 2', sensor_id: 'SENSOR-A2' }
+		] as never[];
+		const alerts = [
+			alert({ id: 'a-1', id_materiel: 'frigo-1' }),
+			alert({ id: 'a-2', id_materiel: 'frigo-2' })
+		];
+
+		expect(pickTelemetrySensor(alerts, equipment, null)).toBeNull();
+	});
+
+	it('ignore une alerte froid résolue : pas de courbe sans bandeau', () => {
+		// `alertsToCold` ne rendrait aucun incident ici. Une courbe pilotée par une alerte close
+		// s'afficherait donc sans titre ni contexte, comme si l'incident durait encore.
+		// Le matériel de l'alerte (SENSOR-Z9) diffère du repli trié (SENSOR-A1) : sans quoi
+		// l'assertion serait vraie même si l'alerte close pilotait la courbe.
+		const equipment = [
+			{ id: 'frigo-9', nom: 'Zone tampon', sensor_id: 'SENSOR-Z9' },
+			{ id: 'frigo-1', nom: 'Groupe 1', sensor_id: 'SENSOR-A1' }
+		] as never[];
+
+		expect(
+			pickTelemetrySensor([alert({ id_materiel: 'frigo-9', statut: 'RESOLVED' })], equipment, null)
+		).toBe('SENSOR-A1');
+	});
+
+	it('ne laisse pas un rappel produit piloter la courbe de température', () => {
+		const equipment = [
+			{ id: 'frigo-9', nom: 'Zone tampon', sensor_id: 'SENSOR-Z9' },
+			{ id: 'frigo-1', nom: 'Groupe 1', sensor_id: 'SENSOR-A1' }
+		] as never[];
+
+		// Un rappel n'est pas une excursion : il ne désigne aucun capteur. La page retombe sur la
+		// surveillance, donc sur le capteur de tête APRÈS tri — jamais sur celui du rappel.
+		expect(
+			pickTelemetrySensor(
+				[alert({ type: 'PRODUCT_RECALL', id_materiel: 'frigo-9' })],
+				equipment,
+				null
+			)
+		).toBe('SENSOR-A1');
+	});
+
+	it('respecte le capteur demandé dans l’URL', () => {
+		const equipment = [{ id: 'frigo-1', nom: 'Groupe 1', sensor_id: 'SENSOR-A1' }] as never[];
+		expect(pickTelemetrySensor([alert({ id_materiel: 'frigo-1' })], equipment, 'SENSOR-A2')).toBe(
+			'SENSOR-A2'
+		);
+	});
+
+	it('retombe sur un capteur quelconque en l’absence d’alerte froid', () => {
+		const equipment = [
+			{ id: 'frigo-1', nom: 'Sans capteur', sensor_id: null },
+			{ id: 'frigo-2', nom: 'Groupe 2', sensor_id: 'SENSOR-A2' }
+		] as never[];
+
+		expect(pickTelemetrySensor([], equipment, null)).toBe('SENSOR-A2');
+		expect(pickTelemetrySensor([], [], null)).toBeNull();
 	});
 
 	it('mappe PANIC en statut critique', () => {

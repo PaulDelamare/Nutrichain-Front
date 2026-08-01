@@ -50,6 +50,11 @@
 			threshold={data.telemetry.threshold}
 			label="Capteur {data.telemetry.sensorId}"
 		/>
+		{#if data.telemetryError}
+			<p class="telemetry-error" role="status">
+				Relevés indisponibles : {data.telemetryError}
+			</p>
+		{/if}
 	</section>
 {/if}
 
@@ -66,6 +71,12 @@
 <style>
 	.telemetry {
 		margin-bottom: 1rem;
+	}
+
+	.telemetry-error {
+		margin: 0.375rem 0 0;
+		color: #92400e;
+		font-size: 0.8125rem;
 	}
 
 	.banner {
