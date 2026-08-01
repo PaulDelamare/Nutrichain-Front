@@ -8,10 +8,16 @@
 	import TaskAlert from '$lib/components/dashboard/TaskAlert.svelte';
 	import PageHead from '$lib/components/page/PageHead.svelte';
 	import { findNavItem } from '$lib/config/nav';
+	import { consumeIntroOnce } from '$lib/utils/introOnce';
 	import { page } from '$app/stores';
+	import { browser } from '$app/environment';
 	import type { PageData } from './$types';
 
 	let { data }: { data: PageData } = $props();
+
+	// L'animation d'entrée ne joue qu'à la première arrivée sur le dashboard dans cette session ;
+	// aux retours (navigation, retour arrière) la page s'affiche d'emblée, sans la rejouer.
+	const animateIntro = consumeIntroOnce('tableau-de-bord', browser);
 
 	const nav = $derived(findNavItem($page.url.pathname));
 
@@ -19,7 +25,7 @@
 	const tasks = $derived(data.tasks);
 </script>
 
-<div class="dashboard">
+<div class="dashboard" class:intro={animateIntro}>
 	{#if nav}
 		<div class="dashboard-head">
 			<PageHead heading={nav.heading} description={nav.description} />
@@ -125,24 +131,26 @@
 		--enter-body-delay: 0.32s;
 	}
 
-	.dashboard-head,
-	.dashboard-body {
+	/* Première arrivée seulement (classe `intro`) : masqué puis fondu enchaîné. Sans cette classe —
+	   les retours de navigation — les blocs restent visibles d'emblée, sans animation. */
+	.dashboard.intro .dashboard-head,
+	.dashboard.intro .dashboard-body {
 		opacity: 0;
 	}
 
-	.dashboard-head {
+	.dashboard.intro .dashboard-head {
 		animation: dashboard-fade-in var(--enter-title-duration) var(--enter-ease) forwards;
 		animation-delay: 0ms;
 	}
 
-	.dashboard-body {
+	.dashboard.intro .dashboard-body {
 		animation: dashboard-fade-in var(--enter-body-duration) var(--enter-ease) forwards;
 		animation-delay: var(--enter-body-delay);
 	}
 
 	@media (prefers-reduced-motion: reduce) {
-		.dashboard-head,
-		.dashboard-body {
+		.dashboard.intro .dashboard-head,
+		.dashboard.intro .dashboard-body {
 			opacity: 1;
 			animation: none;
 			transform: none;
