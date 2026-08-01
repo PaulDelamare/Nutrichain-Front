@@ -32,7 +32,13 @@
 		{:else}
 			<div class="kpis">
 				{#each data.kpis as kpi (kpi.label)}
-					<KpiCard label={kpi.label} value={kpi.value} detail={kpi.detail} />
+					<KpiCard
+						label={kpi.label}
+						value={kpi.value}
+						detail={kpi.detail}
+						href={kpi.href}
+						accent={kpi.accent}
+					/>
 				{/each}
 			</div>
 

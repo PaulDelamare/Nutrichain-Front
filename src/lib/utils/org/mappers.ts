@@ -240,22 +240,30 @@ export function buildDashboardKpis(
 		{
 			label: 'Lots suivis',
 			value: String(batchCount),
-			detail: 'Catalogue organisation active'
+			detail: 'Catalogue organisation active',
+			href: '/recherche-lots',
+			accent: 'green'
 		},
 		{
 			label: 'Alertes chaîne du froid',
 			value: String(cold),
-			detail: cold > 0 ? 'Investigation en cours' : 'Aucune alerte active'
+			detail: cold > 0 ? 'Investigation en cours' : 'Aucune alerte active',
+			href: '/chaine-du-froid',
+			accent: 'red'
 		},
 		{
 			label: 'Rappels en cours',
 			value: String(rappels),
-			detail: rappels > 0 ? 'Workflow actif' : 'Aucun rappel'
+			detail: rappels > 0 ? 'Workflow actif' : 'Aucun rappel',
+			href: '/rappels-produits',
+			accent: 'blue'
 		},
 		{
 			label: 'Anomalies ouvertes',
 			value: String(qualityCount),
-			detail: `${quarantineCount} lot(s) en quarantaine`
+			detail: `${quarantineCount} lot(s) en quarantaine`,
+			href: '/non-conformites',
+			accent: 'orange'
 		}
 	];
 }

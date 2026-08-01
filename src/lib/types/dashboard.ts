@@ -1,9 +1,13 @@
 import type { Pathname } from '$app/types';
 
+export type KpiAccent = 'green' | 'red' | 'blue' | 'orange';
+
 export type Kpi = {
 	label: string;
 	value: string;
 	detail: string;
+	href: Pathname;
+	accent: KpiAccent;
 };
 
 export type EpcisEvent = {
