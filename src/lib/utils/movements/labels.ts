@@ -1,6 +1,7 @@
 export const MOVEMENT_CHART_TYPES = [
 	'RECEPTION',
 	'EXPEDITION',
+	'LIVRAISON',
 	'QUARANTAINE',
 	'TRANSFORMATION',
 	'AUTRE'
@@ -12,6 +13,10 @@ export function normalizeMovementType(type: string): MovementChartType {
 	const t = type.toUpperCase();
 	if (t.includes('RECEPTION')) return 'RECEPTION';
 	if (t === 'EXPEDITION') return 'EXPEDITION';
+	// Catégorie à part, et non repli sur « Autres » : une arrivée constatée porte sur de la
+	// marchandise déjà comptée en expédition. Confondue avec elle, elle doublerait le flux sortant ;
+	// noyée dans « Autres », elle gonflerait un fourre-tout sans que personne sache pourquoi.
+	if (t === 'LIVRAISON') return 'LIVRAISON';
 	if (t.includes('QUARANTAINE') || t.includes('QUARANT') || t === 'QUARANTAINE_FROID')
 		return 'QUARANTAINE';
 	if (
@@ -27,6 +32,7 @@ export function normalizeMovementType(type: string): MovementChartType {
 export const MOVEMENT_CHART_LABELS: Record<MovementChartType, string> = {
 	RECEPTION: 'Réceptions',
 	EXPEDITION: 'Expéditions',
+	LIVRAISON: 'Arrivées constatées',
 	QUARANTAINE: 'Quarantaines',
 	TRANSFORMATION: 'Transformations',
 	AUTRE: 'Autres'
@@ -35,6 +41,7 @@ export const MOVEMENT_CHART_LABELS: Record<MovementChartType, string> = {
 export const MOVEMENT_CHART_COLORS: Record<MovementChartType, string> = {
 	RECEPTION: '#1b6b5c',
 	EXPEDITION: '#5aafa0',
+	LIVRAISON: '#0f766e',
 	QUARANTAINE: '#f59e0b',
 	TRANSFORMATION: '#8fd4c5',
 	AUTRE: '#94a3b8'

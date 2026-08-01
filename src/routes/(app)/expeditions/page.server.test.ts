@@ -21,7 +21,7 @@ const run = () => (load as any)({ fetch: vi.fn(), cookies: {} });
  * une donnée d'exploitation (elle pré-remplit la destination), mais `is_active` reste absent — les
  * archivés sont déjà écartés par le `where` du serveur.
  */
-const clientTerrain = {
+const fieldCustomer = {
 	id: 'c1',
 	nom_enseigne: 'Épicerie du Marché',
 	adresse_livraison: '3 rue des Halles'
@@ -29,7 +29,7 @@ const clientTerrain = {
 
 beforeEach(() => {
 	organization.getShipments.mockResolvedValue(ok([]));
-	organization.getCustomers.mockResolvedValue(ok([clientTerrain]));
+	organization.getCustomers.mockResolvedValue(ok([fieldCustomer]));
 	traceability.getBatchList.mockResolvedValue(
 		ok([
 			{
@@ -52,7 +52,7 @@ describe('chargement des expéditions', () => {
 	it('propose les clients servis à un rôle terrain, sans is_active (#82)', async () => {
 		const data = await run();
 
-		expect(data.customers).toEqual([clientTerrain]);
+		expect(data.customers).toEqual([fieldCustomer]);
 	});
 
 	it('ne propose que les lots réellement expédiables', async () => {
@@ -93,12 +93,12 @@ describe('chargement des expéditions', () => {
 });
 
 describe('confirmation de livraison', () => {
-	const requete = (id: string) =>
+	const buildRequest = (id: string) =>
 		({ formData: async () => new Map([['id', id]]) }) as unknown as Request;
 
-	const executer = (id: string, role: string) =>
-		(actions as any).confirmer({
-			request: requete(id),
+	const runConfirm = (id: string, role: string) =>
+		(actions as any).confirm({
+			request: buildRequest(id),
 			fetch: vi.fn(),
 			cookies: {},
 			locals: { user: { role } }
@@ -119,14 +119,18 @@ describe('confirmation de livraison', () => {
 	});
 
 	it('constate l’arrivée et rend la date retenue', async () => {
-		const res = await executer('e1', 'operator');
+		const res = await runConfirm('e1', 'operator');
 
 		expect(logistics.confirmShipmentDelivery).toHaveBeenCalledWith(
 			expect.anything(),
 			expect.anything(),
 			'e1'
 		);
+		// La date est assertée, et pas seulement la référence : sans ça, la transmettre à `undefined`
+		// laissait tout vert et l'écran annonçait « arrivée le Invalid Date ».
 		expect(res).toMatchObject({ confirmed: { ref: 'BL-1' } });
+		expect(res.confirmed.date).toContain('31/07/2026');
+		expect(res.confirmed.date).not.toContain('T10:00:00');
 	});
 
 	/**
@@ -134,23 +138,27 @@ describe('confirmation de livraison', () => {
 	 * la requête afficherait un échec réseau là où il s'agit d'un droit manquant.
 	 */
 	it('refuse un rôle en lecture seule sans appeler l’API', async () => {
-		const res = await executer('e1', 'viewer');
+		const res = await runConfirm('e1', 'viewer');
 
 		expect(res.status).toBe(403);
+		// La CLÉ compte autant que le code : le gabarit ne lit que `confirmError`. Sous `createError`,
+		// le refus part dans le vide et l'utilisateur voit un clic sans effet.
+		expect(res.data).toMatchObject({ confirmError: expect.any(String) });
 		expect(logistics.confirmShipmentDelivery).not.toHaveBeenCalled();
 	});
 
 	it('refuse une expédition non désignée', async () => {
-		const res = await executer('', 'operator');
+		const res = await runConfirm('', 'operator');
 
 		expect(res.status).toBe(400);
+		expect(res.data).toMatchObject({ confirmError: expect.any(String) });
 		expect(logistics.confirmShipmentDelivery).not.toHaveBeenCalled();
 	});
 
 	it('relaie le refus de l’API au lieu de le taire', async () => {
 		logistics.confirmShipmentDelivery.mockResolvedValue(err('Expédition introuvable'));
 
-		const res = await executer('e1', 'operator');
+		const res = await runConfirm('e1', 'operator');
 
 		expect(res.status).toBe(503);
 		expect(res.data).toMatchObject({ confirmError: 'Expédition introuvable' });
@@ -182,8 +190,8 @@ describe('lecture de l’arrivée', () => {
 
 		const data = await run();
 
-		expect(data.shipments[0].dateLivraison).not.toBeNull();
+		expect(data.shipments[0].deliveredAt).not.toBeNull();
 		// `null` et non une chaîne vide : c'est ce que l'écran teste pour proposer la confirmation.
-		expect(data.shipments[1].dateLivraison).toBeNull();
+		expect(data.shipments[1].deliveredAt).toBeNull();
 	});
 });

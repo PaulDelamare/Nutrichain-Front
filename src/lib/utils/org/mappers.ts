@@ -376,6 +376,11 @@ const AUDIT_ACTION_LABELS: Record<string, string> = {
 	CREATE_RECEIPT: 'Réception enregistrée',
 	CREATE_RECEIPT_VIA_SYNC: 'Réception (mobile)',
 	CREATE_SHIPMENT: 'Expédition créée',
+	CONFIRM_SHIPMENT_DELIVERY: 'Arrivée constatée',
+	// L'API distingue le rejeu par un AUTRE acteur : c'est un désaccord sur la date d'arrivée, et
+	// c'est la ligne qu'on cherchera en cas de litige. Le libellé doit le dire, pas le lisser.
+	CONFIRM_SHIPMENT_DELIVERY_REJOUEE: 'Arrivée reconfirmée par un autre acteur',
+	LIVRAISON: 'Arrivée chez le client',
 	EXPEDITION: 'Expédition',
 	DEPLACEMENT: 'Changement d’emplacement',
 	MOVE_BATCH: 'Lot déplacé',

@@ -17,6 +17,10 @@ describe('normalizeMovementType', () => {
 		expect(normalizeMovementType('EXPEDITION')).toBe('EXPEDITION');
 	});
 
+	it("range l'arrivée constatée à part, sans la confondre avec l'expédition ni avec « Autres »", () => {
+		expect(normalizeMovementType('LIVRAISON')).toBe('LIVRAISON');
+	});
+
 	it('range la quarantaine froid avec les quarantaines', () => {
 		expect(normalizeMovementType('QUARANTAINE_FROID')).toBe('QUARANTAINE');
 		expect(normalizeMovementType('quarantaine')).toBe('QUARANTAINE');
@@ -71,7 +75,8 @@ describe('movementEventLabel', () => {
 			'LEVEE_QUARANTAINE',
 			'RAPPEL',
 			'DEPLACEMENT',
-			'MISE_AU_REBUT'
+			'MISE_AU_REBUT',
+			'LIVRAISON'
 		];
 
 		for (const type of TYPES_API) {

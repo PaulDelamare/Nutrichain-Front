@@ -33,7 +33,7 @@ export const load: PageServerLoad = async ({ fetch, cookies }) => {
 			date: new Date(s.date_envoi).toLocaleString('fr-FR'),
 			// `null` tant que l'arrivée n'a pas été constatée. C'est cette absence, et non le statut
 			// seul, qui dit au décideur qu'il ignore où se trouve la marchandise.
-			dateLivraison: s.date_livraison ? new Date(s.date_livraison).toLocaleString('fr-FR') : null,
+			deliveredAt: s.date_livraison ? new Date(s.date_livraison).toLocaleString('fr-FR') : null,
 			lots: s.liaisons?.map((l) => l.lot.id.slice(0, 8)).join(', ') ?? '—'
 		})),
 		error: null,
@@ -54,8 +54,8 @@ export const load: PageServerLoad = async ({ fetch, cookies }) => {
 
 export const actions = {
 	create: async ({ request, fetch, cookies, locals }) => {
-		const refus = refusEcriture(locals.user);
-		if (refus) return fail(403, { createError: refus });
+		const denial = refusEcriture(locals.user);
+		if (denial) return fail(403, { createError: denial });
 
 		const fd = await request.formData();
 		const id_client = String(fd.get('id_client') ?? '').trim();
@@ -95,9 +95,9 @@ export const actions = {
 	 * Même garde d'écriture que la création : c'est un geste de manutention, pas une décision
 	 * qualité. L'API le refuse aussi de son côté — cette garde-ci évite juste un aller-retour.
 	 */
-	confirmer: async ({ request, fetch, cookies, locals }) => {
-		const refus = refusEcriture(locals.user);
-		if (refus) return fail(403, { confirmError: refus });
+	confirm: async ({ request, fetch, cookies, locals }) => {
+		const denial = refusEcriture(locals.user);
+		if (denial) return fail(403, { confirmError: denial });
 
 		const fd = await request.formData();
 		const id = String(fd.get('id') ?? '').trim();
@@ -106,6 +106,13 @@ export const actions = {
 		const res = await confirmShipmentDelivery(fetch, cookies, id);
 		if (!res.ok) return fail(res.status, { confirmError: res.message });
 
-		return { confirmed: { ref: res.data.shipment_id, date: res.data.date_livraison } };
+		// Formaté ici comme les dates du tableau : formater dans le gabarit ferait dater la même
+		// arrivée du fuseau du navigateur d'un côté et de celui du serveur de l'autre.
+		return {
+			confirmed: {
+				ref: res.data.shipment_id,
+				date: new Date(res.data.date_livraison).toLocaleString('fr-FR')
+			}
+		};
 	}
 } satisfies Actions;

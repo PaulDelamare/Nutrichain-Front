@@ -6,7 +6,18 @@
 
 	let { data, form }: { data: PageData; form: ActionData } = $props();
 
-	const peutCreer = $derived(peutEcrire(data.user.role));
+	const canWrite = $derived(peutEcrire(data.user.role));
+
+	/**
+	 * Geste irréversible : la date d'arrivée est scellée dans le journal WORM et aucune route ne
+	 * l'annule. Les boutons sont identiques d'une ligne à l'autre — sans ce garde-fou, un clic une
+	 * ligne trop bas date définitivement la mauvaise expédition.
+	 */
+	function confirmDelivery(ref: string, event: SubmitEvent) {
+		if (!confirm(`Constater l'arrivée de l'expédition ${ref} ? La date sera définitive.`)) {
+			event.preventDefault();
+		}
+	}
 </script>
 
 <PageHead
@@ -20,7 +31,7 @@
 
 <section class="create">
 	<h2>Créer une expédition</h2>
-	{#if peutCreer}
+	{#if canWrite}
 		<form method="POST" action="?/create" class="form">
 			<label>
 				Client
@@ -76,8 +87,7 @@
 
 {#if form?.confirmed}
 	<p class="ok" role="status">
-		Livraison confirmée — réf. {form.confirmed.ref}, arrivée le
-		{new Date(form.confirmed.date).toLocaleString('fr-FR')}
+		Livraison confirmée — réf. {form.confirmed.ref}, arrivée le {form.confirmed.date}
 	</p>
 {:else if form?.confirmError}
 	<p class="err" role="status">{form.confirmError}</p>
@@ -94,7 +104,7 @@
 					<th>Date envoi</th>
 					<th>Arrivée</th>
 					<th>Lots</th>
-					{#if peutCreer}<th>Action</th>{/if}
+					{#if canWrite}<th>Action</th>{/if}
 				</tr>
 			</thead>
 			<tbody>
@@ -106,14 +116,18 @@
 						<td>{row.date}</td>
 						<!-- Une arrivée non constatée se dit, elle ne se devine pas : c'est cette absence
 						     qui prévient le décideur qu'il ignore où est la marchandise. -->
-						<td>{row.dateLivraison ?? 'non constatée'}</td>
+						<td>{row.deliveredAt ?? 'non constatée'}</td>
 						<td>{row.lots}</td>
-						{#if peutCreer}
+						{#if canWrite}
 							<td>
-								{#if !row.dateLivraison}
-									<form method="POST" action="?/confirmer">
+								{#if !row.deliveredAt}
+									<form
+										method="POST"
+										action="?/confirm"
+										onsubmit={(e) => confirmDelivery(row.ref, e)}
+									>
 										<input type="hidden" name="id" value={row.id} />
-										<button type="submit" class="confirmer">Confirmer la livraison</button>
+										<button type="submit" class="confirm-delivery">Confirmer la livraison</button>
 									</form>
 								{:else}
 									<span class="hint">—</span>
@@ -201,6 +215,12 @@
 		margin: 0.75rem 0 0;
 		color: #b91c1c;
 		font-size: 0.875rem;
+	}
+
+	.confirm-delivery {
+		padding: 0.3rem 0.55rem;
+		font-size: 0.8125rem;
+		white-space: nowrap;
 	}
 
 	.hint {
