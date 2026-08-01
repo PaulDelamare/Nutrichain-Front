@@ -2,7 +2,9 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 const ok = <T>(data: T) => ({ ok: true as const, status: 200, data });
+const err = (message: string) => ({ ok: false as const, status: 409, message });
 
+const scrapBatch = vi.fn();
 const getBatchById = vi.fn();
 const getGenealogy = vi.fn();
 const getMovements = vi.fn();
@@ -11,7 +13,8 @@ const getBatchList = vi.fn();
 
 vi.mock('$lib/Api/logistics.server', () => ({
 	getBatchById: (...a: unknown[]) => getBatchById(...a),
-	releaseQuarantine: vi.fn()
+	releaseQuarantine: vi.fn(),
+	scrapBatch: (...a: unknown[]) => scrapBatch(...a)
 }));
 
 vi.mock('$lib/Api/organization.server', () => ({
@@ -25,7 +28,7 @@ vi.mock('$lib/Api/traceability.server', () => ({
 	triggerRecall: vi.fn()
 }));
 
-const { load } = await import('./+page.server');
+const { load, actions } = await import('./+page.server');
 
 const run = (lotId = 'lot-1') => (load as any)({ fetch: vi.fn(), cookies: {}, params: { lotId } });
 
@@ -127,5 +130,75 @@ describe('chargement de la fiche lot — historique', () => {
 		await run();
 
 		expect(getAuditLogs).not.toHaveBeenCalled();
+	});
+});
+
+/**
+ * #254 — Mettre au rebut est la SEULE sortie d'un lot bloqué : la levée de quarantaine et un
+ * contrôle conforme rendent tous deux 409. L'API l'exposait, aucune interface ne l'appelait, donc
+ * un lot bloqué par erreur restait coincé à vie.
+ */
+describe('mise au rebut', () => {
+	const buildRequest = (motif: string) =>
+		({ formData: async () => new Map([['motif', motif]]) }) as unknown as Request;
+
+	const runScrap = (motif: string, role: string) =>
+		(actions as any).scrap({
+			request: buildRequest(motif),
+			fetch: vi.fn(),
+			cookies: {},
+			params: { lotId: 'lot-1' },
+			locals: { user: { role } }
+		});
+
+	beforeEach(() => {
+		scrapBatch.mockReset();
+		scrapBatch.mockResolvedValue(ok({ id: 'lot-1', statut: 'REBUT' }));
+	});
+
+	it('met le lot au rebut avec son motif', async () => {
+		const res = await runScrap('Rupture de chaine du froid de 4 h', 'quality');
+
+		expect(scrapBatch).toHaveBeenCalledWith(
+			expect.anything(),
+			expect.anything(),
+			'lot-1',
+			'Rupture de chaine du froid de 4 h'
+		);
+		expect(res).toMatchObject({ scrapped: true });
+	});
+
+	/**
+	 * Détruire de la marchandise n'est pas de la manutention : l'API exige les rôles qualité. La
+	 * garde est doublée ici pour ne pas aller chercher un 403 sur le réseau.
+	 */
+	it("refuse la mise au rebut à l'opérateur, sans appeler l'API", async () => {
+		const res = await runScrap('Motif valable', 'operator');
+
+		expect(res.status).toBe(403);
+		// La CLÉ compte autant que le code : le gabarit ne lit que `scrapError`.
+		expect(res.data).toMatchObject({ scrapError: expect.any(String) });
+		expect(scrapBatch).not.toHaveBeenCalled();
+	});
+
+	it('refuse un motif trop court — la destruction est scellée dans l’audit', async () => {
+		const res = await runScrap('ok', 'quality');
+
+		expect(res.status).toBe(400);
+		expect(res.data).toMatchObject({ scrapError: expect.any(String) });
+		expect(scrapBatch).not.toHaveBeenCalled();
+	});
+
+	it('relaie le refus de l’API au lieu de le taire', async () => {
+		scrapBatch.mockResolvedValue(
+			err('Seul un lot en quarantaine ou sous rappel peut etre mis au rebut.')
+		);
+
+		const res = await runScrap('Motif valable', 'quality');
+
+		expect(res.status).toBe(409);
+		expect(res.data).toMatchObject({
+			scrapError: 'Seul un lot en quarantaine ou sous rappel peut etre mis au rebut.'
+		});
 	});
 });

@@ -40,6 +40,35 @@ describe('LotActionsPanel — décisions qualité', () => {
 		await expect.element(page.getByText('Lever la quarantaine')).toBeInTheDocument();
 	});
 
+	/**
+	 * #254 — La mise au rebut est la SEULE sortie d'un lot bloqué : la levée rend 409, et un contrôle
+	 * conforme aussi. Elle détruit de la marchandise, donc elle relève de la décision qualité, comme
+	 * la levée et le rappel.
+	 */
+	it("refuse la mise au rebut à l'opérateur — détruire n'est pas de la manutention", async () => {
+		renderPanel('quarantaine', 'operator');
+
+		expect(page.getByRole('button', { name: 'Mettre au rebut' }).all()).toHaveLength(0);
+	});
+
+	it('autorise la mise au rebut au rôle qualité, sur un lot bloqué', async () => {
+		renderPanel('quarantaine', 'quality');
+
+		await expect.element(page.getByRole('button', { name: 'Mettre au rebut' })).toBeInTheDocument();
+	});
+
+	it('autorise la mise au rebut sur un lot sous rappel — le stock resté chez nous', async () => {
+		renderPanel('surveillance', 'quality');
+
+		await expect.element(page.getByRole('button', { name: 'Mettre au rebut' })).toBeInTheDocument();
+	});
+
+	it("ne la propose pas sur un lot conforme — l'API la refuserait en 409", async () => {
+		renderPanel('conforme', 'quality');
+
+		expect(page.getByRole('button', { name: 'Mettre au rebut' }).all()).toHaveLength(0);
+	});
+
 	it("laisse la traçabilité accessible à tous — c'est une lecture", async () => {
 		renderPanel('conforme', 'viewer');
 

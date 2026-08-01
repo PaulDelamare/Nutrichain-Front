@@ -11,6 +11,8 @@
 		releaseError?: string;
 		recall?: ApiRecallResult;
 		recallError?: string;
+		scrapped?: boolean;
+		scrapError?: string;
 	}
 
 	let {
@@ -26,6 +28,23 @@
 	} = $props();
 
 	const peutDecider = $derived(peutDeciderQualite(role));
+
+	/**
+	 * Les deux seuls états où l'API accepte la mise au rebut. C'est aussi la seule sortie d'un lot
+	 * bloqué : sans elle, la levée rend 409 et un contrôle conforme aussi — le lot restait coincé
+	 * à vie (#254).
+	 */
+	const peutMettreAuRebut = $derived(statut === 'quarantaine' || statut === 'surveillance');
+
+	/**
+	 * Geste irréversible : la quantité tombe à zéro et aucune route ne le défait. Le lot est nommé
+	 * dans la demande, parce qu'on arrive ici depuis une liste et qu'on peut s'être trompé de fiche.
+	 */
+	function confirmScrap(event: SubmitEvent) {
+		if (!confirm(`Mettre le lot ${lotId} au rebut ? La marchandise sera déclarée détruite.`)) {
+			event.preventDefault();
+		}
+	}
 </script>
 
 <section class="panel">
@@ -88,6 +107,37 @@
 			{/if}
 			{#if form?.recallError}
 				<p class="feedback err" role="status">❌ {form.recallError}</p>
+			{/if}
+		</div>
+	{/if}
+
+	{#if peutMettreAuRebut}
+		<div class="action">
+			<p class="action-title">Mettre au rebut</p>
+			<p class="action-hint">
+				{statut === 'quarantaine'
+					? 'La marchandise n’est pas récupérable : elle quitte définitivement la chaîne. C’est la seule sortie d’un lot bloqué.'
+					: 'Le stock de ce lot resté chez nous quitte définitivement la chaîne. Le retrait des rayons, lui, se déclare par expédition.'}
+			</p>
+			{#if peutDecider}
+				<form method="POST" action="?/scrap" onsubmit={confirmScrap}>
+					<input
+						type="text"
+						name="motif"
+						placeholder="Motif (ex. rupture de chaîne du froid de 4 h)"
+						required
+						minlength="3"
+						maxlength="500"
+					/>
+					<button type="submit" class="danger">Mettre au rebut</button>
+				</form>
+			{:else}
+				<ActionReservee action="La mise au rebut" {role} />
+			{/if}
+			{#if form?.scrapped}
+				<p class="feedback ok" role="status">✅ Lot mis au rebut — quantité ramenée à zéro.</p>
+			{:else if form?.scrapError}
+				<p class="feedback err" role="status">❌ {form.scrapError}</p>
 			{/if}
 		</div>
 	{/if}
