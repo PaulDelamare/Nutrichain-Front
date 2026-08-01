@@ -4,7 +4,7 @@ import { getAlertBatches, resolveAlert, type ApiAlertBatch } from '$lib/Api/aler
 import { getAlerts, getEquipment } from '$lib/Api/organization.server';
 import { getSensorHistory } from '$lib/Api/iot.server';
 import { refusDecisionQualite } from '$lib/server/guards';
-import { alertsToCold, listActiveColdAlerts } from '$lib/utils/org/mappers';
+import { alertsToCold, listActiveColdAlerts, pickTelemetrySensor } from '$lib/utils/org/mappers';
 
 export const load: PageServerLoad = async ({ fetch, cookies, url }) => {
 	const sensorId = url.searchParams.get('sensor');
@@ -20,6 +20,7 @@ export const load: PageServerLoad = async ({ fetch, cookies, url }) => {
 			alerts: [],
 			error: alerts.message || equipment.message,
 			telemetry: null,
+			telemetryError: null,
 			selectedSensor: sensorId
 		};
 	}
@@ -41,24 +42,37 @@ export const load: PageServerLoad = async ({ fetch, cookies, url }) => {
 		threshold: number | null;
 	} | null = null;
 
-	const targetSensor = sensorId ?? equipment.data.find((e) => e.sensor_id)?.sensor_id ?? null;
+	const targetSensor = pickTelemetrySensor(alerts.data, equipment.data, sensorId);
+
+	// Un échec de la télémétrie ne doit pas escamoter la section : la page se contentait de ne rien
+	// afficher, si bien qu'un capteur muet et une télémétrie tombée donnaient le même écran vide.
+	// Sous un bandeau « incident critique », l'absence de courbe se lit comme « tout va bien ».
+	let telemetryError: string | null = null;
 
 	if (targetSensor) {
 		const history = await getSensorHistory(fetch, cookies, targetSensor, 48);
-		if (history.ok) {
-			const equip = equipment.data.find((e) => e.sensor_id === targetSensor);
-			telemetry = {
-				sensorId: targetSensor,
-				points: history.data.data.map((p) => ({
-					timestamp: p.timestamp,
-					temperature: Number(p.temperature)
-				})),
-				threshold: equip?.temp_seuil_max != null ? Number(equip.temp_seuil_max) : null
-			};
-		}
+		const equip = equipment.data.find((e) => e.sensor_id === targetSensor);
+		telemetry = {
+			sensorId: targetSensor,
+			points: history.ok
+				? history.data.data.map((p) => ({
+						timestamp: p.timestamp,
+						temperature: Number(p.temperature)
+					}))
+				: [],
+			threshold: equip?.temp_seuil_max != null ? Number(equip.temp_seuil_max) : null
+		};
+		if (!history.ok) telemetryError = history.message;
 	}
 
-	return { incident, alerts: rows, error: null, telemetry, selectedSensor: targetSensor };
+	return {
+		incident,
+		alerts: rows,
+		error: null,
+		telemetry,
+		telemetryError,
+		selectedSensor: targetSensor
+	};
 };
 
 export const actions = {

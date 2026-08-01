@@ -74,6 +74,45 @@ export function listActiveColdAlerts(alerts: ApiAlert[]): ApiAlert[] {
 	return alerts.filter((a) => COLD_ALERT_TYPES.includes(a.type) && a.statut === 'ACTIVE');
 }
 
+/**
+ * Le capteur dont la courbe illustre l'incident affiché en bandeau.
+ *
+ * ⚠️ Ne PAS retomber d'emblée sur « le premier matériel muni d'un capteur » :
+ * `GET /api/organization/equipment` ne promet aucun ordre, et l'ingestion de télémétrie réécrit la
+ * ligne du matériel qu'elle mesure. Déclencher une excursion déplaçait donc le capteur concerné
+ * hors de la première place, et la courbe basculait sur « aucune donnée » à l'instant précis où
+ * elle avait quelque chose à montrer. Même stable, elle traçait une autre chambre que celle du
+ * bandeau : une courbe plate sous un incident critique, ou l'inverse.
+ *
+ * On prend donc EXACTEMENT le matériel de l'incident — `cold[0]`, la même alerte que celle
+ * qu'`alertsToCold` met en bandeau. Se rabattre sur l'alerte suivante quand celle-là n'a pas de
+ * capteur exploitable (matériel nul, type `FROID` non issu d'une détection, capteur détaché)
+ * reproduirait le défaut ailleurs : une courbe qui parle d'une autre chambre que le titre au-dessus
+ * d'elle, sans que rien ne le signale. Pas de capteur pour l'incident ⇒ pas de courbe.
+ */
+export function pickTelemetrySensor(
+	alerts: ApiAlert[],
+	equipment: ApiEquipment[],
+	requestedSensor: string | null
+): string | null {
+	if (requestedSensor) return requestedSensor;
+
+	const incident = listActiveColdAlerts(alerts)[0];
+	if (incident) {
+		return equipment.find((e) => e.id === incident.id_materiel)?.sensor_id ?? null;
+	}
+
+	// Aucun incident : la page reste utile en surveillance. Tri explicite — l'API ne promet pas
+	// d'ordre, et un `find` sur liste non triée ferait sauter la courbe d'une chambre à l'autre à
+	// chaque mesure reçue.
+	return (
+		equipment
+			.map((e) => e.sensor_id)
+			.filter((s): s is string => Boolean(s))
+			.sort()[0] ?? null
+	);
+}
+
 /** Mappe les lots renvoyés par GET /api/alerts/:id/batches — jamais une reconstitution par frigo. */
 export function mapAlertBatchesToLots(batches: ApiAlertBatch[]): ColdAlertLot[] {
 	return batches.map((b) => ({
