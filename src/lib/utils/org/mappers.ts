@@ -270,14 +270,13 @@ export function buildDashboardKpis(
 	batchCount: number,
 	alerts: ApiAlert[],
 	qualityCount: number,
-	quarantineCount: number
+	quarantineCount: number,
+	recalledCount: number
 ): Kpi[] {
 	const cold = alerts.filter(
 		(a) => COLD_ALERT_TYPES.includes(a.type) && a.statut === 'ACTIVE'
 	).length;
-	const rappels = alerts.filter(
-		(a) => RECALL_ALERT_TYPES.includes(a.type) && a.statut === 'ACTIVE'
-	).length;
+
 	return [
 		{
 			label: 'Lots suivis',
@@ -294,9 +293,12 @@ export function buildDashboardKpis(
 			accent: 'red'
 		},
 		{
-			label: 'Rappels en cours',
-			value: String(rappels),
-			detail: rappels > 0 ? 'Workflow actif' : 'Aucun rappel',
+			// Compté sur le STATUT DES LOTS, pas sur les alertes actives : résoudre l'alerte d'un
+			// rappel ne le clôt pas (l'API le documente), et le tableau annonçait alors « Aucun
+			// rappel » pendant que sa propre répartition affichait des lots sous rappel.
+			label: 'Lots sous rappel',
+			value: String(recalledCount),
+			detail: recalledCount > 0 ? 'Marchandise immobilisée' : 'Aucun lot sous rappel',
 			href: '/rappels-produits',
 			accent: 'blue'
 		},

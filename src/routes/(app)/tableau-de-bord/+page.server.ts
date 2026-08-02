@@ -37,7 +37,13 @@ export const load: PageServerLoad = async ({ fetch, cookies }) => {
 	const openIssues = openQualityIssues(qualityList).length;
 
 	return {
-		kpis: buildDashboardKpis(totalBatches, alertList, openIssues, quarantineList.length),
+		kpis: buildDashboardKpis(
+			totalBatches,
+			alertList,
+			openIssues,
+			quarantineList.length,
+			batchList.filter((b) => b.statut === 'ALERTE').length
+		),
 		charts: buildDashboardCharts(batchList, alertList, movementList, qualityList),
 		// La répartition ne porte que sur les lots effectivement reçus. Au-delà du plafond, le dire
 		// vaut mieux que de laisser croire que le camembert couvre tout le catalogue.

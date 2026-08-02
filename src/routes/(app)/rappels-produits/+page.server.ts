@@ -11,9 +11,15 @@ export const load: PageServerLoad = async ({ fetch, cookies }) => {
 		getBatchList(fetch, cookies)
 	]);
 
+	const batchList = batches.ok ? batches.data : [];
+
 	return {
 		rappels: alerts.ok ? alertsToRappels(alerts.data) : [],
-		batches: batches.ok ? batches.data.filter((b) => !['BLOQUE', 'ALERTE'].includes(b.statut)) : [],
+		batches: batchList.filter((b) => !['BLOQUE', 'ALERTE'].includes(b.statut)),
+		// L'état qui fait foi est celui des LOTS. Les cartes ci-dessus se déduisent des alertes, et
+		// une alerte résolue — ou purgée — faisait disparaître le rappel de l'écran pendant que la
+		// marchandise restait immobilisée.
+		lotsSousRappel: batchList.filter((b) => b.statut === 'ALERTE'),
 		error: [alerts, batches].find((r) => !r.ok)?.message
 	};
 };
