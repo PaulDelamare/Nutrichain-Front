@@ -48,27 +48,40 @@ export const MOVEMENT_CHART_COLORS: Record<MovementChartType, string> = {
 };
 
 /**
+ * Libellés de l'historique INTERNE d'un lot (`Batch_Mouvement`).
+ *
+ * Aucun ne nomme un type d'événement EPCIS, et c'est le sujet de #83 : l'API n'a jamais émis de
+ * `TransactionEvent`, et la quarantaine, le rappel, le contrôle qualité, le déplacement et le rebut
+ * n'émettent rien du tout. Étiqueter un mouvement d'un type EPCIS transformait une lacune assumée
+ * en affirmation fausse à l'écran. La vue normalisée, et la seule, c'est le journal EPCIS.
+ *
  * Doit couvrir tout `MOVEMENT_TYPES` de l'API (`logistics.constants.ts`) : ce qui manque ici sort
  * tel quel dans l'activité récente du tableau de bord — « ObjectEvent — DEPLACEMENT » (#81).
+ *
+ * Le vocabulaire reprend celui de la frise de la fiche lot (`lots/lotEvents.ts`) — deux écrans qui
+ * nomment le même geste autrement se contredisent. Une exception assumée : `LIVRAISON` se dit ici
+ * « Arrivée constatée », comme la légende du graphe juste au-dessus, alors que la frise dit
+ * « Livraison confirmée ». Sur un même écran, la cohérence prime sur l'alignement inter-écrans.
  */
-export const MOVEMENT_EVENT_LABELS: Record<string, string> = {
-	RECEPTION: 'ObjectEvent — réception',
-	EXPEDITION: 'TransactionEvent — expédition',
-	QUARANTAINE: 'ObjectEvent — quarantaine',
-	QUARANTAINE_FROID: 'ObjectEvent — quarantaine froid',
-	TRANSFORMATION: 'TransformationEvent — production',
-	TRANSFORMATION_ENTREE: 'TransformationEvent — production',
-	TRANSFORMATION_SORTIE: 'TransformationEvent — consommation',
-	CONTROLE_QUALITE: 'ObjectEvent — contrôle qualité',
-	LEVEE_QUARANTAINE: 'ObjectEvent — levée de quarantaine',
-	RAPPEL: 'TransactionEvent — rappel produit',
-	DEPLACEMENT: 'ObjectEvent — changement d’emplacement',
-	MISE_AU_REBUT: 'ObjectEvent — mise au rebut',
-	// Pas d'événement EPCIS derrière : l'API n'en émet aucun à la confirmation — l'arrivée appartient
-	// au destinataire. Le libellé ne doit donc pas en annoncer un.
+export const MOVEMENT_LABELS: Record<string, string> = {
+	RECEPTION: 'Réception',
+	EXPEDITION: 'Expédition',
+	QUARANTAINE_FROID: 'Quarantaine — excursion de température',
+	TRANSFORMATION_ENTREE: 'Transformation — production',
+	TRANSFORMATION_SORTIE: 'Transformation — consommation',
+	CONTROLE_QUALITE: 'Contrôle qualité',
+	LEVEE_QUARANTAINE: 'Levée de quarantaine',
+	RAPPEL: 'Rappel produit',
+	DEPLACEMENT: 'Déplacement',
+	MISE_AU_REBUT: 'Mise au rebut',
 	LIVRAISON: 'Arrivée constatée chez le client'
 };
 
-export function movementEventLabel(type: string): string {
-	return MOVEMENT_EVENT_LABELS[type] ?? `ObjectEvent — ${type}`;
+/**
+ * Repli pour un type que l'API ajouterait sans qu'on l'ait traduit ici : il montre le code brut
+ * plutôt que d'inventer une catégorie, et le préfixe dit ce que la ligne est — un mouvement — sans
+ * revendiquer un standard.
+ */
+export function movementLabel(type: string): string {
+	return MOVEMENT_LABELS[type] ?? `Mouvement — ${type}`;
 }

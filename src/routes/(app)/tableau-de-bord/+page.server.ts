@@ -6,7 +6,11 @@ import {
 	getQuarantineBatches,
 	getMovements
 } from '$lib/Api/organization.server';
-import { buildDashboardKpis, buildDashboardTasks, movementsToEvents } from '$lib/utils/org/mappers';
+import {
+	buildDashboardKpis,
+	buildDashboardTasks,
+	movementsToActivity
+} from '$lib/utils/org/mappers';
 import { buildDashboardCharts } from '$lib/utils/org/dashboardCharts';
 import { openQualityIssues } from '$lib/utils/org/quality';
 
@@ -43,7 +47,7 @@ export const load: PageServerLoad = async ({ fetch, cookies }) => {
 				: 'Par statut opérationnel',
 		// Le catalogue sert aussi à nommer les lots de l'activité récente : l'API ne joint pas le
 		// numéro d'étiquette à ses mouvements, et la page affichait donc des UUID (#81).
-		recentEvents: movementsToEvents(movementList.slice(0, 5), batchList),
+		recentActivity: movementsToActivity(movementList.slice(0, 5), batchList),
 		tasks: buildDashboardTasks(alertList, openIssues),
 		error
 	};

@@ -11,7 +11,7 @@ import {
 	countActiveColdAlerts,
 	genealogyToGraph,
 	membersToUsers,
-	movementsToEvents,
+	movementsToActivity,
 	pickTelemetrySensor,
 	qualityToNc
 } from './mappers';
@@ -433,7 +433,7 @@ describe('buildDashboardTasks', () => {
 	});
 });
 
-describe('movementsToEvents', () => {
+describe('movementsToActivity', () => {
 	const mouvement = (partial: Partial<ApiMovement> = {}): ApiMovement =>
 		({
 			id: 'mvt-1',
@@ -447,7 +447,7 @@ describe('movementsToEvents', () => {
 		}) as ApiMovement;
 
 	it('ne rend aucun événement quand il n’y a aucun mouvement', () => {
-		expect(movementsToEvents([])).toEqual([]);
+		expect(movementsToActivity([])).toEqual([]);
 	});
 
 	/**
@@ -457,7 +457,7 @@ describe('movementsToEvents', () => {
 	 * catalogue de lots que la page charge déjà pour son camembert.
 	 */
 	it('nomme le lot par son numéro d’étiquette (#81)', () => {
-		const [event] = movementsToEvents(
+		const [event] = movementsToActivity(
 			[mouvement()],
 			[{ id: '2a71fc4a-76e6-423f-8b00-05941af0b8ca', lot_number: '260726-IXWL0H' }]
 		);
@@ -468,7 +468,7 @@ describe('movementsToEvents', () => {
 	it('se replie sur un préfixe court quand le lot est hors du catalogue chargé', () => {
 		// Le catalogue est plafonné : un mouvement peut porter sur un lot plus ancien. Mieux vaut
 		// huit caractères que trente-six.
-		const [event] = movementsToEvents([mouvement()], []);
+		const [event] = movementsToActivity([mouvement()], []);
 
 		expect(event.meta).toBe('Lot 2a71fc4a · Plaquette de Beurre Doux 250g');
 	});
@@ -804,9 +804,9 @@ describe('buildDashboardTasks — ce qu’il reste à faire', () => {
 	});
 });
 
-describe('movementsToEvents', () => {
-	it('nomme l’événement EPCIS et le lot concerné', () => {
-		const [event] = movementsToEvents([
+describe('movementsToActivity', () => {
+	it('nomme le geste métier et le lot concerné, sans revendiquer un type EPCIS', () => {
+		const [event] = movementsToActivity([
 			{
 				id: 1,
 				type_action: 'EXPEDITION',
@@ -817,13 +817,13 @@ describe('movementsToEvents', () => {
 			}
 		]);
 
-		expect(event.title).toBe('TransactionEvent — expédition');
+		expect(event.title).toBe('Expédition');
 		expect(event.meta).toBe('Lot lot-1 · Lait 1L');
 		expect(event.when).toMatch(/Aujourd'hui/);
 	});
 
 	it('ne laisse pas un lot anonyme sans repère', () => {
-		const [event] = movementsToEvents([
+		const [event] = movementsToActivity([
 			{
 				id: 1,
 				type_action: 'RECEPTION',

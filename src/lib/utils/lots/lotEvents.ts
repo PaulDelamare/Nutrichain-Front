@@ -105,6 +105,14 @@ const SHAPES: Record<string, EventShape> = {
 	}
 };
 
+/**
+ * Titres de la frise, exposés pour le garde-fou de #83 : aucun libellé de mouvement ne doit
+ * revendiquer un type d'événement EPCIS, ni ici ni dans le registre du tableau de bord.
+ */
+export const LOT_EVENT_TITLES: Record<string, string> = Object.fromEntries(
+	Object.entries(SHAPES).map(([type, shape]) => [type, shape.title])
+);
+
 function fallbackShape(typeAction: string): EventShape {
 	return { title: typeAction, tone: 'neutral', context: () => '' };
 }

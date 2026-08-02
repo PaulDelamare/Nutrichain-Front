@@ -8,14 +8,14 @@ import type {
 	ApiQualityControl
 } from '$lib/Api/organization.server';
 import type { ApiBatch, ApiGenealogy } from '$lib/Api/traceability.server';
-import type { Kpi, EpcisEvent, TaskItem } from '$lib/types/dashboard';
+import type { Kpi, ActivityItem, TaskItem } from '$lib/types/dashboard';
 import type { ColdAlertLot, ColdAlertRow, ColdIncident } from '$lib/types/cold';
 import type { NcRow, QuarantineLot } from '$lib/types/nc';
 import type { Recall } from '$lib/types/recall';
 import type { AppUser } from '$lib/types/user';
 import type { TraceGraph } from '$lib/types/trace';
 import type { StoreStat, StoreBrief } from '$lib/types/portail';
-import { movementEventLabel } from '$lib/utils/movements/labels';
+import { movementLabel } from '$lib/utils/movements/labels';
 import { numeroLot } from '$lib/utils/lots/lotLabel';
 import { toColdAlertUiStatus } from '$lib/vocab/alertSeverity';
 import { batchStatusLabel } from '$lib/vocab/batchStatus';
@@ -240,10 +240,10 @@ export function alertsToRappels(alerts: ApiAlert[]): Recall[] {
  * (`organization.service.ts` ne sélectionne que `{ id, produit }`) : on le retrouve dans le
  * catalogue que la page charge déjà pour son camembert, et à défaut on tronque.
  */
-export function movementsToEvents(
+export function movementsToActivity(
 	movements: ApiMovement[],
 	catalogue: { id: string; lot_number?: string | null }[] = []
-): EpcisEvent[] {
+): ActivityItem[] {
 	// On indexe les numéros bruts et on ne calcule le repli qu'à la lecture : inutile de tronquer
 	// 500 identifiants pour en afficher cinq.
 	const numeroParLot = new Map(catalogue.map((b) => [b.id, b.lot_number]));
@@ -254,7 +254,7 @@ export function movementsToEvents(
 
 		return {
 			when: fmtWhen(m.created_at),
-			title: movementEventLabel(m.type_action),
+			title: movementLabel(m.type_action),
 			meta: `Lot ${numero} · ${m.lot?.produit?.nom ?? ''}`.trim()
 		};
 	});

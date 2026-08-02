@@ -1,11 +1,13 @@
 import { describe, it, expect } from 'vitest';
 import {
 	normalizeMovementType,
-	movementEventLabel,
+	movementLabel,
 	MOVEMENT_CHART_TYPES,
 	MOVEMENT_CHART_LABELS,
-	MOVEMENT_CHART_COLORS
+	MOVEMENT_CHART_COLORS,
+	MOVEMENT_LABELS
 } from './labels';
+import { LOT_EVENT_TITLES } from '$lib/utils/lots/lotEvents';
 
 describe('normalizeMovementType', () => {
 	it('regroupe les réceptions, y compris celles issues de la synchro mobile', () => {
@@ -46,14 +48,51 @@ describe('libellés et couleurs du graphe', () => {
 	});
 });
 
-describe('movementEventLabel', () => {
-	it('nomme les événements EPCIS connus par leur type normalisé', () => {
-		expect(movementEventLabel('EXPEDITION')).toBe('TransactionEvent — expédition');
-		expect(movementEventLabel('RAPPEL')).toBe('TransactionEvent — rappel produit');
+describe('movementLabel', () => {
+	/**
+	 * #83 — Ces libellés décrivent des `Batch_Mouvement`, l'historique INTERNE d'un lot. Les
+	 * affubler d'un type d'événement EPCIS affirme une conformite que le back n'a pas : l'API n'a
+	 * jamais emis de `TransactionEvent`, et rien n'est emis du tout pour la quarantaine, le rappel,
+	 * le controle qualite, le deplacement ou le rebut. La vue normalisee, c'est le journal EPCIS.
+	 */
+	const VOCABULAIRE_EPCIS = [
+		'objectevent',
+		'transactionevent',
+		'transformationevent',
+		'aggregationevent',
+		'epcis'
+	];
+
+	/** Insensible à la casse ET aux accents : « Événement Objet » doit tomber comme « ObjectEvent ». */
+	const aplati = (texte: string) => texte.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase();
+
+	it("ne nomme aucun type d'événement EPCIS, y compris sur un type inconnu", () => {
+		// Les DEUX registres de libellés de mouvement : celui du tableau de bord et celui de la frise
+		// de la fiche lot. `lotEvents` est propre aujourd'hui, et rien ne l'empêcherait de dériver
+		// demain — or c'est la moitié de la surface décrite par #83.
+		const libelles = [
+			...Object.values(MOVEMENT_LABELS),
+			...Object.values(LOT_EVENT_TITLES),
+			movementLabel('TYPE_QUE_L_API_AJOUTERAIT')
+		];
+
+		for (const libelle of libelles) {
+			for (const terme of VOCABULAIRE_EPCIS) {
+				expect(
+					aplati(libelle),
+					`« ${libelle} » revendique « ${terme} », que rien n'émet`
+				).not.toContain(terme);
+			}
+		}
 	});
 
-	it('dégrade sur un ObjectEvent générique pour un type non répertorié', () => {
-		expect(movementEventLabel('AUDIT_MANUEL')).toBe('ObjectEvent — AUDIT_MANUEL');
+	it('nomme le geste métier, en clair', () => {
+		expect(movementLabel('EXPEDITION')).toBe('Expédition');
+		expect(movementLabel('RAPPEL')).toBe('Rappel produit');
+	});
+
+	it('rend lisible un type que le front ne connaît pas, sans rien inventer', () => {
+		expect(movementLabel('AUDIT_MANUEL')).toBe('Mouvement — AUDIT_MANUEL');
 	});
 
 	/**
@@ -80,7 +119,7 @@ describe('movementEventLabel', () => {
 		];
 
 		for (const type of TYPES_API) {
-			expect(movementEventLabel(type), `type ${type} non traduit`).not.toContain(type);
+			expect(movementLabel(type), `type ${type} non traduit`).not.toContain(type);
 		}
 	});
 });

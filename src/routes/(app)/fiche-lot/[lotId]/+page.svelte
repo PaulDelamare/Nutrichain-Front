@@ -42,7 +42,7 @@
 	     cliquer depuis la recherche (#81). -->
 	<PageHead
 		heading="Fiche lot {data.sheet.lotNumber}"
-		description="Produit, dates, statut, historique, température, évènements EPCIS, localisation et carte."
+		description="Produit, dates, statut, historique, température, localisation et carte."
 	/>
 </header>
 
