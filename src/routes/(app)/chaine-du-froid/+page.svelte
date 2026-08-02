@@ -1,6 +1,5 @@
 <script lang="ts">
 	import ColdAlertTable from '$lib/components/cold/ColdAlertTable.svelte';
-	import IncidentBanner from '$lib/components/cold/IncidentBanner.svelte';
 	import TemperatureChart from '$lib/components/cold/TemperatureChart.svelte';
 	import PageHead from '$lib/components/page/PageHead.svelte';
 	import Placeholder from '$lib/components/page/Placeholder.svelte';
@@ -37,10 +36,6 @@
 
 {#if data.error}
 	<p class="banner">API indisponible — {data.error}</p>
-{/if}
-
-{#if data.incident}
-	<IncidentBanner incident={data.incident} />
 {/if}
 
 {#if data.telemetry}

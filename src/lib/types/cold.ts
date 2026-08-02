@@ -19,12 +19,9 @@ export type ColdAlertRow = {
 	site: string;
 	zone: string;
 	tempActuelle: string;
+	/** Seuil max du matériel (auparavant visible seulement dans le bandeau incident). */
+	seuil: string;
 	depuis: string;
 	statut: ColdAlertStatus;
 	lotsImpactes: ColdAlertLot[];
-};
-
-export type ColdIncident = {
-	id: string;
-	message: string;
 };

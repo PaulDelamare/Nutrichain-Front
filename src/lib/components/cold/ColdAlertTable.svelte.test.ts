@@ -12,6 +12,7 @@ function alerte(partial: Partial<ColdAlertRow> = {}): ColdAlertRow {
 		site: 'Usine Loire',
 		zone: 'Chambre froide 2',
 		tempActuelle: '9,4 °C',
+		seuil: '4 °C',
 		depuis: 'depuis 42 min',
 		statut: 'critique',
 		lotsImpactes: [
@@ -38,6 +39,13 @@ describe('ColdAlertTable', () => {
 		renderTable([alerte()]);
 		await expect.element(page.getByText('9,4 °C')).toBeInTheDocument();
 		await expect.element(page.getByText('depuis 42 min')).toBeInTheDocument();
+	});
+
+	// Le seuil vivait auparavant dans le bandeau rouge (retiré) : il doit rester lisible ici.
+	// Valeur choisie hors de « 9,4 °C » pour ne pas la retrouver par sous-chaîne.
+	it('affiche le seuil max du matériel', async () => {
+		renderTable([alerte({ seuil: '6 °C' })]);
+		await expect.element(page.getByText('6 °C')).toBeInTheDocument();
 	});
 
 	// Une excursion de température qui s'affiche « Investigation » fait perdre un temps décisif.

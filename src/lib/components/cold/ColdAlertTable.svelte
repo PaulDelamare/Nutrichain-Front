@@ -30,6 +30,7 @@
 				<th>Site</th>
 				<th>Zone</th>
 				<th>Temp. actuelle</th>
+				<th>Seuil</th>
 				<th>Lots impactés</th>
 				<th>Depuis</th>
 				<th>Statut</th>
@@ -43,6 +44,7 @@
 					<td>{row.site}</td>
 					<td>{row.zone}</td>
 					<td>{row.tempActuelle}</td>
+					<td>{row.seuil}</td>
 					<td class="lots">
 						{#if row.lotsImpactes.length === 0}
 							<span class="none">—</span>
