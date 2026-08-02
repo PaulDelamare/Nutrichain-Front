@@ -73,6 +73,12 @@ const routes: [nom: string, appel: () => unknown, methode: string, chemin: strin
 	],
 	['getAlerts', () => org.getAlerts(fetchEspion, cookies), 'GET', '/api/organization/alerts'],
 	[
+		'getRecalls',
+		() => org.getRecalls(fetchEspion, cookies),
+		'GET',
+		'/api/organization/recalls?page=1&limit=25'
+	],
+	[
 		'getAlertBatches',
 		() => alerts.getAlertBatches(fetchEspion, cookies, 'alert-1'),
 		'GET',

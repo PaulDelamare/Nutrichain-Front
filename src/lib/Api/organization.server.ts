@@ -185,6 +185,33 @@ export const revokeMember = (fetch: typeof globalThis.fetch, cookies: Cookies, m
 export const getAlerts = (fetch: typeof globalThis.fetch, cookies: Cookies) =>
 	orgApi(fetch, cookies).get<ApiAlert[]>('/api/organization/alerts');
 
+export type ApiRecallList = {
+	data: ApiAlert[];
+	pagination: { page: number; limit: number; total: number; totalPages: number };
+};
+
+export type RecallQuery = {
+	page?: number;
+	limit?: number;
+	// Filtres de colonnes appliqués côté API (voir GET /organization/recalls).
+	q?: string;
+	statut?: string;
+};
+
+export const getRecalls = (
+	fetch: typeof globalThis.fetch,
+	cookies: Cookies,
+	opts: RecallQuery = {}
+) => {
+	const params = new URLSearchParams();
+	params.set('page', String(opts.page ?? 1));
+	params.set('limit', String(opts.limit ?? 25));
+	const q = opts.q?.trim();
+	if (q) params.set('q', q);
+	if (opts.statut) params.set('statut', opts.statut);
+	return orgApi(fetch, cookies).get<ApiRecallList>(`/api/organization/recalls?${params}`);
+};
+
 export const getAuditLogs = (fetch: typeof globalThis.fetch, cookies: Cookies, limit = 30) =>
 	orgApi(fetch, cookies).get<ApiAuditLog[]>(`/api/organization/audit-logs?limit=${limit}`);
 
