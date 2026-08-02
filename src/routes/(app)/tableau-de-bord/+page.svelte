@@ -21,7 +21,7 @@
 
 	const nav = $derived(findNavItem($page.url.pathname));
 
-	const recentEvents = $derived(data.recentEvents);
+	const recentActivity = $derived(data.recentActivity);
 	const tasks = $derived(data.tasks);
 </script>
 
@@ -57,7 +57,9 @@
 					/>
 				</ChartCard>
 
-				<ChartCard title="Flux logistiques" subtitle="7 derniers jours — événements EPCIS">
+				<!-- Ces deux blocs sont alimentés par getMovements, donc par l historique interne des lots :
+				     pas par les événements EPCIS, qui vivent dans leur journal dédié (#83). -->
+				<ChartCard title="Flux logistiques" subtitle="7 derniers jours — mouvements de lots">
 					<StackedBarChart
 						labels={data.charts.weeklyMovements.labels}
 						series={data.charts.weeklyMovements.series}
@@ -82,10 +84,10 @@
 
 			<div class="panels">
 				<section class="panel">
-					<h3>Activité récente (EPCIS)</h3>
-					{#if recentEvents.length > 0}
+					<h3>Activité récente</h3>
+					{#if recentActivity.length > 0}
 						<ul>
-							{#each recentEvents as event (event)}
+							{#each recentActivity as event (event)}
 								<EventRow when={event.when} title={event.title} meta={event.meta} />
 							{/each}
 						</ul>

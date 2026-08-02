@@ -19,7 +19,7 @@ function renderDashboard() {
 				user: { id: 'u-test', name: 'Test', email: 'test@nutrichain.fr' },
 				kpis: [],
 				charts: buildDashboardCharts([], [], [], []),
-				recentEvents: [],
+				recentActivity: [],
 				tasks: []
 			}
 		},
@@ -33,6 +33,21 @@ describe('/tableau-de-bord', () => {
 
 		const heading = page.getByRole('heading', { level: 2, name: "Vue d'ensemble" });
 		await expect.element(heading).toBeInTheDocument();
+	});
+
+	/**
+	 * #83 — Les deux panneaux alimentés par  s'annonçaient « EPCIS » (« Activité
+	 * récente (EPCIS) », « 7 derniers jours — événements EPCIS ») alors qu'ils affichent des
+	 * . L'écran revendiquait une conformité que le back n'a pas, sur l'argument
+	 * central du projet. Le journal EPCIS, lui, garde son vocabulaire : il montre de vrais événements.
+	 */
+	it('ne revendique pas EPCIS sur les panneaux alimentés par les mouvements', async () => {
+		renderDashboard();
+
+		await expect
+			.element(page.getByRole('heading', { name: 'Activité récente' }))
+			.toBeInTheDocument();
+		await expect.element(page.getByText(/EPCIS/)).not.toBeInTheDocument();
 	});
 
 	it('annonce l’absence de données au lieu d’en inventer', async () => {

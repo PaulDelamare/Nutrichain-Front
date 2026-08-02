@@ -10,7 +10,7 @@ export type Kpi = {
 	accent: KpiAccent;
 };
 
-export type EpcisEvent = {
+export type ActivityItem = {
 	when: string;
 	title: string;
 	meta: string;
