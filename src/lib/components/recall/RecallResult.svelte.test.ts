@@ -32,7 +32,7 @@ function renderResult(partial: Partial<ApiRecallResult> = {}) {
 describe('RecallResult', () => {
 	/**
 	 * ⚠️ Cœur de #59. Un chiffre nu (« 2 expéditions ») ne dit pas QUELS magasins sont touchés —
-	 * or c'est la dernière étape du parcours soutenance depuis la fiche lot.
+	 * or c'est la dernière étape du parcours qualité depuis la fiche lot.
 	 */
 	it('nomme chaque magasin touché, pas seulement le nombre d’expéditions', async () => {
 		renderResult();

@@ -2,6 +2,7 @@
 	import { enhance } from '$app/forms';
 	import PageHead from '$lib/components/page/PageHead.svelte';
 	import SearchSelect from '$lib/components/ui/SearchSelect.svelte';
+	import AffectedShipmentList from '$lib/components/recall/AffectedShipmentList.svelte';
 	import type { PageData, ActionData } from './$types';
 
 	let { data, form }: { data: PageData; form: ActionData } = $props();
@@ -16,7 +17,10 @@
 		data.lots.find((l) => l.id === (form?.simulated ? form.sourceLotId : lotId))?.label ?? '—'
 	);
 
-	const impactedCount = $derived(form?.simulated ? form.downstream.length + 1 : 0);
+	// Le compte vient de l'API, qui applique la règle du rappel lui-même. Le dériver de la
+	// généalogie affichée — comme le faisait `downstream.length + 1` — le plafonnait à 1001 : cette
+	// lecture est bornée à 1000 lots, et un rappel massif se serait donc annoncé douze fois trop petit.
+	const impactedCount = $derived(form?.simulated ? form.impactedCount : 0);
 </script>
 
 <PageHead
@@ -87,6 +91,13 @@
 
 			<p class="src">Lot source : <strong>{sourceProduit}</strong></p>
 
+			{#if form.depthSaturated}
+				<p class="warn" role="alert">
+					La descendance estimée peut être incomplète (profondeur de graphe saturée) — vérifiez
+					manuellement les lots liés.
+				</p>
+			{/if}
+
 			{#if form.downstream.length === 0}
 				<p class="empty">Aucun lot descendant — le rappel se limiterait au lot source.</p>
 			{:else}
@@ -98,7 +109,26 @@
 						</li>
 					{/each}
 				</ul>
+				{#if form.downstreamPartial}
+					<p class="warn">
+						Liste des lots tronquée à l'affichage — le compte ci-dessus reste exact.
+					</p>
+				{/if}
 			{/if}
+
+			<!-- La 4e étape du parcours qualité : quels magasins ont reçu la marchandise. Elle
+			     n'était atteignable qu'en déclenchant un rappel réel, irréversible. -->
+			<div class="shipments-block">
+				<AffectedShipmentList
+					shipments={form.affectedShipments}
+					emptyLabel="Aucune expédition déjà partie ne contient ces lots."
+				/>
+				{#if form.affectedShipmentsTruncated}
+					<p class="warn">
+						{form.affectedShipmentsCount} expéditions concernées — seules les premières sont listées.
+					</p>
+				{/if}
+			</div>
 		{/if}
 	</section>
 </div>
@@ -265,5 +295,11 @@
 	.hit-meta {
 		font-size: 0.8125rem;
 		color: var(--nc-text-muted);
+	}
+
+	.shipments-block {
+		margin-top: 1rem;
+		padding-top: 1rem;
+		border-top: 1px solid #e2e8f0;
 	}
 </style>
