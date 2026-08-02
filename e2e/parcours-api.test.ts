@@ -85,10 +85,35 @@ test('la liste des utilisateurs contient le compte connecté', async ({ page }) 
 const DECLENCHEUR_LOT =
 	'div:has(> input[type="hidden"][name="lotId"]) > button[aria-haspopup="listbox"]';
 
+/**
+ * Le formulaire de déclenchement d'un rappel est maintenant dans une modale, ouverte par un bouton ;
+ * son contenu (dont le champ lot) n'est monté qu'à l'ouverture.
+ *
+ * La page est rendue côté serveur PUIS hydratée : un clic qui arrive avant que Svelte n'ait attaché
+ * le gestionnaire est purement perdu (rien ne s'ouvre), et rallonger le timeout n'y change rien —
+ * le clic, lui, est déjà passé. On réessaie donc le clic jusqu'à ce que la modale apparaisse : dès
+ * l'hydratation faite, la première tentative suivante ouvre la modale. `exact` pour ne pas viser le
+ * bouton de soumission « Déclencher le rappel ». (Le compte de test est owner : il a le droit de
+ * décision qualité, donc le bouton s'affiche.)
+ */
+async function ouvrirDeclencheur(page: Page): Promise<void> {
+	const champLot = page.locator(DECLENCHEUR_LOT);
+	const bouton = page.getByRole('button', { name: 'Déclencher un rappel', exact: true });
+	await expect(async () => {
+		// Une fois la modale ouverte, NE PAS recliquer : le bouton est sous le fond de la modale, et
+		// un second clic tomberait sur ce fond (donc la refermerait). On ne clique que tant qu'elle
+		// est fermée — ce qui, avant hydratation, ne fait rien, d'où la reprise.
+		if (!(await champLot.isVisible())) await bouton.click();
+		await expect(champLot).toBeVisible({ timeout: 2000 });
+	}).toPass({ timeout: 20_000 });
+}
+
 test('le formulaire de rappel liste des lots rappelables', async ({ page }) => {
 	await login(page);
 	await page.goto('/rappels-produits');
 
+	// Le déclenchement d'un rappel vit désormais dans une modale : l'ouvrir avant de viser le champ lot.
+	await ouvrirDeclencheur(page);
 	await page.locator(DECLENCHEUR_LOT).click();
 	expect(await page.getByRole('option').count()).toBeGreaterThan(0);
 });
@@ -97,6 +122,7 @@ test('la traçabilité ciblée sur un lot affiche sa généalogie', async ({ pag
 	await login(page);
 
 	await page.goto('/rappels-produits');
+	await ouvrirDeclencheur(page);
 	await page.locator(DECLENCHEUR_LOT).click();
 	await page.getByRole('option').first().click();
 
