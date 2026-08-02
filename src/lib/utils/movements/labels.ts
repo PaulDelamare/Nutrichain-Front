@@ -71,6 +71,7 @@ export const MOVEMENT_LABELS: Record<string, string> = {
 	TRANSFORMATION_SORTIE: 'Transformation — consommation',
 	CONTROLE_QUALITE: 'Contrôle qualité',
 	LEVEE_QUARANTAINE: 'Levée de quarantaine',
+	LEVEE_QUARANTAINE_QUALITE: 'Levée de quarantaine qualité',
 	RAPPEL: 'Rappel produit',
 	DEPLACEMENT: 'Déplacement',
 	MISE_AU_REBUT: 'Mise au rebut',

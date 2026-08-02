@@ -26,12 +26,25 @@ const SHAPES: Record<string, EventShape> = {
 		title: 'Contrôle qualité',
 		tone: (m) => (m.resultat === 'NON_CONFORME' ? 'warn' : 'ok'),
 		context: (m) => {
-			const resultat = str(m, 'resultat') === 'NON_CONFORME' ? 'Non conforme' : 'Conforme';
+			const nonConforme = str(m, 'resultat') === 'NON_CONFORME';
+			const resultat = nonConforme ? 'Non conforme' : 'Conforme';
 			const test = str(m, 'type_test');
-			const suite =
-				m.statut_resultant === 'EN_STOCK'
+
+			// La conséquence se lit au CHANGEMENT de statut, pas au statut d'arrivée. Une
+			// contre-analyse conforme sur un lot déjà bloqué le laisse bloqué : annoncer « lot placé
+			// en quarantaine » attribuait au contrôle un effet qu'il n'a pas eu, et laissait croire
+			// que le lot venait d'être condamné une seconde fois.
+			const precedent = str(m, 'statut_precedent');
+			const resultant = str(m, 'statut_resultant');
+			const inchange = precedent !== '' && precedent === resultant;
+
+			const suite = inchange
+				? nonConforme
+					? ' — lot déjà en quarantaine'
+					: ' — enregistré, le lot reste en l’état'
+				: resultant === 'EN_STOCK'
 					? ' — lot libéré'
-					: m.statut_resultant === 'BLOQUE'
+					: resultant === 'BLOQUE'
 						? ' — lot placé en quarantaine'
 						: '';
 			return [test && `${test} : ${resultat}${suite}`].filter(Boolean).join(' · ');
@@ -69,6 +82,17 @@ const SHAPES: Record<string, EventShape> = {
 		context: (m) => {
 			const motif = str(m, 'motif');
 			return motif ? `Motif : ${motif}` : '';
+		}
+	},
+	LEVEE_QUARANTAINE_QUALITE: {
+		title: 'Levée de quarantaine qualité',
+		tone: 'ok',
+		context: (m) => {
+			const motif = str(m, 'motif');
+			const statut = str(m, 'statut_restaure');
+			return [motif && `Motif : ${motif}`, statut && `retour en ${statut}`]
+				.filter(Boolean)
+				.join(' · ');
 		}
 	},
 	RAPPEL: {

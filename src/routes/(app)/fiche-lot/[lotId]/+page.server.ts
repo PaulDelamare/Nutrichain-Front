@@ -5,6 +5,7 @@ import {
 	getBatchById,
 	getShelfWithdrawals,
 	recordShelfWithdrawal,
+	releaseQualityQuarantine,
 	releaseQuarantine,
 	scrapBatch
 } from '$lib/Api/logistics.server';
@@ -121,6 +122,23 @@ export const actions = {
 		const res = await releaseQuarantine(fetch, cookies, params.lotId, motif);
 		if (!res.ok) return fail(res.status, { releaseError: res.message });
 		return { released: true };
+	},
+
+	/**
+	 * Levée de la quarantaine QUALITÉ. Même garde que la levée froid — c'est la même décision, prise
+	 * sur une autre preuve : une contre-analyse conforme, que l'API exige et vérifie.
+	 */
+	qualityRelease: async ({ request, fetch, cookies, params, locals }) => {
+		const refus = refusDecisionQualite(locals.user);
+		if (refus) return fail(403, { qualityReleaseError: refus });
+
+		const motif = String((await request.formData()).get('motif') ?? '').trim();
+		if (motif.length < 3) {
+			return fail(400, { qualityReleaseError: 'Motif de levée requis (au moins 3 caractères).' });
+		}
+		const res = await releaseQualityQuarantine(fetch, cookies, params.lotId, motif);
+		if (!res.ok) return fail(res.status, { qualityReleaseError: res.message });
+		return { qualityReleased: true, statutRestaure: res.data.statut };
 	},
 
 	/**

@@ -14,6 +14,54 @@ function mvt(partial: Partial<ApiBatchMouvement>): ApiBatchMouvement {
 }
 
 describe('movementsToLotEvents', () => {
+	/**
+	 * La contre-analyse conforme d un lot bloqué : elle s enregistre SANS rien libérer. La frise
+	 * annonçait « lot placé en quarantaine » — elle attribuait au contrôle un effet qu il n a pas eu,
+	 * et laissait croire que le lot venait d être condamné une seconde fois.
+	 */
+	it('un contrôle qui ne change pas le statut ne prétend pas l avoir changé', () => {
+		const [e] = movementsToLotEvents([
+			mvt({
+				type_action: 'CONTROLE_QUALITE',
+				metadata: {
+					resultat: 'CONFORME',
+					type_test: 'Contre-analyse',
+					statut_precedent: 'BLOQUE',
+					statut_resultant: 'BLOQUE'
+				}
+			})
+		]);
+		expect(e.detail).not.toContain('placé en quarantaine');
+		expect(e.detail).toContain('le lot reste en l’état');
+	});
+
+	it('un contrôle non conforme qui condamne vraiment le dit', () => {
+		const [e] = movementsToLotEvents([
+			mvt({
+				type_action: 'CONTROLE_QUALITE',
+				metadata: {
+					resultat: 'NON_CONFORME',
+					type_test: 'Analyse',
+					statut_precedent: 'EN_ATTENTE_QC',
+					statut_resultant: 'BLOQUE'
+				}
+			})
+		]);
+		expect(e.detail).toContain('lot placé en quarantaine');
+	});
+
+	it('nomme la levée de quarantaine qualité et son statut de retour', () => {
+		const [e] = movementsToLotEvents([
+			mvt({
+				type_action: 'LEVEE_QUARANTAINE_QUALITE',
+				metadata: { motif: 'Contre-analyse conforme', statut_restaure: 'EN_ATTENTE_QC' }
+			})
+		]);
+		expect(e.title).toBe('Levée de quarantaine qualité');
+		expect(e.detail).toContain('Contre-analyse conforme');
+		expect(e.detail).toContain('EN_ATTENTE_QC');
+	});
+
 	it('ne rend aucune étape sans mouvement', () => {
 		expect(movementsToLotEvents([])).toEqual([]);
 	});
