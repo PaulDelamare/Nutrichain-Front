@@ -5,10 +5,13 @@
 		total: number;
 		/** Libellé de ce qui est compté, au pluriel : « lots », « réceptions »… */
 		unit: string;
-		hrefFor: (page: number) => string;
+		/** Mode lien (pagination serveur via l'URL). Exclusif avec `onselect`. */
+		hrefFor?: (page: number) => string;
+		/** Mode bouton (pagination client, sans navigation). Exclusif avec `hrefFor`. */
+		onselect?: (page: number) => void;
 	};
 
-	let { page, totalPages, total, unit, hrefFor }: Props = $props();
+	let { page, totalPages, total, unit, hrefFor, onselect }: Props = $props();
 
 	const hasPrevious = $derived(page > 1);
 	const hasNext = $derived(page < totalPages);
@@ -16,34 +19,62 @@
 
 {#if totalPages > 1}
 	<nav class="pagination" aria-label="Pagination">
-		<!-- `hrefFor` est fourni par la page appelante, à qui il revient de passer par resolve() :
-		     un composant générique ne connaît pas la route qu'il pagine. -->
-		<!-- eslint-disable svelte/no-navigation-without-resolve -->
-		<a
-			class="step"
-			href={hrefFor(page - 1)}
-			aria-disabled={!hasPrevious}
-			tabindex={hasPrevious ? undefined : -1}
-		>
-			Précédent
-		</a>
+		{#if onselect}
+			<!-- Mode client : pas de navigation, on découpe une liste déjà chargée. -->
+			<button
+				type="button"
+				class="step"
+				aria-disabled={!hasPrevious}
+				disabled={!hasPrevious}
+				onclick={() => onselect(page - 1)}
+			>
+				Précédent
+			</button>
 
-		<!-- Le total dit ce que la page ne montre PAS : sans lui, une liste tronquée est
-		     indiscernable d'une liste complète. -->
-		<span class="status" aria-live="polite">
-			Page {page} sur {totalPages} · {total}
-			{unit}
-		</span>
+			<span class="status" aria-live="polite">
+				Page {page} sur {totalPages} · {total}
+				{unit}
+			</span>
 
-		<a
-			class="step"
-			href={hrefFor(page + 1)}
-			aria-disabled={!hasNext}
-			tabindex={hasNext ? undefined : -1}
-		>
-			Suivant
-		</a>
-		<!-- eslint-enable svelte/no-navigation-without-resolve -->
+			<button
+				type="button"
+				class="step"
+				aria-disabled={!hasNext}
+				disabled={!hasNext}
+				onclick={() => onselect(page + 1)}
+			>
+				Suivant
+			</button>
+		{:else if hrefFor}
+			<!-- `hrefFor` est fourni par la page appelante, à qui il revient de passer par resolve() :
+			     un composant générique ne connaît pas la route qu'il pagine. -->
+			<!-- eslint-disable svelte/no-navigation-without-resolve -->
+			<a
+				class="step"
+				href={hrefFor(page - 1)}
+				aria-disabled={!hasPrevious}
+				tabindex={hasPrevious ? undefined : -1}
+			>
+				Précédent
+			</a>
+
+			<!-- Le total dit ce que la page ne montre PAS : sans lui, une liste tronquée est
+			     indiscernable d'une liste complète. -->
+			<span class="status" aria-live="polite">
+				Page {page} sur {totalPages} · {total}
+				{unit}
+			</span>
+
+			<a
+				class="step"
+				href={hrefFor(page + 1)}
+				aria-disabled={!hasNext}
+				tabindex={hasNext ? undefined : -1}
+			>
+				Suivant
+			</a>
+			<!-- eslint-enable svelte/no-navigation-without-resolve -->
+		{/if}
 	</nav>
 {:else if total > 0}
 	<p class="status lonely">{total} {unit}</p>
@@ -64,9 +95,11 @@
 		border-radius: 0.375rem;
 		background: #fff;
 		color: var(--nc-brand);
+		font-family: inherit;
 		font-size: 0.8125rem;
 		font-weight: 500;
 		text-decoration: none;
+		cursor: pointer;
 	}
 
 	.step:hover {

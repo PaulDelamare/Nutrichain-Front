@@ -1,4 +1,5 @@
 <script lang="ts">
+	import DataTable from '$lib/components/ui/DataTable.svelte';
 	import NcStatusBadge from './NcStatusBadge.svelte';
 	import type { NcRow } from '$lib/types/nc';
 
@@ -7,63 +8,25 @@
 	};
 
 	let { rows }: Props = $props();
+
+	const COLUMNS = ['ID', 'Type', 'Lot', 'Statut'];
 </script>
 
-<div class="table-wrap">
-	<table>
-		<thead>
-			<tr>
-				<th>ID</th>
-				<th>Type</th>
-				<th>Lot</th>
-				<th>Statut</th>
-			</tr>
-		</thead>
-		<tbody>
-			{#each rows as row (row.id)}
-				<tr>
-					<td class="id">{row.id}</td>
-					<td>{row.type}</td>
-					<td>{row.lot}</td>
-					<td><NcStatusBadge statut={row.statut} /></td>
-				</tr>
-			{/each}
-		</tbody>
-	</table>
-</div>
+<DataTable
+	columns={COLUMNS}
+	{rows}
+	rowKey={(r) => r.id}
+	empty="Aucune non-conformité ne correspond aux filtres."
+>
+	{#snippet row(r)}
+		<td class="id">{r.id}</td>
+		<td>{r.type}</td>
+		<td>{r.lot}</td>
+		<td><NcStatusBadge statut={r.statut} /></td>
+	{/snippet}
+</DataTable>
 
 <style>
-	.table-wrap {
-		overflow-x: auto;
-	}
-
-	table {
-		width: 100%;
-		border-collapse: collapse;
-		font-size: 0.875rem;
-	}
-
-	th {
-		padding: 0.625rem 0.75rem;
-		border-bottom: 1px solid #e2e8f0;
-		text-align: left;
-		font-size: 0.75rem;
-		font-weight: 600;
-		color: var(--nc-text-muted);
-		background: #f8fafc;
-	}
-
-	td {
-		padding: 0.75rem;
-		border-bottom: 1px solid #f1f5f9;
-		color: var(--nc-text-muted);
-		vertical-align: middle;
-	}
-
-	tr:last-child td {
-		border-bottom: none;
-	}
-
 	.id {
 		font-weight: 500;
 		color: var(--nc-text);
