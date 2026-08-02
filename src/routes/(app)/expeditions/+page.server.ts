@@ -8,24 +8,60 @@ import { refusEcriture } from '$lib/server/guards';
 
 const EXPEDIABLE = new Set(['EN_STOCK', 'PRET']);
 
-export const load: PageServerLoad = async ({ fetch, cookies }) => {
+const PAGE_SIZE_OPTIONS = [10, 25, 50, 100] as const;
+const DEFAULT_PAGE_SIZE = 25;
+const emptyPagination = { page: 1, limit: DEFAULT_PAGE_SIZE, total: 0, totalPages: 0 };
+
+/** Une page hors bornes (`?page=0`, `?page=abc`) est un lien copié de travers, pas une erreur 400. */
+function parsePage(raw: string | null): number {
+	const parsed = Number(raw);
+	return Number.isInteger(parsed) && parsed >= 1 ? parsed : 1;
+}
+
+/** `limit` est borné à la liste du sélecteur : un `?limit=999` copié retombe sur le défaut. */
+function parseLimit(raw: string | null): number {
+	const parsed = Number(raw);
+	return (PAGE_SIZE_OPTIONS as readonly number[]).includes(parsed) ? parsed : DEFAULT_PAGE_SIZE;
+}
+
+export const load: PageServerLoad = async ({ fetch, cookies, url }) => {
+	const p = url.searchParams;
+	const page = parsePage(p.get('page'));
+	const limit = parseLimit(p.get('limit'));
+	// Filtres de colonnes portés par l'URL : la requête part filtrée à l'API (plus de tri sur la
+	// seule page reçue), et un lien filtré reste partageable / rechargeable.
+	const ref = p.get('ref')?.trim() || undefined;
+	const client = p.get('client')?.trim() || undefined;
+	const statut = p.get('statut')?.trim() || undefined;
+	const date = p.get('date')?.trim() || undefined;
+
 	const [shipments, customers, batches] = await Promise.all([
-		getShipments(fetch, cookies),
+		getShipments(fetch, cookies, { page, limit, ref, client, statut, date }),
 		getCustomers(fetch, cookies),
 		getBatchList(fetch, cookies, { limit: 500 })
 	]);
 
+	const filters = {
+		ref: ref ?? '',
+		client: client ?? 'tous',
+		statut: statut ?? 'tous',
+		date: date ?? ''
+	};
+	const meta = { filters, pageSize: limit, pageSizeOptions: [...PAGE_SIZE_OPTIONS] };
+
 	if (!shipments.ok) {
 		return {
 			shipments: [],
+			pagination: { ...emptyPagination, limit },
 			error: shipments.message,
 			customers: [],
-			lots: []
+			lots: [],
+			...meta
 		};
 	}
 
 	return {
-		shipments: shipments.data.map((s) => ({
+		shipments: shipments.data.data.map((s) => ({
 			id: s.id,
 			ref: s.shipment_id,
 			client: s.client?.nom_enseigne ?? '—',
@@ -36,6 +72,7 @@ export const load: PageServerLoad = async ({ fetch, cookies }) => {
 			deliveredAt: s.date_livraison ? new Date(s.date_livraison).toLocaleString('fr-FR') : null,
 			lots: s.liaisons?.map((l) => l.lot.id.slice(0, 8)).join(', ') ?? '—'
 		})),
+		pagination: shipments.data.pagination,
 		error: null,
 		// Pas de refiltrage sur `is_active` : déjà fait par l'API, et absent de la projection servie
 		// aux rôles terrain — le sélecteur Client était vide pour eux (#82).
@@ -48,7 +85,8 @@ export const load: PageServerLoad = async ({ fetch, cookies }) => {
 						label: `${numeroLot(b)} — ${b.produit?.nom ?? '—'} (${b.quantite_actuelle} ${b.unite_code})`,
 						max: Number(b.quantite_actuelle)
 					}))
-			: []
+			: [],
+		...meta
 	};
 };
 
