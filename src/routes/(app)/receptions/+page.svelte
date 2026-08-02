@@ -266,9 +266,10 @@
 		font-weight: 500;
 	}
 
+	/* Bouton d'action à gauche : rapproche l'appel à l'action du début de lecture de la page. */
 	.topbar {
 		display: flex;
-		justify-content: flex-end;
+		justify-content: flex-start;
 		margin-bottom: 1rem;
 	}
 
