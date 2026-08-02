@@ -33,11 +33,15 @@ describe('LotActionsPanel — décisions qualité', () => {
 			.toBeInTheDocument();
 	});
 
-	it("refuse la levée de quarantaine à l'opérateur mais lui laisse le contexte du lot", async () => {
+	it("refuse les DEUX levées à l'opérateur mais lui laisse le contexte du lot", async () => {
 		renderPanel('quarantaine', 'operator');
 
-		expect(page.getByRole('button', { name: 'Lever la quarantaine' }).all()).toHaveLength(0);
-		await expect.element(page.getByText('Lever la quarantaine')).toBeInTheDocument();
+		expect(page.getByRole('button', { name: 'Lever la quarantaine froid' }).all()).toHaveLength(0);
+		expect(page.getByRole('button', { name: 'Lever la quarantaine qualité' }).all()).toHaveLength(
+			0
+		);
+		await expect.element(page.getByText('Lever la quarantaine froid')).toBeInTheDocument();
+		await expect.element(page.getByText('Lever la quarantaine qualité')).toBeInTheDocument();
 	});
 
 	/**

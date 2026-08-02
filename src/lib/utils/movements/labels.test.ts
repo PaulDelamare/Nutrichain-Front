@@ -112,6 +112,7 @@ describe('movementLabel', () => {
 			'EXPEDITION',
 			'QUARANTAINE_FROID',
 			'LEVEE_QUARANTAINE',
+			'LEVEE_QUARANTAINE_QUALITE',
 			'RAPPEL',
 			'DEPLACEMENT',
 			'MISE_AU_REBUT',

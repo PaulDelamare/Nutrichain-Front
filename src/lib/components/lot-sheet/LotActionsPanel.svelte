@@ -9,6 +9,9 @@
 	interface ActionFeedback {
 		released?: boolean;
 		releaseError?: string;
+		qualityReleased?: boolean;
+		statutRestaure?: string;
+		qualityReleaseError?: string;
 		recall?: ApiRecallResult;
 		recallError?: string;
 		scrapped?: boolean;
@@ -29,11 +32,7 @@
 
 	const peutDecider = $derived(peutDeciderQualite(role));
 
-	/**
-	 * Les deux seuls états où l'API accepte la mise au rebut. C'est aussi la seule sortie d'un lot
-	 * bloqué : sans elle, la levée rend 409 et un contrôle conforme aussi — le lot restait coincé
-	 * à vie (#254).
-	 */
+	/** Les deux seuls états où l'API accepte la mise au rebut. */
 	const peutMettreAuRebut = $derived(statut === 'quarantaine' || statut === 'surveillance');
 
 	/**
@@ -50,30 +49,74 @@
 <section class="panel">
 	<h3>Actions</h3>
 
+	<!--
+		Les confirmations vivent HORS des blocs conditionnés au statut : une action réussie change
+		précisément ce statut, le bloc qui la portait disparaît, et l'utilisateur ne voyait jamais que
+		son geste avait abouti. Les erreurs, elles, restent dans leur bloc — en cas d'échec le statut
+		n'a pas bougé, et le message doit rester près du champ qui l'a produit.
+	-->
+	{#if form?.qualityReleased}
+		<p class="feedback ok" role="status">
+			✅ Quarantaine qualité levée — lot revenu en « {form.statutRestaure ?? 'son statut d’avant'}
+			».
+		</p>
+	{/if}
+	{#if form?.released}
+		<p class="feedback ok" role="status">✅ Quarantaine froid levée.</p>
+	{/if}
+	{#if form?.scrapped}
+		<p class="feedback ok" role="status">✅ Lot mis au rebut — quantité ramenée à zéro.</p>
+	{/if}
+
 	{#if statut === 'quarantaine'}
 		<div class="action">
-			<p class="action-title">Lever la quarantaine</p>
+			<p class="action-title">Lever la quarantaine froid</p>
 			<p class="action-hint">
-				Décision qualité — motif obligatoire, tracé dans l'historique du lot.
+				Pour un lot isolé par une excursion de température, une fois l'incident traité. Un lot
+				retenu par un contrôle non conforme n'est pas levable ici — motif obligatoire, tracé dans
+				l'historique du lot.
 			</p>
 			{#if peutDecider}
 				<form method="POST" action="?/release">
 					<input
 						type="text"
 						name="motif"
-						placeholder="Motif (ex. 2ᵉ contrôle conforme)"
+						placeholder="Motif (ex. chambre froide réparée, relevés conformes)"
 						required
 						minlength="3"
 					/>
-					<button type="submit" class="ok">Lever la quarantaine</button>
+					<button type="submit" class="ok">Lever la quarantaine froid</button>
 				</form>
 			{:else}
-				<ActionReservee action="La levée de quarantaine" {role} />
+				<ActionReservee action="La levée de quarantaine froid" {role} />
 			{/if}
-			{#if form?.released}
-				<p class="feedback ok" role="status">✅ Quarantaine levée — lot remis en stock.</p>
-			{:else if form?.releaseError}
+			{#if form?.releaseError}
 				<p class="feedback err" role="status">❌ {form.releaseError}</p>
+			{/if}
+		</div>
+		<div class="action">
+			<p class="action-title">Lever la quarantaine qualité</p>
+			<p class="action-hint">
+				Pour un lot retenu par un contrôle NON CONFORME. Enregistrez d'abord la contre-analyse
+				conforme depuis le contrôle qualité : l'API l'exige comme preuve, le motif ne la remplace
+				pas. Le lot revient à son statut d'avant le blocage, pas en stock.
+			</p>
+			{#if peutDecider}
+				<form method="POST" action="?/qualityRelease">
+					<input
+						type="text"
+						name="motif"
+						placeholder="Motif (ex. contre-analyse microbiologique conforme)"
+						required
+						minlength="3"
+					/>
+					<button type="submit" class="ok">Lever la quarantaine qualité</button>
+				</form>
+			{:else}
+				<ActionReservee action="La levée de quarantaine qualité" {role} />
+			{/if}
+			{#if form?.qualityReleaseError}
+				<p class="feedback err" role="status">❌ {form.qualityReleaseError}</p>
 			{/if}
 		</div>
 	{:else if statut === 'surveillance' && !form?.recall}
@@ -134,9 +177,7 @@
 			{:else}
 				<ActionReservee action="La mise au rebut" {role} />
 			{/if}
-			{#if form?.scrapped}
-				<p class="feedback ok" role="status">✅ Lot mis au rebut — quantité ramenée à zéro.</p>
-			{:else if form?.scrapError}
+			{#if form?.scrapError}
 				<p class="feedback err" role="status">❌ {form.scrapError}</p>
 			{/if}
 		</div>

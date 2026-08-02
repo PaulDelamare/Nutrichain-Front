@@ -5,6 +5,7 @@ const ok = <T>(data: T) => ({ ok: true as const, status: 200, data });
 const err = (message: string) => ({ ok: false as const, status: 409, message });
 
 const scrapBatch = vi.fn();
+const releaseQualityQuarantine = vi.fn();
 const getBatchById = vi.fn();
 const getGenealogy = vi.fn();
 const getMovements = vi.fn();
@@ -16,6 +17,7 @@ const recordShelfWithdrawal = vi.fn();
 vi.mock('$lib/Api/logistics.server', () => ({
 	getBatchById: (...a: unknown[]) => getBatchById(...a),
 	releaseQuarantine: vi.fn(),
+	releaseQualityQuarantine: (...a: unknown[]) => releaseQualityQuarantine(...a),
 	scrapBatch: (...a: unknown[]) => scrapBatch(...a),
 	getShelfWithdrawals: (...a: unknown[]) => getShelfWithdrawals(...a),
 	recordShelfWithdrawal: (...a: unknown[]) => recordShelfWithdrawal(...a)
@@ -138,6 +140,78 @@ describe('chargement de la fiche lot — historique', () => {
 		await run();
 
 		expect(getAuditLogs).not.toHaveBeenCalled();
+	});
+});
+
+/**
+ * La levée de quarantaine QUALITÉ. Elle a son propre canal parce qu'elle n'exige pas la même preuve
+ * que la levée froid : une contre-analyse conforme, pas un incident frigo traité. Les confondre
+ * libérerait un lot par la mauvaise porte — et la levée froid restaure vers un statut plus
+ * permissif.
+ */
+describe('levée de quarantaine qualité', () => {
+	const buildRequest = (motif: string) =>
+		({ formData: async () => new Map([['motif', motif]]) }) as unknown as Request;
+
+	const runRelease = (motif: string, role: string) =>
+		(actions as any).qualityRelease({
+			request: buildRequest(motif),
+			fetch: vi.fn(),
+			cookies: {},
+			params: { lotId: 'lot-1' },
+			locals: { user: { role } }
+		});
+
+	beforeEach(() => {
+		releaseQualityQuarantine.mockReset();
+		releaseQualityQuarantine.mockResolvedValue(ok({ id: 'lot-1', statut: 'EN_ATTENTE_QC' }));
+	});
+
+	it('lève la quarantaine qualité avec son motif, et rend le statut restauré', async () => {
+		const res = await runRelease('Contre-analyse microbiologique conforme', 'quality');
+
+		expect(releaseQualityQuarantine).toHaveBeenCalledWith(
+			expect.anything(),
+			expect.anything(),
+			'lot-1',
+			'Contre-analyse microbiologique conforme'
+		);
+		// Le statut est REMONTÉ à l'écran : « remis en stock » serait un mensonge sur un lot qui
+		// repart en attente de son contrôle de sortie.
+		expect(res).toMatchObject({ qualityReleased: true, statutRestaure: 'EN_ATTENTE_QC' });
+	});
+
+	it("refuse la levée à l'opérateur, sans appeler l'API", async () => {
+		const res = await runRelease('Motif valable', 'operator');
+
+		expect(res.status).toBe(403);
+		// La CLÉ compte autant que le code : le gabarit ne lit que `qualityReleaseError`.
+		expect(res.data).toMatchObject({ qualityReleaseError: expect.any(String) });
+		expect(releaseQualityQuarantine).not.toHaveBeenCalled();
+	});
+
+	it('refuse un motif trop court sans solliciter l’API', async () => {
+		const res = await runRelease('ok', 'quality');
+
+		expect(res.status).toBe(400);
+		expect(res.data).toMatchObject({ qualityReleaseError: expect.any(String) });
+		expect(releaseQualityQuarantine).not.toHaveBeenCalled();
+	});
+
+	/** Le refus de l'API porte l'instruction utile (« enregistrez la contre-analyse ») : le taire
+	 * laisserait l'utilisateur sans savoir quoi faire. */
+	it('relaie le refus de l’API au lieu de le taire', async () => {
+		releaseQualityQuarantine.mockResolvedValue(
+			err('Une contre-analyse conforme est requise avant de lever cette quarantaine.')
+		);
+
+		const res = await runRelease('Motif valable', 'quality');
+
+		expect(res.status).toBe(409);
+		expect(res.data).toMatchObject({
+			qualityReleaseError:
+				'Une contre-analyse conforme est requise avant de lever cette quarantaine.'
+		});
 	});
 });
 

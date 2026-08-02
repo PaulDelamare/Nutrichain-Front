@@ -168,6 +168,25 @@ export function releaseQuarantine(
 }
 
 /**
+ * Levée de la quarantaine QUALITÉ, celle qu'un contrôle non conforme a posée.
+ *
+ * Canal distinct de `releaseQuarantine`, qui ne traite que l'incident froid : l'API n'accepte
+ * celui-ci que si une contre-analyse conforme dément la non-conformité, et rend le lot à son statut
+ * d'AVANT le blocage plutôt qu'en stock.
+ */
+export function releaseQualityQuarantine(
+	fetch: typeof globalThis.fetch,
+	cookies: Cookies,
+	lotId: string,
+	motif: string
+) {
+	return api(fetch, cookies).post<ApiBatch>(
+		`/api/logistics/batches/${encodeURIComponent(lotId)}/quality-release`,
+		{ motif }
+	);
+}
+
+/**
  * Sortie définitive d'un lot : il quitte la chaîne, sa quantité tombe à zéro.
  *
  * L'API ne l'accepte que sur un lot `BLOQUE` ou `ALERTE`. Sans ce geste, un lot bloqué par erreur

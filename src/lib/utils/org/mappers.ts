@@ -436,6 +436,8 @@ const AUDIT_ACTION_LABELS: Record<string, string> = {
 	CREATE_QUALITY_CONTROL: 'Contrôle qualité enregistré',
 	LIFT_BATCH_QUARANTINE: 'Levée de quarantaine',
 	LEVEE_QUARANTAINE: 'Levée de quarantaine',
+	LIFT_QUALITY_QUARANTINE: 'Levée de quarantaine qualité',
+	LEVEE_QUARANTAINE_QUALITE: 'Levée de quarantaine qualité',
 	QUARANTAINE_FROID: 'Quarantaine froid',
 	BATCH_RECALL_TRIGGERED: 'Rappel déclenché',
 	ALERT_RESOLVED: 'Alerte résolue',
