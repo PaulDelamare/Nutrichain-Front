@@ -6,7 +6,9 @@ const ok = <T>(data: T) => ({ ok: true as const, status: 200, data });
 
 vi.mock('$lib/Api/organization.server', () => ({
 	getAuditLogs: vi.fn(async () => ok([])),
-	getMembers: vi.fn(async () => ok([]))
+	getMembers: vi.fn(async () =>
+		ok({ data: [], pagination: { page: 1, limit: 25, total: 0, totalPages: 0 } })
+	)
 }));
 
 vi.mock('$lib/Api/audit.server', () => ({ verifyAudit: vi.fn(async () => ok({ valid: true })) }));
@@ -22,6 +24,7 @@ const PAGES = [
 const evenement = (role: KnownRole) => ({
 	fetch: vi.fn(),
 	cookies: {},
+	url: new URL('http://front.test/'),
 	locals: { user: { id: 'u1', name: 'T', email: 't@x.fr', role, isPlatformAdmin: false } }
 });
 

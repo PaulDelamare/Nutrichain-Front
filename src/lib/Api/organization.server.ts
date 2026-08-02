@@ -134,8 +134,34 @@ function orgApi(fetch: typeof globalThis.fetch, cookies: Cookies) {
 	return api(fetch, cookies);
 }
 
-export const getMembers = (fetch: typeof globalThis.fetch, cookies: Cookies) =>
-	orgApi(fetch, cookies).get<ApiMember[]>('/api/organization/members');
+export type ApiMemberList = {
+	data: ApiMember[];
+	pagination: { page: number; limit: number; total: number; totalPages: number };
+};
+
+export type MemberQuery = {
+	page?: number;
+	limit?: number;
+	// Filtres de colonnes appliqués côté API (voir GET /organization/members).
+	email?: string;
+	role?: string;
+	mfa?: boolean;
+};
+
+export const getMembers = (
+	fetch: typeof globalThis.fetch,
+	cookies: Cookies,
+	opts: MemberQuery = {}
+) => {
+	const params = new URLSearchParams();
+	params.set('page', String(opts.page ?? 1));
+	params.set('limit', String(opts.limit ?? 25));
+	const email = opts.email?.trim();
+	if (email) params.set('email', email);
+	if (opts.role) params.set('role', opts.role);
+	if (opts.mfa !== undefined) params.set('mfa', String(opts.mfa));
+	return orgApi(fetch, cookies).get<ApiMemberList>(`/api/organization/members?${params}`);
+};
 
 export const changeMemberRole = (
 	fetch: typeof globalThis.fetch,
