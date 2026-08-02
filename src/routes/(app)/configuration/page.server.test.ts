@@ -193,61 +193,97 @@ describe('configuration — réservée aux administrateurs', () => {
 		expect(api.createLocation).not.toHaveBeenCalled();
 	});
 
-	it("refuse l'action setLocationCoordinates à un non-admin", async () => {
-		const s = await statutAction((mod as any).actions.setLocationCoordinates, {
-			...form({ id: 'loc-1', latitude: '48.832910', longitude: '2.286540' }),
+	it('crée un emplacement avec sa position, sans type', async () => {
+		const res = await (mod as any).actions.createLocation({
+			...form({ nom: 'Chambre froide A', latitude: '48.832910', longitude: '2.286540' }),
+			locals: { user: user(true) }
+		});
+
+		expect(api.createLocation).toHaveBeenCalledWith(expect.anything(), expect.anything(), {
+			nom: 'Chambre froide A',
+			latitude: 48.83291,
+			longitude: 2.28654
+		});
+		expect(res).toMatchObject({ locationCreated: { id: 'l' } });
+	});
+
+	it("refuse une demi-position au create avant l'appel API", async () => {
+		const res = await (mod as any).actions.createLocation({
+			...form({ nom: 'Chambre froide A', latitude: '48.832910', longitude: '' }),
+			locals: { user: user(true) }
+		});
+		expect(res).toMatchObject({ status: 400 });
+		expect(api.createLocation).not.toHaveBeenCalled();
+	});
+
+	it("refuse l'action updateLocation à un non-admin", async () => {
+		const s = await statutAction((mod as any).actions.updateLocation, {
+			...form({ id: 'loc-1', nom: 'Quai', latitude: '48.832910', longitude: '2.286540' }),
 			locals: { user: user(false) }
 		});
 		expect(s).toBe(403);
 		expect(api.updateLocation).not.toHaveBeenCalled();
 	});
 
-	it('positionne un emplacement avec le couple de coordonnées saisi', async () => {
-		const res = await (mod as any).actions.setLocationCoordinates({
-			...form({ id: 'loc-1', latitude: '48.832910', longitude: '2.286540' }),
+	it('édite un emplacement (nom, type, description, position)', async () => {
+		const res = await (mod as any).actions.updateLocation({
+			...form({
+				id: 'loc-1',
+				nom: 'Chambre froide B',
+				type: 'Chambre froide',
+				description: 'Zone 2',
+				latitude: '48.832910',
+				longitude: '2.286540'
+			}),
 			locals: { user: user(true) }
 		});
 
 		expect(api.updateLocation).toHaveBeenCalledWith(expect.anything(), expect.anything(), 'loc-1', {
+			nom: 'Chambre froide B',
+			type: 'Chambre froide',
+			description: 'Zone 2',
 			latitude: 48.83291,
 			longitude: 2.28654
 		});
-		expect(res).toMatchObject({ locationPositioned: { id: 'l' } });
+		expect(res).toMatchObject({ locationUpdated: { id: 'l' } });
 	});
 
-	it('retire la position quand les deux champs sont vides', async () => {
-		await (mod as any).actions.setLocationCoordinates({
-			...form({ id: 'loc-1', latitude: '', longitude: '' }),
+	it('efface type, description et position quand les champs sont vides', async () => {
+		await (mod as any).actions.updateLocation({
+			...form({ id: 'loc-1', nom: 'Quai', type: '', description: '', latitude: '', longitude: '' }),
 			locals: { user: user(true) }
 		});
 
 		expect(api.updateLocation).toHaveBeenCalledWith(expect.anything(), expect.anything(), 'loc-1', {
+			nom: 'Quai',
+			type: null,
+			description: null,
 			latitude: null,
 			longitude: null
 		});
 	});
 
-	it("refuse une demi-position avant l'appel API", async () => {
-		const res = await (mod as any).actions.setLocationCoordinates({
-			...form({ id: 'loc-1', latitude: '48.832910', longitude: '' }),
+	it("refuse une demi-position à l'édition avant l'appel API", async () => {
+		const res = await (mod as any).actions.updateLocation({
+			...form({ id: 'loc-1', nom: 'Quai', latitude: '48.832910', longitude: '' }),
 			locals: { user: user(true) }
 		});
 		expect(res).toMatchObject({ status: 400 });
 		expect(api.updateLocation).not.toHaveBeenCalled();
 	});
 
-	it("refuse des coordonnées hors bornes avant l'appel API", async () => {
-		const res = await (mod as any).actions.setLocationCoordinates({
-			...form({ id: 'loc-1', latitude: '122.4', longitude: '37.77' }),
+	it("refuse des coordonnées hors bornes à l'édition avant l'appel API", async () => {
+		const res = await (mod as any).actions.updateLocation({
+			...form({ id: 'loc-1', nom: 'Quai', latitude: '122.4', longitude: '37.77' }),
 			locals: { user: user(true) }
 		});
 		expect(res).toMatchObject({ status: 400 });
 		expect(api.updateLocation).not.toHaveBeenCalled();
 	});
 
-	it('refuse un positionnement sans emplacement désigné', async () => {
-		const res = await (mod as any).actions.setLocationCoordinates({
-			...form({ id: '', latitude: '48.832910', longitude: '2.286540' }),
+	it('refuse une édition sans emplacement désigné', async () => {
+		const res = await (mod as any).actions.updateLocation({
+			...form({ id: '', nom: 'Quai', latitude: '48.832910', longitude: '2.286540' }),
 			locals: { user: user(true) }
 		});
 		expect(res).toMatchObject({ status: 400 });

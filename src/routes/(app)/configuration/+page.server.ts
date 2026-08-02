@@ -113,46 +113,65 @@ export const actions = {
 		return { supplierUpdated: res.data };
 	},
 
+	// `type` est facultatif (simple label), la position se saisit ICI (plus de formulaire séparé) et
+	// reste la SEULE source du repère affiché sur la fiche lot (#23).
 	createLocation: async ({ request, fetch, cookies, locals }) => {
+		const refus = refusAdministration(locals.user);
 		const form = await request.formData();
 		const nom = champ(form, 'nom');
+		if (refus) return fail(403, { locationError: refus, nom });
+		if (nom.length < 2) {
+			return fail(400, { locationError: "Nom de l'emplacement requis (2 caractères min).", nom });
+		}
+
+		const coords = parseCoordinateFields(champ(form, 'latitude'), champ(form, 'longitude'));
+		if (!coords.ok) return fail(400, { locationError: coords.message, nom });
+
 		const type = champ(form, 'type');
 		const description = champ(form, 'description');
 
-		const refus = refusAdministration(locals.user);
-		if (refus) return fail(403, { locationError: refus, nom });
-		if (nom.length < 2 || type.length < 2) {
-			return fail(400, { locationError: "Nom et type de l'emplacement requis.", nom });
-		}
-
 		const res = await createLocation(fetch, cookies, {
 			nom,
-			type,
-			...(description ? { description } : {})
+			...(type ? { type } : {}),
+			...(description ? { description } : {}),
+			...(coords.latitude != null && coords.longitude != null
+				? { latitude: coords.latitude, longitude: coords.longitude }
+				: {})
 		});
 		if (!res.ok) return fail(res.status, { locationError: res.message, nom });
 		return { locationCreated: res.data };
 	},
 
-	// La position d'un emplacement est la SEULE source du repère affiché sur la fiche lot (#23) :
-	// elle se saisit ici, et se retire en soumettant les deux champs vides.
-	setLocationCoordinates: async ({ request, fetch, cookies, locals }) => {
+	// Édition complète d'un emplacement (nom, type, description, position) via la modale. Les champs
+	// vides EFFACENT (type/description → null ; les deux coordonnées vides → position retirée).
+	updateLocation: async ({ request, fetch, cookies, locals }) => {
 		const refus = refusAdministration(locals.user);
 		if (refus) return fail(403, { locationError: refus });
 
 		const form = await request.formData();
 		const id = champ(form, 'id');
-		if (!id) return fail(400, { locationError: 'Emplacement à positionner requis.' });
+		if (!id) return fail(400, { locationError: 'Emplacement à modifier requis.' });
+
+		const nom = champ(form, 'nom');
+		if (nom.length < 2) {
+			return fail(400, { locationError: "Nom de l'emplacement requis (2 caractères min).", nom });
+		}
 
 		const coords = parseCoordinateFields(champ(form, 'latitude'), champ(form, 'longitude'));
-		if (!coords.ok) return fail(400, { locationError: coords.message });
+		if (!coords.ok) return fail(400, { locationError: coords.message, nom });
+
+		const type = champ(form, 'type');
+		const description = champ(form, 'description');
 
 		const res = await updateLocation(fetch, cookies, id, {
+			nom,
+			type: type || null,
+			description: description || null,
 			latitude: coords.latitude,
 			longitude: coords.longitude
 		});
-		if (!res.ok) return fail(res.status, { locationError: res.message });
-		return { locationPositioned: res.data };
+		if (!res.ok) return fail(res.status, { locationError: res.message, nom });
+		return { locationUpdated: res.data };
 	},
 
 	toggleLocation: async ({ request, fetch, cookies, locals }) => {
