@@ -1,5 +1,10 @@
 import { error } from '@sveltejs/kit';
-import { peutAdministrer, peutDeciderQualite, peutEcrire } from '$lib/config/roles';
+import {
+	canRecordShelfWithdrawal,
+	peutAdministrer,
+	peutDeciderQualite,
+	peutEcrire
+} from '$lib/config/roles';
 import type { SessionUser } from '$lib/types/session';
 
 export function exigerAdministrateur(user: SessionUser | undefined, quoi: string): void {
@@ -15,6 +20,14 @@ const MESSAGE_ADMIN = "Cette action est réservée aux administrateurs de l'orga
 
 const MESSAGE_ECRITURE =
 	'Cette opération est réservée aux rôles opérateur, administrateur et propriétaire.';
+
+const MESSAGE_RETRAIT =
+	'L enregistrement d un retrait en magasin est ferme au role en lecture seule.';
+
+/** Garde du retrait en magasin — strictement celle de l API, pour ne pas refuser ce qu elle accepte. */
+export function denyShelfWithdrawal(user: SessionUser | undefined): string | null {
+	return user && canRecordShelfWithdrawal(user.role) ? null : MESSAGE_RETRAIT;
+}
 
 export function refusDecisionQualite(user: SessionUser | undefined): string | null {
 	return user && peutDeciderQualite(user.role) ? null : MESSAGE_QUALITE;

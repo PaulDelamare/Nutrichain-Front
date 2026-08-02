@@ -74,7 +74,8 @@ export const MOVEMENT_LABELS: Record<string, string> = {
 	RAPPEL: 'Rappel produit',
 	DEPLACEMENT: 'Déplacement',
 	MISE_AU_REBUT: 'Mise au rebut',
-	LIVRAISON: 'Arrivée constatée chez le client'
+	LIVRAISON: 'Arrivée constatée chez le client',
+	RETRAIT_MAGASIN: 'Retrait du rayon'
 };
 
 /**

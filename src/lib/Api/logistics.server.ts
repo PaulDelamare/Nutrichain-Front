@@ -190,6 +190,61 @@ export function scrapBatch(
 	);
 }
 
+/** Ce qu'un magasin a reçu, retiré, et ce qu'il lui reste à retirer pour un lot. */
+export type ApiShelfWithdrawalProgress = {
+	customerId: string;
+	customerName: string;
+	quantiteLivree: string;
+	quantiteRetiree: string;
+	resteARetirer: string;
+	unite: string;
+	retraits: {
+		id: string;
+		quantite: string;
+		motif: string;
+		constateAupresDe: string | null;
+		createdAt: string;
+	}[];
+};
+
+export type ApiShelfWithdrawalResult = {
+	id: string;
+	quantiteLivree: string;
+	quantiteRetiree: string;
+	resteARetirer: string;
+	unite: string;
+};
+
+/**
+ * Avancement du retrait, par magasin. Le reste-à-retirer vient de l'API : le recalculer ici
+ * dupliquerait la règle qui gouverne l'écriture, donc la ferait diverger.
+ */
+export function getShelfWithdrawals(
+	fetch: typeof globalThis.fetch,
+	cookies: Cookies,
+	lotId: string
+) {
+	return api(fetch, cookies).get<{ batchId: string; clients: ApiShelfWithdrawalProgress[] }>(
+		`/api/logistics/batches/${encodeURIComponent(lotId)}/withdrawals`
+	);
+}
+
+/**
+ * L'unité n'est PAS envoyée : elle est reprise du lot côté API. L'ajouter ici permettrait de
+ * déclarer 500 g contre un plafond exprimé en kg.
+ */
+export function recordShelfWithdrawal(
+	fetch: typeof globalThis.fetch,
+	cookies: Cookies,
+	lotId: string,
+	body: { id_client: string; quantite: number; motif: string; constate_aupres_de?: string }
+) {
+	return api(fetch, cookies).post<ApiShelfWithdrawalResult>(
+		`/api/logistics/batches/${encodeURIComponent(lotId)}/withdrawals`,
+		body
+	);
+}
+
 export type CreateReceiptBody = {
 	id_fournisseur: string;
 	shipment_id: string;

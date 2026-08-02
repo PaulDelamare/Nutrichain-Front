@@ -95,6 +95,15 @@ const SHAPES: Record<string, EventShape> = {
 		tone: 'neutral',
 		context: () => ''
 	},
+	RETRAIT_MAGASIN: {
+		title: 'Retrait du rayon',
+		tone: 'warn',
+		context: (m) => {
+			const constate = str(m, 'constate_aupres_de');
+			const motif = str(m, 'motif');
+			return [motif, constate && `constaté auprès de ${constate}`].filter(Boolean).join(' · ');
+		}
+	},
 	MISE_AU_REBUT: {
 		title: 'Mise au rebut',
 		tone: 'danger',
