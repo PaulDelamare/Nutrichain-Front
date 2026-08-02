@@ -1,11 +1,16 @@
 <script lang="ts">
+	import { enhance } from '$app/forms';
+	import type { SubmitFunction } from '@sveltejs/kit';
 	import { Tabs } from '@skeletonlabs/skeleton-svelte';
-	import NcPanel from '$lib/components/nc/NcPanel.svelte';
-	import PendingQcPanel from '$lib/components/nc/PendingQcPanel.svelte';
-	import QuarantinePanel from '$lib/components/nc/QuarantinePanel.svelte';
+	import NcOpenListing from '$lib/components/nc/NcOpenListing.svelte';
+	import PendingQcListing from '$lib/components/nc/PendingQcListing.svelte';
+	import QuarantineListing from '$lib/components/nc/QuarantineListing.svelte';
+	import Modal from '$lib/components/ui/Modal.svelte';
 	import PageHead from '$lib/components/page/PageHead.svelte';
 	import { usePageSearch } from '$lib/context/pageSearch.svelte';
 	import { filterRowsByText } from '$lib/utils/pageSearch/filterByText';
+	import type { PendingQcLot } from '$lib/types/quality';
+	import type { QuarantineLot } from '$lib/types/nc';
 	import type { ActionData, PageData } from './$types';
 
 	let { data, form }: { data: PageData; form: ActionData } = $props();
@@ -17,11 +22,11 @@
 		return () => pageSearch.deactivate();
 	});
 
+	// La barre de recherche globale du header reste, en amont des filtres par colonne : elle alimente
+	// chaque listing (son UX est vouée à disparaître, cf. plan).
 	const openNc = $derived(
 		filterRowsByText(data.openNc, pageSearch.query, (r) => [r.id, r.type, r.lot, r.statut])
 	);
-	// On filtre sur ce qui est affiché : le numéro d'étiquette, plus l'UUID que la liste ne montre
-	// plus (#81) — sinon une recherche « trouve » une ligne où rien ne correspond à l'œil.
 	const quarantineLots = $derived(
 		filterRowsByText(data.quarantineLots, pageSearch.query, (l) => [l.numero, l.detail])
 	);
@@ -44,22 +49,46 @@
 
 	type TabId = 'pending' | 'nc' | 'quarantine';
 
-	// Une action de levée renvoie l'utilisateur sur l'onglet quarantaine plutot que sur l'onglet
-	// par defaut : sans use:enhance, la soumission recharge la page et remonte le composant.
-	function initialTab(): TabId {
-		if (form?.released || form?.releaseError) return 'quarantine';
-		return 'pending';
-	}
+	let activeTab = $state<TabId>('pending');
 
-	let activeTab = $state<TabId>(initialTab());
-
-	// Le compteur suit la liste filtree par la recherche : un onglet vide signale qu'il faut aller
-	// voir ailleurs, sans quitter la page.
+	// Le compteur suit la liste filtree par la recherche globale : un onglet vide signale qu'il faut
+	// aller voir ailleurs, sans quitter la page.
 	const tabs = $derived([
 		{ id: 'pending' as TabId, label: 'Lots en attente de contrôle', count: pendingQc.length },
 		{ id: 'nc' as TabId, label: 'NC ouvertes', count: openNc.length },
 		{ id: 'quarantine' as TabId, label: 'Lots en quarantaine', count: quarantineLots.length }
 	]);
+
+	// Modale d'action : une seule ouverte à la fois, ouverte depuis la colonne Actions des listings.
+	type ActionState =
+		| { mode: 'control'; lot: PendingQcLot }
+		| { mode: 'release'; lot: QuarantineLot }
+		| null;
+
+	let action = $state<ActionState>(null);
+
+	const modalTitle = $derived(
+		action?.mode === 'control'
+			? 'Saisir le contrôle qualité'
+			: action?.mode === 'release'
+				? 'Lever la quarantaine'
+				: ''
+	);
+
+	// `use:enhance` : pas de rechargement. Succès → recharge les données (la ligne traitée disparaît)
+	// et ferme la modale. Échec → modale ouverte, l'erreur s'affiche dedans SANS vider la saisie ni
+	// recharger (l'utilisateur corrige et renvoie). Sans remontage, l'onglet actif est préservé (plus
+	// besoin d'une logique `initialTab`).
+	const onActionSubmit: SubmitFunction = () => {
+		return async ({ result, update }) => {
+			if (result.type === 'success') {
+				await update();
+				action = null;
+			} else {
+				await update({ reset: false, invalidateAll: false });
+			}
+		};
+	};
 </script>
 
 <PageHead
@@ -75,8 +104,6 @@
 	<p class="feedback ok" role="status">
 		✅ Quarantaine levée — le lot est remis en stock (décision tracée dans l'audit).
 	</p>
-{:else if form?.releaseError}
-	<p class="feedback err" role="status">❌ Levée impossible — {form.releaseError}</p>
 {/if}
 
 {#if form?.controlled}
@@ -102,29 +129,113 @@
 			</Tabs.List>
 
 			<Tabs.Content value="pending">
-				<PendingQcPanel
-					lots={pendingQc}
-					errorLotId={form?.controlLotId}
-					errorMessage={form?.controlError}
+				<PendingQcListing
+					rows={pendingQc}
 					role={data.user.role}
+					onsaisir={(lot) => (action = { mode: 'control', lot })}
 				/>
 			</Tabs.Content>
 
 			<Tabs.Content value="nc">
-				<NcPanel rows={openNc} />
+				<NcOpenListing rows={openNc} />
 			</Tabs.Content>
 
 			<Tabs.Content value="quarantine">
-				<QuarantinePanel lots={quarantineLots} onexport={exportList} role={data.user.role} />
+				<QuarantineListing
+					rows={quarantineLots}
+					role={data.user.role}
+					onlever={(lot) => (action = { mode: 'release', lot })}
+					onexport={exportList}
+				/>
 			</Tabs.Content>
 		</Tabs>
 	</div>
 {/if}
 
+<Modal open={action !== null} title={modalTitle} onclose={() => (action = null)}>
+	{#if action?.mode === 'control'}
+		<form method="POST" action="?/control" use:enhance={onActionSubmit} class="modal-form">
+			<input type="hidden" name="lotId" value={action.lot.id} />
+			<p class="modal-lot">Lot {action.lot.lot} · {action.lot.produit}</p>
+
+			{#if form?.controlError && form?.controlLotId === action.lot.id}
+				<p class="modal-error" role="alert">❌ {form.controlError}</p>
+			{/if}
+
+			<label>
+				<span>Type de test</span>
+				<input
+					type="text"
+					name="typeTest"
+					placeholder="Ex. : analyse microbiologique"
+					required
+					minlength="3"
+				/>
+			</label>
+
+			<label>
+				<span>Notes (facultatif)</span>
+				<input type="text" name="notes" placeholder="Ex. : Listeria négatif" />
+			</label>
+
+			<div class="modal-actions">
+				<button type="submit" name="resultat" value="CONFORME" class="conforme">
+					Conforme — libérer le lot
+				</button>
+				<button type="submit" name="resultat" value="NON_CONFORME" class="non-conforme">
+					Non conforme — mettre en quarantaine
+				</button>
+			</div>
+		</form>
+	{:else if action?.mode === 'release'}
+		<form method="POST" action="?/release" use:enhance={onActionSubmit} class="modal-form">
+			<input type="hidden" name="lotId" value={action.lot.id} />
+			<p class="modal-lot">Lot {action.lot.numero} · {action.lot.detail}</p>
+
+			{#if form?.releaseError && form?.lotId === action.lot.id}
+				<p class="modal-error" role="alert">❌ {form.releaseError}</p>
+			{/if}
+
+			<label>
+				<span>Motif de levée</span>
+				<input
+					type="text"
+					name="motif"
+					placeholder="Ex. : 2ᵉ contrôle conforme"
+					required
+					minlength="3"
+				/>
+			</label>
+
+			<button type="submit" class="lever">Lever la quarantaine</button>
+		</form>
+	{/if}
+</Modal>
+
 <style>
-	/* Le composant Tabs (Skeleton/Zag) est livre sans style : on l'habille avec la charte --nc-*.
-	   Les elements sont rendus par le composant enfant, donc on cible ses hooks (role, data-*, aria)
-	   via :global sous le conteneur scope .tabs pour ne pas fuir sur le reste de l'app. */
+	.banner {
+		margin: 0 0 0.75rem;
+		padding: 0.5rem 0.75rem;
+		border-radius: 0.375rem;
+		background: #fffbeb;
+		color: #92400e;
+		font-size: 0.8125rem;
+	}
+
+	.feedback {
+		margin: 0 0 0.75rem;
+		padding: 0.625rem 0.875rem;
+		border-radius: 0.5rem;
+		font-size: 0.875rem;
+	}
+
+	.feedback.ok {
+		background: #f0fdf4;
+		border: 1px solid #bbf7d0;
+		color: #166534;
+	}
+
+	/* --- Onglets (Skeleton/Zag, habillés avec la charte --nc-*) --- */
 	.tabs :global([role='tablist']) {
 		display: flex;
 		gap: 0.25rem;
@@ -182,31 +293,72 @@
 		color: var(--nc-brand);
 	}
 
-	.banner {
-		margin: 0 0 0.75rem;
-		padding: 0.5rem 0.75rem;
-		border-radius: 0.375rem;
-		background: #fffbeb;
-		color: #92400e;
-		font-size: 0.8125rem;
+	/* --- Formulaires en modale --- */
+	.modal-form {
+		display: flex;
+		flex-direction: column;
+		gap: 0.75rem;
 	}
 
-	.feedback {
-		margin: 0 0 0.75rem;
-		padding: 0.625rem 0.875rem;
-		border-radius: 0.5rem;
+	.modal-lot {
+		margin: 0;
+		font-size: 0.875rem;
+		font-weight: 600;
+		color: var(--nc-text);
+	}
+
+	.modal-error {
+		margin: 0;
+		font-size: 0.8125rem;
+		color: #991b1b;
+	}
+
+	.modal-form label {
+		display: flex;
+		flex-direction: column;
+		gap: 0.25rem;
+		font-size: 0.75rem;
+		color: var(--nc-text-muted);
+	}
+
+	.modal-form input {
+		padding: 0.5rem 0.6rem;
+		border: 1px solid #cbd5e1;
+		border-radius: 0.375rem;
 		font-size: 0.875rem;
 	}
 
-	.feedback.ok {
-		background: #f0fdf4;
-		border: 1px solid #bbf7d0;
-		color: #166534;
+	.modal-actions {
+		display: flex;
+		flex-wrap: wrap;
+		gap: 0.5rem;
+		margin-top: 0.25rem;
 	}
 
-	.feedback.err {
-		background: #fef2f2;
-		border: 1px solid #fecaca;
-		color: #991b1b;
+	.modal-actions button,
+	.lever {
+		padding: 0.5rem 0.9rem;
+		border: none;
+		border-radius: 0.375rem;
+		font-size: 0.8125rem;
+		font-weight: 500;
+		color: #fff;
+		cursor: pointer;
+	}
+
+	.conforme {
+		background: var(--nc-brand-dark, #1b6b5c);
+	}
+
+	.non-conforme {
+		background: #ef4444;
+	}
+
+	.lever {
+		background: var(--nc-brand-dark);
+	}
+
+	.lever:hover {
+		background: var(--nc-brand-hover);
 	}
 </style>
