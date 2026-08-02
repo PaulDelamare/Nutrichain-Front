@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { enhance } from '$app/forms';
 	import { invalidateAll } from '$app/navigation';
+	import DataTable from '$lib/components/ui/DataTable.svelte';
 	import MfaBadge from './MfaBadge.svelte';
 	import { INVITE_ROLE_OPTIONS } from '$lib/config/invite-roles';
 	import type { AppUser } from '$lib/types/user';
@@ -12,6 +13,10 @@
 	};
 
 	let { rows, canManage = false, currentUserId }: Props = $props();
+
+	const columns = $derived(
+		canManage ? ['Utilisateur', 'Rôle', 'MFA', 'Actions'] : ['Utilisateur', 'Rôle', 'MFA']
+	);
 
 	function estGerable(row: AppUser): boolean {
 		return canManage && row.rawRole !== 'owner' && row.userId !== currentUserId;
@@ -35,101 +40,50 @@
 	}
 </script>
 
-<div class="table-wrap">
-	<table>
-		<thead>
-			<tr>
-				<th>Utilisateur</th>
-				<th>Rôle</th>
-				<th>MFA</th>
-				{#if canManage}
-					<th>Actions</th>
+<DataTable
+	{columns}
+	{rows}
+	rowKey={(r) => r.memberId}
+	empty="Aucun utilisateur ne correspond aux filtres."
+>
+	{#snippet row(r)}
+		<td class="email">{r.email}</td>
+		<td>{r.role}</td>
+		<td><MfaBadge enabled={r.mfa} /></td>
+		{#if canManage}
+			<td>
+				{#if estGerable(r)}
+					<div class="actions">
+						<form method="POST" action="?/changeRole" class="role-form" use:enhance={apresAction}>
+							<input type="hidden" name="memberId" value={r.memberId} />
+							<select name="role" aria-label={`Rôle de ${r.email}`}>
+								{#each INVITE_ROLE_OPTIONS as opt (opt.value)}
+									<option value={opt.value} selected={opt.value === r.rawRole}>
+										{opt.label}
+									</option>
+								{/each}
+							</select>
+							<button type="submit" class="apply">Appliquer</button>
+						</form>
+						<form
+							method="POST"
+							action="?/revoke"
+							use:enhance={apresAction}
+							onsubmit={(e) => confirmerRevocation(r.email, e)}
+						>
+							<input type="hidden" name="memberId" value={r.memberId} />
+							<button type="submit" class="danger">Révoquer</button>
+						</form>
+					</div>
+				{:else}
+					<span class="muted">—</span>
 				{/if}
-			</tr>
-		</thead>
-		<tbody>
-			{#each rows as row (row.memberId)}
-				<tr>
-					<td class="email">{row.email}</td>
-					<td>{row.role}</td>
-					<td><MfaBadge enabled={row.mfa} /></td>
-					{#if canManage}
-						<td>
-							{#if estGerable(row)}
-								<div class="actions">
-									<form
-										method="POST"
-										action="?/changeRole"
-										class="role-form"
-										use:enhance={apresAction}
-									>
-										<input type="hidden" name="memberId" value={row.memberId} />
-										<select name="role" aria-label={`Rôle de ${row.email}`}>
-											{#each INVITE_ROLE_OPTIONS as opt (opt.value)}
-												<option value={opt.value} selected={opt.value === row.rawRole}>
-													{opt.label}
-												</option>
-											{/each}
-										</select>
-										<button type="submit" class="apply">Appliquer</button>
-									</form>
-									<form
-										method="POST"
-										action="?/revoke"
-										use:enhance={apresAction}
-										onsubmit={(e) => confirmerRevocation(row.email, e)}
-									>
-										<input type="hidden" name="memberId" value={row.memberId} />
-										<button type="submit" class="danger">Révoquer</button>
-									</form>
-								</div>
-							{:else}
-								<span class="muted">—</span>
-							{/if}
-						</td>
-					{/if}
-				</tr>
-			{/each}
-		</tbody>
-	</table>
-</div>
+			</td>
+		{/if}
+	{/snippet}
+</DataTable>
 
 <style>
-	.table-wrap {
-		overflow-x: auto;
-		border: 1px solid #e2e8f0;
-		border-radius: 0.5rem;
-		background: #fff;
-	}
-
-	table {
-		width: 100%;
-		border-collapse: collapse;
-		font-size: 0.875rem;
-	}
-
-	th {
-		padding: 0.75rem 1rem;
-		border-bottom: 1px solid #e2e8f0;
-		text-align: left;
-		font-size: 0.75rem;
-		font-weight: 600;
-		color: var(--nc-text-muted);
-		background: #f8fafc;
-		white-space: nowrap;
-	}
-
-	td {
-		padding: 0.875rem 1rem;
-		border-bottom: 1px solid #f1f5f9;
-		color: var(--nc-text-muted);
-		vertical-align: middle;
-	}
-
-	tr:last-child td {
-		border-bottom: none;
-	}
-
 	.email {
 		color: var(--nc-text);
 	}
