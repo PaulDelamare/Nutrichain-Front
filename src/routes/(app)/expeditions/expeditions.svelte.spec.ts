@@ -59,6 +59,19 @@ describe("Expéditions — constater l'arrivée", () => {
 		vi.restoreAllMocks();
 	});
 
+	/**
+	 * Le tableau affichait le code de l'API tel quel — « EN_ROUTE » — alors que le filtre juste
+	 * au-dessus proposait déjà « En route ». Deux vocabulaires sur le même écran.
+	 */
+	it("affiche le statut en clair, pas le code de l'API", async () => {
+		renderPage('operator', [EN_ROUTE, LIVREE]);
+
+		// La CELLULE, pas le filtre : « En route » figure aussi dans la liste déroulante.
+		await expect.element(page.getByRole('cell', { name: 'En route' })).toBeInTheDocument();
+		await expect.element(page.getByRole('cell', { name: 'Livré' })).toBeInTheDocument();
+		expect(page.getByText('EN_ROUTE').all()).toHaveLength(0);
+	});
+
 	it("propose de confirmer une expédition dont l'arrivée n'est pas constatée", async () => {
 		renderPage('operator', [EN_ROUTE]);
 

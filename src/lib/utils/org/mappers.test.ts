@@ -433,18 +433,18 @@ describe('alertsToRappels', () => {
 
 describe('buildDashboardKpis', () => {
 	it('ne rend que des indicateurs calculés — aucun KPI d’intégration inventé', () => {
-		const kpis = buildDashboardKpis(0, [], 0, 0);
+		const kpis = buildDashboardKpis(0, [], 0, 0, 0);
 		expect(kpis).toHaveLength(4);
 		expect(kpis.map((k) => k.label)).not.toContain('Sync. intégrations');
 		expect(JSON.stringify(kpis)).not.toContain('99 %');
 	});
 
 	it('associe à chaque indicateur son lien et sa couleur de contour', () => {
-		const kpis = buildDashboardKpis(0, [], 0, 0);
+		const kpis = buildDashboardKpis(0, [], 0, 0, 0);
 		expect(kpis.map((k) => ({ label: k.label, href: k.href, accent: k.accent }))).toEqual([
 			{ label: 'Lots suivis', href: '/recherche-lots', accent: 'green' },
 			{ label: 'Alertes chaîne du froid', href: '/chaine-du-froid', accent: 'red' },
-			{ label: 'Rappels en cours', href: '/rappels-produits', accent: 'blue' },
+			{ label: 'Lots sous rappel', href: '/rappels-produits', accent: 'blue' },
 			{ label: 'Anomalies ouvertes', href: '/non-conformites', accent: 'orange' }
 		]);
 	});
@@ -761,37 +761,42 @@ describe('buildDashboardKpis — ce que le chiffre affirme', () => {
 	 * l'appelant tient de la pagination.
 	 */
 	it('affiche le total du catalogue, pas la taille de la page reçue', () => {
-		const [lots] = buildDashboardKpis(342, [], 0, 0);
+		const [lots] = buildDashboardKpis(342, [], 0, 0, 0);
 		expect(lots.value).toBe('342');
 		expect(lots.detail).toBe('Catalogue organisation active');
 	});
 
 	it('annonce un catalogue vide sans fioriture', () => {
-		const [lots] = buildDashboardKpis(0, [], 0, 0);
+		const [lots] = buildDashboardKpis(0, [], 0, 0, 0);
 		expect(lots.value).toBe('0');
 	});
 
-	it('compte séparément les alertes froid et les rappels actifs', () => {
+	/**
+	 * Le compteur se lisait sur les ALERTES actives. Résoudre l'alerte d'un rappel ne le clôt pas
+	 * (l'API le documente) : le tableau annonçait alors « Aucun rappel » pendant que sa propre
+	 * répartition affichait des lots sous rappel. Il se lit désormais sur le statut des LOTS.
+	 */
+	it('compte les lots sous rappel, PAS les alertes de rappel actives', () => {
 		const kpis = buildDashboardKpis(
 			10,
 			[
 				alert({ type: 'TEMP_EXCURSION', statut: 'ACTIVE' }),
-				alert({ type: 'PRODUCT_RECALL', statut: 'ACTIVE' }),
 				alert({ type: 'PRODUCT_RECALL', statut: 'RESOLVED' })
 			],
 			3,
-			2
+			2,
+			4
 		);
 
 		expect(kpis[1]).toMatchObject({ value: '1', detail: 'Investigation en cours' });
-		expect(kpis[2]).toMatchObject({ value: '1', detail: 'Workflow actif' });
+		expect(kpis[2]).toMatchObject({ value: '4', detail: 'Marchandise immobilisée' });
 		expect(kpis[3]).toMatchObject({ value: '3', detail: '2 lot(s) en quarantaine' });
 	});
 
 	it('affiche « aucune » plutôt qu’un zéro sec quand tout va bien', () => {
-		const kpis = buildDashboardKpis(10, [], 0, 0);
+		const kpis = buildDashboardKpis(10, [], 0, 0, 0);
 		expect(kpis[1].detail).toBe('Aucune alerte active');
-		expect(kpis[2].detail).toBe('Aucun rappel');
+		expect(kpis[2].detail).toBe('Aucun lot sous rappel');
 	});
 });
 

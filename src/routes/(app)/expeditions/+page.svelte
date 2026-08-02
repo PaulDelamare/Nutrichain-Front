@@ -45,6 +45,14 @@
 		{ label: 'Livré', value: 'LIVRE' }
 	];
 
+	/**
+	 * Le tableau affichait le code de l'API tel quel (« EN_ROUTE »), alors que le filtre juste
+	 * au-dessus proposait déjà « En route ». Un type inconnu retombe sur son code plutôt que de
+	 * disparaître : mieux vaut un code lisible qu'une cellule vide.
+	 */
+	const libelleStatut = (statut: string) =>
+		statutOptions.find((o) => o.value === statut)?.label ?? statut;
+
 	const hrefForPage = $derived((target: number) =>
 		pageHref(resolve('/expeditions'), $page.url.searchParams, target)
 	);
@@ -157,7 +165,7 @@
 			{#snippet row(r)}
 				<td class="mono">{r.ref}</td>
 				<td>{r.client}</td>
-				<td>{r.statut}</td>
+				<td>{libelleStatut(r.statut)}</td>
 				<td>{r.date}</td>
 				<!-- Une arrivée non constatée se dit, elle ne se devine pas. -->
 				<td>{r.deliveredAt ?? 'non constatée'}</td>
