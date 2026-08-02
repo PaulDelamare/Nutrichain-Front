@@ -16,7 +16,15 @@ vi.mock('$lib/Api/organization.server', () => organization);
 
 const { load } = await import('./+page.server');
 
-const run = () => (load as any)({ fetch: vi.fn(), cookies: {} });
+const run = (query = '') =>
+	(load as any)({
+		fetch: vi.fn(),
+		cookies: {},
+		url: new URL(`http://front.test/receptions${query}`)
+	});
+
+/** Les options réellement envoyées à l'API lors du dernier chargement. */
+const requete = () => logistics.getReceipts.mock.calls.at(-1)?.[2];
 
 const pageReceptions = (rows: unknown[] = []) =>
 	ok({ data: rows, pagination: { page: 1, limit: 20, total: rows.length, totalPages: 1 } });
@@ -83,5 +91,33 @@ describe('chargement des réceptions', () => {
 
 		expect(data.error).toBe('API injoignable');
 		expect(data.suppliers).toEqual([]);
+	});
+
+	// Les filtres de colonnes partent à l'API (filtrage sur toute l'organisation), au lieu d'être
+	// appliqués sur la seule page reçue côté front.
+	it('transmet les filtres de colonnes et la page à l’API', async () => {
+		await run('?page=2&ref=BL-2026&fournisseur=f1&statut=ALERTE&date=2026-07-31');
+
+		expect(requete()).toMatchObject({
+			page: 2,
+			ref: 'BL-2026',
+			fournisseur: 'f1',
+			statut: 'ALERTE',
+			date: '2026-07-31'
+		});
+	});
+
+	it('honore une taille de page de la liste (?limit=100)', async () => {
+		const data = await run('?limit=100');
+
+		expect(requete()).toMatchObject({ limit: 100 });
+		expect(data.pageSize).toBe(100);
+	});
+
+	it('borne une taille de page hors liste au défaut (25)', async () => {
+		const data = await run('?limit=999');
+
+		expect(requete()).toMatchObject({ limit: 25 });
+		expect(data.pageSize).toBe(25);
 	});
 });

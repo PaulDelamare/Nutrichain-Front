@@ -23,14 +23,31 @@ export function getBatchById(fetch: typeof globalThis.fetch, cookies: Cookies, i
 	);
 }
 
+export type ReceiptQuery = {
+	page?: number;
+	limit?: number;
+	// Filtres de colonnes appliqués côté API (voir GET /logistics/receipts).
+	ref?: string;
+	fournisseur?: string;
+	statut?: string;
+	date?: string;
+};
+
 export function getReceipts(
 	fetch: typeof globalThis.fetch,
 	cookies: Cookies,
-	page = 1,
-	limit = 50
+	opts: ReceiptQuery = {}
 ) {
+	const params = new URLSearchParams();
+	params.set('page', String(opts.page ?? 1));
+	params.set('limit', String(opts.limit ?? 50));
+	const ref = opts.ref?.trim();
+	if (ref) params.set('ref', ref);
+	if (opts.fournisseur) params.set('fournisseur', opts.fournisseur);
+	if (opts.statut) params.set('statut', opts.statut);
+	if (opts.date) params.set('date', opts.date);
 	return api(fetch, cookies, { useApiKey: false }).get<ApiReceiptList>(
-		`/api/logistics/receipts?page=${page}&limit=${limit}`
+		`/api/logistics/receipts?${params}`
 	);
 }
 

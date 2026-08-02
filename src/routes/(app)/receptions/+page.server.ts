@@ -4,22 +4,59 @@ import { createReceipt, getReceipts } from '$lib/Api/logistics.server';
 import { getEquipment, getProductsForConfig, getSuppliers } from '$lib/Api/organization.server';
 import { refusEcriture } from '$lib/server/guards';
 
-export const load: PageServerLoad = async ({ fetch, cookies }) => {
+const PAGE_SIZE_OPTIONS = [10, 25, 50, 100] as const;
+const DEFAULT_PAGE_SIZE = 25;
+const emptyPagination = { page: 1, limit: DEFAULT_PAGE_SIZE, total: 0, totalPages: 0 };
+
+/** Une page hors bornes (`?page=0`, `?page=abc`) est un lien copié de travers, pas une erreur 400. */
+function parsePage(raw: string | null): number {
+	const parsed = Number(raw);
+	return Number.isInteger(parsed) && parsed >= 1 ? parsed : 1;
+}
+
+/** `limit` est borné à la liste du sélecteur : un `?limit=999` copié retombe sur le défaut. */
+function parseLimit(raw: string | null): number {
+	const parsed = Number(raw);
+	return (PAGE_SIZE_OPTIONS as readonly number[]).includes(parsed) ? parsed : DEFAULT_PAGE_SIZE;
+}
+
+export const load: PageServerLoad = async ({ fetch, cookies, url }) => {
+	const p = url.searchParams;
+	const page = parsePage(p.get('page'));
+	const limit = parseLimit(p.get('limit'));
+	// Filtres de colonnes portés par l'URL : la requête part filtrée à l'API (plus de tri sur la
+	// seule page reçue), et un lien filtré reste partageable / rechargeable.
+	const ref = p.get('ref')?.trim() || undefined;
+	const fournisseur = p.get('fournisseur')?.trim() || undefined;
+	const statut = p.get('statut')?.trim() || undefined;
+	const date = p.get('date')?.trim() || undefined;
+
 	const [receipts, suppliers, products, equipment] = await Promise.all([
-		getReceipts(fetch, cookies),
+		getReceipts(fetch, cookies, { page, limit, ref, fournisseur, statut, date }),
 		getSuppliers(fetch, cookies),
 		getProductsForConfig(fetch, cookies),
 		getEquipment(fetch, cookies)
 	]);
 
+	// Valeurs courantes des filtres, remises dans la forme du panneau (sentinelle `tous` pour les selects).
+	const filters = {
+		ref: ref ?? '',
+		fournisseur: fournisseur ?? 'tous',
+		statut: statut ?? 'tous',
+		date: date ?? ''
+	};
+
+	const meta = { filters, pageSize: limit, pageSizeOptions: [...PAGE_SIZE_OPTIONS] };
+
 	if (!receipts.ok) {
 		return {
 			receipts: [],
-			total: 0,
+			pagination: { ...emptyPagination, limit },
 			error: receipts.message,
 			suppliers: [],
 			products: [],
-			equipment: []
+			equipment: [],
+			...meta
 		};
 	}
 
@@ -31,16 +68,17 @@ export const load: PageServerLoad = async ({ fetch, cookies }) => {
 			statut: r.statut_controle,
 			date: new Date(r.date_reception).toLocaleString('fr-FR')
 		})),
-		total: receipts.data.pagination.total,
+		pagination: receipts.data.pagination,
 		error: null,
 		// Aucun refiltrage sur `is_active` : l'API l'applique déjà dans son `where`, et sa projection
 		// pour un rôle terrain ne contient même pas le champ — le filtre vidait donc le sélecteur
-		// pour tout compte non administrateur (#82).
+		// Fournisseur pour tout compte non administrateur (#82).
 		suppliers: suppliers.ok ? suppliers.data : [],
 		products: products.ok ? products.data : [],
 		// Le matériel, lui, n'est PAS filtré par l'API : écarter les frigos en panne est une règle
 		// métier du front, pas une redondance.
-		equipment: equipment.ok ? equipment.data.filter((e) => e.statut !== 'HORS_SERVICE') : []
+		equipment: equipment.ok ? equipment.data.filter((e) => e.statut !== 'HORS_SERVICE') : [],
+		...meta
 	};
 };
 
