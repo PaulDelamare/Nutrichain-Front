@@ -16,7 +16,6 @@ export const load: PageServerLoad = async ({ fetch, cookies, url }) => {
 
 	if (!alerts.ok || !equipment.ok) {
 		return {
-			incident: null,
 			alerts: [],
 			error: alerts.message || equipment.message,
 			telemetry: null,
@@ -34,7 +33,7 @@ export const load: PageServerLoad = async ({ fetch, cookies, url }) => {
 		batchesByAlertId.set(a.id, res.ok ? res.data : []);
 	});
 
-	const { incident, rows } = alertsToCold(alerts.data, equipment.data, batchesByAlertId);
+	const rows = alertsToCold(alerts.data, equipment.data, batchesByAlertId);
 
 	let telemetry: {
 		sensorId: string;
@@ -66,7 +65,6 @@ export const load: PageServerLoad = async ({ fetch, cookies, url }) => {
 	}
 
 	return {
-		incident,
 		alerts: rows,
 		error: null,
 		telemetry,

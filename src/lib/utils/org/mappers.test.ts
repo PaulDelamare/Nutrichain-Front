@@ -162,19 +162,19 @@ describe('auditLogsToRows', () => {
 });
 
 describe('alertsToCold', () => {
-	it('ne rend ni incident ni ligne quand aucune alerte froid n’est active', () => {
-		expect(alertsToCold([], [])).toEqual({ incident: null, rows: [] });
+	it('ne rend aucune ligne quand aucune alerte froid n’est active', () => {
+		expect(alertsToCold([], [])).toEqual([]);
 	});
 
 	it('n’invente pas de site ni de zone quand le matériel est inconnu', () => {
-		const { rows } = alertsToCold([alert({ id_materiel: 'inconnu' })], []);
+		const rows = alertsToCold([alert({ id_materiel: 'inconnu' })], []);
 		expect(rows[0].site).toBe('—');
 		expect(rows[0].zone).toBe('—');
 	});
 
 	it('prend uniquement les lots renvoyés par /alerts/:id/batches pour cette alerte', () => {
 		const alertId = '11111111-2222-3333-4444-555555555555';
-		const { rows } = alertsToCold(
+		const rows = alertsToCold(
 			[alert({ id: alertId, id_materiel: 'frigo-1' })],
 			[{ id: 'frigo-1', nom: 'Frigo A', lieu: { nom: 'Quai' } } as never],
 			{
@@ -207,7 +207,7 @@ describe('alertsToCold', () => {
 	// l'identifiant technique vaut mieux qu'une case vide quand l'API ne le renvoie pas.
 	it('retombe sur l’identifiant abrégé quand le numéro de lot manque', () => {
 		const alertId = '11111111-2222-3333-4444-555555555555';
-		const { rows } = alertsToCold([alert({ id: alertId })], [], {
+		const rows = alertsToCold([alert({ id: alertId })], [], {
 			[alertId]: [
 				{
 					id: '0a3f64b1-1111-2222-3333-444444444444',
@@ -227,7 +227,7 @@ describe('alertsToCold', () => {
 	it('n’attribue pas à une alerte les lots d’une autre, même frigo', () => {
 		const a1 = 'aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee';
 		const a2 = 'ffffffff-1111-2222-3333-444444444444';
-		const { rows } = alertsToCold(
+		const rows = alertsToCold(
 			[
 				alert({ id: a1, id_materiel: 'frigo-1' }),
 				alert({ id: a2, id_materiel: 'frigo-1', message: 'autre' })
@@ -255,7 +255,7 @@ describe('alertsToCold', () => {
 
 	it('propage levable=false et le motif de blocage', () => {
 		const alertId = '11111111-2222-3333-4444-555555555555';
-		const { rows } = alertsToCold([alert({ id: alertId })], [], {
+		const rows = alertsToCold([alert({ id: alertId })], [], {
 			[alertId]: [
 				{
 					id: 'lot-x',
@@ -276,7 +276,7 @@ describe('alertsToCold', () => {
 	});
 
 	it('ne rattache aucun lot quand l’endpoint n’en renvoie pas', () => {
-		const { rows } = alertsToCold([alert({ id_materiel: 'frigo-1' })], [], {});
+		const rows = alertsToCold([alert({ id_materiel: 'frigo-1' })], [], {});
 		expect(rows[0].lotsImpactes).toEqual([]);
 	});
 
@@ -368,14 +368,37 @@ describe('alertsToCold', () => {
 	});
 
 	it('mappe PANIC en statut critique', () => {
-		const { rows } = alertsToCold([alert({ niveau_gravite: 'PANIC' })], []);
+		const rows = alertsToCold([alert({ niveau_gravite: 'PANIC' })], []);
 		expect(rows[0].statut).toBe('critique');
 	});
 
 	it('conserve l’UUID API pour permettre la clôture', () => {
-		const { rows } = alertsToCold([alert({ id: 'aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee' })], []);
+		const rows = alertsToCold([alert({ id: 'aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee' })], []);
 		expect(rows[0].alertId).toBe('aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee');
 		expect(rows[0].id).not.toBe(rows[0].alertId);
+	});
+
+	// « Depuis » = date + heure française, jamais une date sèche : une alerte de plusieurs jours
+	// affichait « 31/07/2026 » sans l'heure. (Le fuseau du runner peut décaler l'heure : on vérifie
+	// le format, pas la valeur exacte.)
+	it('affiche « Depuis » en date-heure française', () => {
+		const rows = alertsToCold([alert({ created_at: '2026-07-11T10:00:00.000Z' })], []);
+		expect(rows[0].depuis).toMatch(/\d{2}\/\d{2}\/\d{4}/);
+		expect(rows[0].depuis).toMatch(/\d{2}:\d{2}/);
+	});
+
+	// Le seuil du matériel n'était visible que dans l'ancien bandeau : il est désormais une colonne.
+	it('expose le seuil max du matériel pour la colonne Seuil', () => {
+		const rows = alertsToCold(
+			[alert({ id_materiel: 'frigo-1' })],
+			[{ id: 'frigo-1', nom: 'Frigo A', temp_seuil_max: 4, lieu: { nom: 'Quai' } } as never]
+		);
+		expect(rows[0].seuil).toBe('4 °C');
+	});
+
+	it('affiche « — » comme seuil quand le matériel est inconnu', () => {
+		const rows = alertsToCold([alert({ id_materiel: 'inconnu' })], []);
+		expect(rows[0].seuil).toBe('—');
 	});
 });
 

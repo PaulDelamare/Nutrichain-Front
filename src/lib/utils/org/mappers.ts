@@ -9,7 +9,7 @@ import type {
 } from '$lib/Api/organization.server';
 import type { ApiBatch, ApiGenealogy } from '$lib/Api/traceability.server';
 import type { Kpi, ActivityItem, TaskItem } from '$lib/types/dashboard';
-import type { ColdAlertLot, ColdAlertRow, ColdIncident } from '$lib/types/cold';
+import type { ColdAlertLot, ColdAlertRow } from '$lib/types/cold';
 import type { NcRow, QuarantineLot } from '$lib/types/nc';
 import type { Recall } from '$lib/types/recall';
 import type { AppUser } from '$lib/types/user';
@@ -29,14 +29,19 @@ const ROLE_LABELS: Record<string, string> = {
 	viewer: 'Lecteur'
 };
 
-function fmtRelative(iso: string): string {
-	const d = new Date(iso);
-	const diff = Date.now() - d.getTime();
-	const mins = Math.floor(diff / 60000);
-	if (mins < 60) return `${mins} min`;
-	const h = Math.floor(mins / 60);
-	if (h < 48) return `${h} h`;
-	return d.toLocaleDateString('fr-FR');
+/**
+ * Date-heure absolue au format français (« 31/07/2026 14:23 »). On préfère l'horodatage réel à une
+ * durée relative : une alerte de trois jours affichait « 31/07/2026 » sans heure, et un « depuis
+ * X min » figé dans le message d'alerte donnait l'illusion d'un incident tout frais.
+ */
+function fmtDateTime(iso: string): string {
+	return new Date(iso).toLocaleString('fr-FR', {
+		day: '2-digit',
+		month: '2-digit',
+		year: 'numeric',
+		hour: '2-digit',
+		minute: '2-digit'
+	});
 }
 
 function fmtWhen(iso: string): string {
@@ -75,17 +80,17 @@ export function listActiveColdAlerts(alerts: ApiAlert[]): ApiAlert[] {
 }
 
 /**
- * Le capteur dont la courbe illustre l'incident affiché en bandeau.
+ * Le capteur dont la courbe illustre l'alerte froid principale (la première active, `cold[0]`).
  *
  * ⚠️ Ne PAS retomber d'emblée sur « le premier matériel muni d'un capteur » :
  * `GET /api/organization/equipment` ne promet aucun ordre, et l'ingestion de télémétrie réécrit la
  * ligne du matériel qu'elle mesure. Déclencher une excursion déplaçait donc le capteur concerné
  * hors de la première place, et la courbe basculait sur « aucune donnée » à l'instant précis où
- * elle avait quelque chose à montrer. Même stable, elle traçait une autre chambre que celle du
- * bandeau : une courbe plate sous un incident critique, ou l'inverse.
+ * elle avait quelque chose à montrer. Même stable, elle traçait une autre chambre que celle de
+ * l'alerte : une courbe plate sous un incident critique, ou l'inverse.
  *
- * On prend donc EXACTEMENT le matériel de l'incident — `cold[0]`, la même alerte que celle
- * qu'`alertsToCold` met en bandeau. Se rabattre sur l'alerte suivante quand celle-là n'a pas de
+ * On prend donc EXACTEMENT le matériel de l'incident — `cold[0]`, la première alerte froid active
+ * listée par `alertsToCold`. Se rabattre sur l'alerte suivante quand celle-là n'a pas de
  * capteur exploitable (matériel nul, type `FROID` non issu d'une détection, capteur détaché)
  * reproduirait le défaut ailleurs : une courbe qui parle d'une autre chambre que le titre au-dessus
  * d'elle, sans que rien ne le signale. Pas de capteur pour l'incident ⇒ pas de courbe.
@@ -132,21 +137,19 @@ export function alertsToCold(
 	alerts: ApiAlert[],
 	equipment: ApiEquipment[],
 	batchesByAlertId: ReadonlyMap<string, ApiAlertBatch[]> | Record<string, ApiAlertBatch[]> = {}
-): { incident: ColdIncident | null; rows: ColdAlertRow[] } {
+): ColdAlertRow[] {
 	const cold = listActiveColdAlerts(alerts);
-	if (cold.length === 0) return { incident: null, rows: [] };
+	if (cold.length === 0) return [];
 
 	const lookup =
 		batchesByAlertId instanceof Map ? batchesByAlertId : new Map(Object.entries(batchesByAlertId));
 
-	const incident: ColdIncident = {
-		id: shortRef(cold[0].id),
-		message: cold[0].message
-	};
-
-	const rows: ColdAlertRow[] = cold.map((a) => {
+	return cold.map((a) => {
 		const equip = equipment.find((e) => e.id === a.id_materiel);
 		const temp = equip?.temp_actuelle != null ? `${equip.temp_actuelle} °C` : '—';
+		// Seuil max du matériel : c'était la seule information portée par l'ancien bandeau, on la
+		// remet dans le tableau à côté de la température actuelle.
+		const seuil = equip?.temp_seuil_max != null ? `${equip.temp_seuil_max} °C` : '—';
 		const statut = toColdAlertUiStatus(a.niveau_gravite);
 
 		return {
@@ -155,13 +158,12 @@ export function alertsToCold(
 			site: equip?.lieu?.nom ?? '—',
 			zone: equip?.nom ?? '—',
 			tempActuelle: temp,
-			depuis: fmtRelative(a.created_at),
+			seuil,
+			depuis: fmtDateTime(a.created_at),
 			statut,
 			lotsImpactes: mapAlertBatchesToLots(lookup.get(a.id) ?? [])
 		};
 	});
-
-	return { incident, rows };
 }
 
 function shortRef(id: string): string {
