@@ -178,7 +178,7 @@ const routes: [nom: string, appel: () => unknown, methode: string, chemin: strin
 		'getShipments',
 		() => org.getShipments(fetchEspion, cookies),
 		'GET',
-		'/api/organization/shipments'
+		'/api/organization/shipments?page=1&limit=50'
 	],
 	[
 		'getPendingQualityControl',

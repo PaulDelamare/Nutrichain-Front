@@ -38,7 +38,17 @@ const LIVREE: Shipment = {
 function renderPage(role: KnownRole, shipments: Shipment[], form: any = null) {
 	render(ExpeditionsPage, {
 		props: {
-			data: { user: { role }, shipments, customers: [], lots: [], error: null },
+			data: {
+				user: { role },
+				shipments,
+				pagination: { page: 1, limit: 25, total: shipments.length, totalPages: 1 },
+				customers: [],
+				lots: [],
+				error: null,
+				filters: { ref: '', client: 'tous', statut: 'tous', date: '' },
+				pageSize: 25,
+				pageSizeOptions: [10, 25, 50, 100]
+			},
 			form
 		}
 	} as unknown as SvelteComponentOptions<typeof ExpeditionsPage>);

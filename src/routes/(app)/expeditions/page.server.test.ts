@@ -14,7 +14,18 @@ vi.mock('$lib/Api/traceability.server', () => traceability);
 
 const { load, actions } = await import('./+page.server');
 
-const run = () => (load as any)({ fetch: vi.fn(), cookies: {} });
+const run = (query = '') =>
+	(load as any)({
+		fetch: vi.fn(),
+		cookies: {},
+		url: new URL(`http://front.test/expeditions${query}`)
+	});
+
+/** Les options réellement envoyées à l'API lors du dernier chargement. */
+const requete = () => organization.getShipments.mock.calls.at(-1)?.[2];
+
+const shipmentPage = (rows: unknown[] = []) =>
+	ok({ data: rows, pagination: { page: 1, limit: 25, total: rows.length, totalPages: 1 } });
 
 /**
  * Ce que l'API renvoie à un rôle TERRAIN : `{ id, nom_enseigne, adresse_livraison }`. L'adresse est
@@ -28,7 +39,7 @@ const fieldCustomer = {
 };
 
 beforeEach(() => {
-	organization.getShipments.mockResolvedValue(ok([]));
+	organization.getShipments.mockResolvedValue(shipmentPage([]));
 	organization.getCustomers.mockResolvedValue(ok([fieldCustomer]));
 	traceability.getBatchList.mockResolvedValue(
 		ok([
@@ -89,6 +100,34 @@ describe('chargement des expéditions', () => {
 
 		expect(data.error).toBe('API injoignable');
 		expect(data.customers).toEqual([]);
+	});
+
+	// Les filtres de colonnes partent à l'API (filtrage sur toute l'organisation), au lieu d'être
+	// appliqués sur la seule page reçue côté front.
+	it('transmet les filtres de colonnes et la page à l’API', async () => {
+		await run('?page=2&ref=BL&client=c1&statut=LIVRE&date=2026-07-31');
+
+		expect(requete()).toMatchObject({
+			page: 2,
+			ref: 'BL',
+			client: 'c1',
+			statut: 'LIVRE',
+			date: '2026-07-31'
+		});
+	});
+
+	it('honore une taille de page de la liste (?limit=100)', async () => {
+		const data = await run('?limit=100');
+
+		expect(requete()).toMatchObject({ limit: 100 });
+		expect(data.pageSize).toBe(100);
+	});
+
+	it('borne une taille de page hors liste au défaut (25)', async () => {
+		const data = await run('?limit=999');
+
+		expect(requete()).toMatchObject({ limit: 25 });
+		expect(data.pageSize).toBe(25);
 	});
 });
 
@@ -168,7 +207,7 @@ describe('confirmation de livraison', () => {
 describe('lecture de l’arrivée', () => {
 	it('distingue une arrivée constatée d’une arrivée inconnue', async () => {
 		organization.getShipments.mockResolvedValue(
-			ok([
+			shipmentPage([
 				{
 					id: 'e1',
 					shipment_id: 'BL-1',

@@ -399,8 +399,36 @@ export const setProductActive = (
 		}
 	);
 
-export const getShipments = (fetch: typeof globalThis.fetch, cookies: Cookies) =>
-	orgApi(fetch, cookies).get<ApiShipment[]>('/api/organization/shipments');
+export type ApiShipmentList = {
+	data: ApiShipment[];
+	pagination: { page: number; limit: number; total: number; totalPages: number };
+};
+
+export type ShipmentQuery = {
+	page?: number;
+	limit?: number;
+	// Filtres de colonnes appliqués côté API (voir GET /organization/shipments).
+	ref?: string;
+	client?: string;
+	statut?: string;
+	date?: string;
+};
+
+export const getShipments = (
+	fetch: typeof globalThis.fetch,
+	cookies: Cookies,
+	opts: ShipmentQuery = {}
+) => {
+	const params = new URLSearchParams();
+	params.set('page', String(opts.page ?? 1));
+	params.set('limit', String(opts.limit ?? 50));
+	const ref = opts.ref?.trim();
+	if (ref) params.set('ref', ref);
+	if (opts.client) params.set('client', opts.client);
+	if (opts.statut) params.set('statut', opts.statut);
+	if (opts.date) params.set('date', opts.date);
+	return orgApi(fetch, cookies).get<ApiShipmentList>(`/api/organization/shipments?${params}`);
+};
 
 export type ApiPendingQcBatch = {
 	id: string;
