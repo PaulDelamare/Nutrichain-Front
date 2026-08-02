@@ -44,6 +44,18 @@ textarea {
 	color: var(--nc-text);
 }
 
+/* Même raison : sous une préférence système sombre, Skeleton passe `color-scheme: dark`, et l'icône
+   NATIVE du sélecteur date/heure (calendrier) est alors rendue en clair — invisible sur nos champs à
+   fond blanc, même si le clic ouvre bien le sélecteur. On force le schéma clair pour ces contrôles
+   natifs, qui sont toujours sur fond blanc ici. */
+input[type='date'],
+input[type='datetime-local'],
+input[type='time'],
+input[type='month'],
+input[type='week'] {
+	color-scheme: light;
+}
+
 /* neutralise @tailwindcss/forms sur la recherche du header */
 :global(.global-search) {
 	margin: 0;

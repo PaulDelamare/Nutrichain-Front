@@ -1,7 +1,14 @@
 <script lang="ts">
+	import { page } from '$app/stores';
+	import { goto } from '$app/navigation';
+	import { resolve } from '$app/paths';
 	import PageHead from '$lib/components/page/PageHead.svelte';
-	import { usePageSearch } from '$lib/context/pageSearch.svelte';
-	import { filterRowsByText } from '$lib/utils/pageSearch/filterByText';
+	import DataTable from '$lib/components/ui/DataTable.svelte';
+	import Pagination from '$lib/components/page/Pagination.svelte';
+	import AuditFilters from '$lib/components/audit/AuditFilters.svelte';
+	import { pageHref } from '$lib/utils/pageSearch/pageHref';
+	import { auditSearchParams, auditPageSizeParams } from '$lib/utils/audit/auditSearchParams';
+	import { emptyAuditFilters } from '$lib/types/audit';
 	import type { ActionData, PageData } from './$types';
 
 	let { data, form }: { data: PageData; form: ActionData } = $props();
@@ -12,25 +19,51 @@
 		truncation: 'lignes supprimées (troncature)'
 	};
 
-	const pageSearch = usePageSearch();
+	const columns = ['Horodatage', 'Action', 'Détail', 'Entité', 'Identifiant'];
 
+	// --- Filtres pilotés par l'URL (requête filtrée côté API) ---
+	// eslint-disable-next-line svelte/prefer-writable-derived
+	let filters = $state(emptyAuditFilters());
 	$effect(() => {
-		pageSearch.configure('Rechercher action, motif, entité, identifiant…');
-		return () => pageSearch.deactivate();
+		filters = { ...data.filters };
 	});
 
-	let actionFilter = $state('all');
-	const actionOptions = $derived([
-		...new Map(data.rows.map((r) => [r.action, r.actionLabel])).entries()
-	]);
-
-	const rows = $derived(
-		filterRowsByText(
-			data.rows.filter((r) => actionFilter === 'all' || r.action === actionFilter),
-			pageSearch.query,
-			(r) => [r.when, r.actionLabel, r.detail, r.entity, r.entityId]
-		)
+	const filtresActifs = $derived(
+		data.filters.action !== 'tous' ||
+			data.filters.entity !== 'tous' ||
+			!!data.filters.entityId ||
+			!!data.filters.from ||
+			!!data.filters.to
 	);
+	const emptyMsg = $derived(
+		filtresActifs
+			? 'Aucune entrée ne correspond aux filtres.'
+			: "Aucune entrée dans le journal d'audit."
+	);
+
+	const hrefForPage = $derived((target: number) =>
+		pageHref(resolve('/audit-logs'), $page.url.searchParams, target)
+	);
+
+	function navigate(params: URLSearchParams) {
+		const qs = params.toString();
+		if (qs === $page.url.searchParams.toString()) return;
+		// eslint-disable-next-line svelte/no-navigation-without-resolve
+		goto(`${resolve('/audit-logs')}${qs ? `?${qs}` : ''}`, {
+			replaceState: true,
+			keepFocus: true,
+			noScroll: true
+		});
+	}
+
+	function apply() {
+		navigate(auditSearchParams($page.url.searchParams, filters));
+	}
+
+	function changePageSize(event: Event) {
+		const size = Number((event.currentTarget as HTMLSelectElement).value);
+		navigate(auditPageSizeParams($page.url.searchParams, size));
+	}
 </script>
 
 <PageHead
@@ -69,98 +102,52 @@
 	{/if}
 </section>
 
-{#if actionOptions.length > 1}
-	<div class="filter">
-		<label for="action-filter">Filtrer par action</label>
-		<select id="action-filter" bind:value={actionFilter}>
-			<option value="all">Toutes les actions</option>
-			{#each actionOptions as [code, label] (code)}
-				<option value={code}>{label}</option>
-			{/each}
-		</select>
-	</div>
-{/if}
-
 {#if data.error}
 	<p class="banner">API indisponible — {data.error}</p>
-{:else if rows.length === 0 && (pageSearch.query || actionFilter !== 'all')}
-	<p class="empty">Aucune entrée ne correspond à la recherche.</p>
-{:else if rows.length === 0}
-	<p class="empty">Aucune entrée dans le journal d'audit.</p>
-{:else}
-	<div class="table-wrap">
-		<table>
-			<thead>
-				<tr>
-					<th>Horodatage</th>
-					<th>Action</th>
-					<th>Détail</th>
-					<th>Entité</th>
-					<th>Identifiant</th>
-				</tr>
-			</thead>
-			<tbody>
-				{#each rows as row (row.id)}
-					<tr>
-						<td>{row.when}</td>
-						<td><span class="action" title={row.action}>{row.actionLabel}</span></td>
-						<td class="detail">{row.detail || '—'}</td>
-						<td>{row.entity}</td>
-						<td class="mono">{row.entityId}</td>
-					</tr>
-				{/each}
-			</tbody>
-		</table>
-	</div>
 {/if}
 
+<AuditFilters bind:filters onapply={apply} />
+
+<div class="toolbar">
+	<label class="page-size">
+		<span>Afficher</span>
+		<select value={String(data.pageSize)} onchange={changePageSize} aria-label="Entrées par page">
+			{#each data.pageSizeOptions as size (size)}
+				<option value={String(size)}>{size} par page</option>
+			{/each}
+		</select>
+	</label>
+</div>
+
+<div class="results">
+	<DataTable {columns} rows={data.rows} rowKey={(r) => r.id} empty={emptyMsg}>
+		{#snippet row(r)}
+			<td>{r.when}</td>
+			<!-- L'enum reste lisible en info-bulle ; le libellé traduit s'affiche. -->
+			<td><span class="action" title={r.action}>{r.actionLabel}</span></td>
+			<td class="detail">{r.detail || '—'}</td>
+			<td>{r.entityLabel}</td>
+			<td class="mono">{r.entityId}</td>
+		{/snippet}
+	</DataTable>
+</div>
+
+<Pagination
+	page={data.pagination.page}
+	totalPages={data.pagination.totalPages}
+	total={data.pagination.total}
+	unit="entrées"
+	hrefFor={hrefForPage}
+/>
+
 <style>
-	.banner,
-	.empty {
-		margin: 0;
+	.banner {
+		margin: 0 0 0.75rem;
 		padding: 0.75rem 1rem;
 		border-radius: 0.375rem;
-		font-size: 0.875rem;
-	}
-
-	.banner {
 		background: #fffbeb;
 		color: #92400e;
-	}
-
-	.empty {
-		background: #f8fafc;
-		color: var(--nc-text-muted);
-		border: 1px solid #e2e8f0;
-	}
-
-	.table-wrap {
-		overflow-x: auto;
-		border: 1px solid #e2e8f0;
-		border-radius: 0.5rem;
-		background: #fff;
-	}
-
-	table {
-		width: 100%;
-		border-collapse: collapse;
 		font-size: 0.875rem;
-	}
-
-	th {
-		padding: 0.75rem 1rem;
-		text-align: left;
-		font-size: 0.75rem;
-		font-weight: 600;
-		color: var(--nc-text-muted);
-		background: #f8fafc;
-		border-bottom: 1px solid #e2e8f0;
-	}
-
-	td {
-		padding: 0.75rem 1rem;
-		border-bottom: 1px solid #f1f5f9;
-		color: var(--nc-text-muted);
 	}
 
 	.mono {
@@ -177,21 +164,34 @@
 		color: var(--nc-text);
 	}
 
-	.filter {
+	.toolbar {
 		display: flex;
+		justify-content: flex-end;
+		margin: 1rem 0 0.75rem;
+	}
+
+	.page-size {
+		display: inline-flex;
 		align-items: center;
 		gap: 0.5rem;
-		margin: 0 0 0.75rem;
 		font-size: 0.8125rem;
 		color: var(--nc-text-muted);
 	}
 
-	.filter select {
-		padding: 0.35rem 0.5rem;
+	.page-size select {
+		height: 2.25rem;
+		padding: 0 0.6rem;
 		border: 1px solid #e2e8f0;
 		border-radius: 0.375rem;
-		font-size: 0.8125rem;
 		background: #fff;
+		font-size: 0.875rem;
+		color: var(--nc-text);
+	}
+
+	.page-size select:focus {
+		outline: 2px solid var(--nc-brand-ring);
+		outline-offset: 0;
+		border-color: var(--nc-brand-border-focus);
 	}
 
 	.verify {

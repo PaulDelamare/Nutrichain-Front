@@ -42,7 +42,9 @@ beforeEach(() => {
 	vi.clearAllMocks();
 	getGenealogy.mockResolvedValue(ok({ origines: [] }));
 	getMovements.mockResolvedValue(ok([]));
-	getAuditLogs.mockResolvedValue(ok([]));
+	getAuditLogs.mockResolvedValue(
+		ok({ data: [], pagination: { page: 1, limit: 100, total: 0, totalPages: 0 } })
+	);
 	getBatchList.mockResolvedValue(ok([]));
 	getShelfWithdrawals.mockResolvedValue(ok({ batchId: 'lot-1', clients: [] }));
 	recordShelfWithdrawal.mockResolvedValue(

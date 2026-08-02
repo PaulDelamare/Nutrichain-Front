@@ -62,15 +62,15 @@ async function enrichBatch(
 
 	const [movements, audit] = await Promise.all([
 		getMovements(fetch, cookies, { lotId, limit: 50 }),
-		getAuditLogs(fetch, cookies, 100)
+		// Filtré côté API sur ce lot (entité Batch) : plus de dilution par les journaux des autres
+		// entités dans les 100 lignes rapatriées.
+		getAuditLogs(fetch, cookies, { limit: 100, entity: 'Batch', entityId: lotId })
 	]);
 
 	const fromMovements = movements.ok ? movements.data.map(movementToBatchMouvement) : [];
 	const fromAudit =
 		audit.ok && fromMovements.length === 0
-			? auditLogsToBatchMouvements(
-					audit.data.filter((l) => l.entity === 'Batch' && l.entity_id === lotId)
-				)
+			? auditLogsToBatchMouvements(audit.data.data.filter((l) => l.entity_id === lotId))
 			: [];
 
 	const mergedEvents = fromMovements.length > 0 ? fromMovements : fromAudit;
