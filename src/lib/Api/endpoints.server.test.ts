@@ -47,7 +47,12 @@ const cleApiEnvoyee = () => new Headers(dernier().init?.headers).has('x-api-key'
  */
 const routes: [nom: string, appel: () => unknown, methode: string, chemin: string][] = [
 	// Organisation
-	['getMembers', () => org.getMembers(fetchEspion, cookies), 'GET', '/api/organization/members'],
+	[
+		'getMembers',
+		() => org.getMembers(fetchEspion, cookies),
+		'GET',
+		'/api/organization/members?page=1&limit=25'
+	],
 	[
 		'getLogisticUnitBySscc',
 		() => logistics.getLogisticUnitBySscc(fetchEspion, cookies, '034567890000000606'),

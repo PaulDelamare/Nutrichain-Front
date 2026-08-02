@@ -7,26 +7,70 @@ import { sendInvitation } from '$lib/Api/identity.server';
 import { membersToUsers } from '$lib/utils/org/mappers';
 import { exigerAdministrateur, refusAdministration } from '$lib/server/guards';
 
-export const load: PageServerLoad = async ({ fetch, cookies, locals }) => {
+const PAGE_SIZE_OPTIONS = [10, 25, 50, 100] as const;
+const DEFAULT_PAGE_SIZE = 25;
+const emptyPagination = { page: 1, limit: DEFAULT_PAGE_SIZE, total: 0, totalPages: 0 };
+
+/** Une page hors bornes (`?page=0`, `?page=abc`) est un lien copié de travers, pas une erreur 400. */
+function parsePage(raw: string | null): number {
+	const parsed = Number(raw);
+	return Number.isInteger(parsed) && parsed >= 1 ? parsed : 1;
+}
+
+/** `limit` est borné à la liste du sélecteur : un `?limit=999` copié retombe sur le défaut. */
+function parseLimit(raw: string | null): number {
+	const parsed = Number(raw);
+	return (PAGE_SIZE_OPTIONS as readonly number[]).includes(parsed) ? parsed : DEFAULT_PAGE_SIZE;
+}
+
+/** `mfa` d'URL est un booléen strict : tout le reste (absent, malformé) vaut « peu importe ». */
+function parseMfa(raw: string | null): boolean | undefined {
+	if (raw === 'true') return true;
+	if (raw === 'false') return false;
+	return undefined;
+}
+
+export const load: PageServerLoad = async ({ fetch, cookies, locals, url }) => {
 	exigerAdministrateur(locals.user, "L'administration des utilisateurs");
 
 	const canInvite = canInviteMembers(locals.user?.role);
 
-	const membersRes = await getMembers(fetch, cookies);
+	const p = url.searchParams;
+	const page = parsePage(p.get('page'));
+	const limit = parseLimit(p.get('limit'));
+	// Filtres de colonnes portés par l'URL : la requête part filtrée à l'API (plus de tri sur la
+	// seule page reçue), et un lien filtré reste partageable / rechargeable.
+	const email = p.get('email')?.trim() || undefined;
+	const role = p.get('role')?.trim() || undefined;
+	const mfa = parseMfa(p.get('mfa'));
+
+	const membersRes = await getMembers(fetch, cookies, { page, limit, email, role, mfa });
+
+	const filters = {
+		email: email ?? '',
+		role: role ?? 'tous',
+		mfa: mfa === true ? 'actif' : mfa === false ? 'inactif' : 'tous'
+	};
+	const meta = { filters, pageSize: limit, pageSizeOptions: [...PAGE_SIZE_OPTIONS] };
 
 	if (!membersRes.ok) {
 		return {
 			users: [],
+			pagination: { ...emptyPagination, limit },
 			error: membersRes.message,
 			canInvite: false,
-			currentUserId: locals.user?.id
+			currentUserId: locals.user?.id,
+			...meta
 		};
 	}
 
 	return {
-		users: membersToUsers(membersRes.data),
+		users: membersToUsers(membersRes.data.data),
+		pagination: membersRes.data.pagination,
+		error: null,
 		canInvite,
-		currentUserId: locals.user?.id
+		currentUserId: locals.user?.id,
+		...meta
 	};
 };
 
