@@ -90,7 +90,8 @@ export type ApiSupplierComplet = ApiSupplier & {
 export type ApiLocation = {
 	id: string;
 	nom: string;
-	type: string;
+	// Label de catégorisation FACULTATIF (chaîne libre) : `null` quand non renseigné.
+	type: string | null;
 	description?: string | null;
 	// Position du lieu, saisie dans Configuration. Chaînes (colonnes DECIMAL côté API), `null` tant
 	// qu'elle n'a pas été renseignée — la fiche lot n'affiche alors pas de carte (cf. #23).
@@ -297,18 +298,26 @@ export const getLocations = (
 export const createLocation = (
 	fetch: typeof globalThis.fetch,
 	cookies: Cookies,
-	body: { nom: string; type: string; description?: string }
+	// `type` est facultatif (simple label) ; `latitude`/`longitude` se saisissent ENSEMBLE.
+	body: {
+		nom: string;
+		type?: string;
+		description?: string;
+		latitude?: number;
+		longitude?: number;
+	}
 ) => orgApi(fetch, cookies).post<ApiLocation>('/api/organization/locations', body);
 
 export const updateLocation = (
 	fetch: typeof globalThis.fetch,
 	cookies: Cookies,
 	id: string,
-	// `latitude`/`longitude` se modifient ENSEMBLE ; les deux à `null` retirent la position.
+	// `latitude`/`longitude` se modifient ENSEMBLE ; les deux à `null` retirent la position. `type`
+	// et `description` à `null` effacent le label (facultatif).
 	body: Partial<{
 		nom: string;
-		type: string;
-		description: string;
+		type: string | null;
+		description: string | null;
 		latitude: number | null;
 		longitude: number | null;
 	}>
