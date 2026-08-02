@@ -127,7 +127,18 @@ export type ApiBatchPage = {
 	pagination: ApiPagination;
 };
 
-export type BatchQuery = { search?: string; page?: number; limit?: number };
+export type BatchQuery = {
+	search?: string;
+	page?: number;
+	limit?: number;
+	// Filtres de colonnes appliqués côté API (voir GET /traceability/batches) : `produit`/`site`
+	// sont des identifiants, `statut` un statut de l'API, `lot`/`gtin` des recherches partielles.
+	statut?: string;
+	produit?: string;
+	site?: string;
+	lot?: string;
+	gtin?: string;
+};
 
 /**
  * Plafond de volumétrie de l'API. Les écrans qui ne paginent pas (sélecteurs de lot, tableau de
@@ -143,6 +154,13 @@ function batchQueryString(opts?: BatchQuery): string {
 	if (q) params.set('q', q);
 	if (opts?.page) params.set('page', String(opts.page));
 	if (opts?.limit) params.set('limit', String(opts.limit));
+	if (opts?.statut) params.set('statut', opts.statut);
+	if (opts?.produit) params.set('produit', opts.produit);
+	if (opts?.site) params.set('site', opts.site);
+	const lot = opts?.lot?.trim();
+	if (lot) params.set('lot', lot);
+	const gtin = opts?.gtin?.trim();
+	if (gtin) params.set('gtin', gtin);
 
 	return params.size > 0 ? `?${params}` : '';
 }

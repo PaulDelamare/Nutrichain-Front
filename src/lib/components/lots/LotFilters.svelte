@@ -1,6 +1,5 @@
 <script lang="ts">
 	import { onDestroy, tick } from 'svelte';
-	import { lotStatutOptions } from '$lib/config/lot-filters';
 	import { debounce } from '$lib/utils/debounce';
 	import type { LotFilters } from '$lib/types/lot';
 
@@ -10,6 +9,7 @@
 		filters: LotFilters;
 		produitOptions?: Option[];
 		siteOptions?: Option[];
+		statutOptions?: Option[];
 		onapply?: () => void;
 	};
 
@@ -17,11 +17,12 @@
 		filters = $bindable(),
 		produitOptions = [{ label: 'Tous les produits', value: 'tous' }],
 		siteOptions = [{ label: 'Tous les sites', value: 'tous' }],
+		statutOptions = [{ label: 'Tous les statuts', value: 'tous' }],
 		onapply
 	}: Props = $props();
 
 	// Saisie texte : on regroupe les frappes rapprochées en une seule recherche (0,5 s). Le seuil de
-	// 3 caractères est porté par filterLots, donc inutile de le dupliquer ici.
+	// 3 caractères (ne rien filtrer sous 3 caractères) est appliqué par l'appelant avant la requête.
 	const applyDebounced = debounce(() => onapply?.(), 500);
 	onDestroy(() => applyDebounced.cancel());
 
@@ -82,7 +83,7 @@
 	<label class="field">
 		<span>Statut</span>
 		<select bind:value={filters.statut} onchange={applyImmediately}>
-			{#each lotStatutOptions as opt (opt.value)}
+			{#each statutOptions as opt (opt.value)}
 				<option value={opt.value}>{opt.label}</option>
 			{/each}
 		</select>
