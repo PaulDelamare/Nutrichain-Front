@@ -212,8 +212,39 @@ export const getRecalls = (
 	return orgApi(fetch, cookies).get<ApiRecallList>(`/api/organization/recalls?${params}`);
 };
 
-export const getAuditLogs = (fetch: typeof globalThis.fetch, cookies: Cookies, limit = 30) =>
-	orgApi(fetch, cookies).get<ApiAuditLog[]>(`/api/organization/audit-logs?limit=${limit}`);
+export type ApiAuditLogList = {
+	data: ApiAuditLog[];
+	pagination: { page: number; limit: number; total: number; totalPages: number };
+};
+
+export type AuditLogQuery = {
+	page?: number;
+	limit?: number;
+	// Filtres de colonnes appliqués côté API (voir GET /organization/audit-logs).
+	action?: string;
+	entity?: string;
+	entityId?: string;
+	// Créneau sur l'horodatage, au format `datetime-local` (`YYYY-MM-DDTHH:mm`).
+	from?: string;
+	to?: string;
+};
+
+export const getAuditLogs = (
+	fetch: typeof globalThis.fetch,
+	cookies: Cookies,
+	opts: AuditLogQuery = {}
+) => {
+	const params = new URLSearchParams();
+	params.set('page', String(opts.page ?? 1));
+	params.set('limit', String(opts.limit ?? 25));
+	if (opts.action) params.set('action', opts.action);
+	if (opts.entity) params.set('entity', opts.entity);
+	const entityId = opts.entityId?.trim();
+	if (entityId) params.set('entity_id', entityId);
+	if (opts.from) params.set('from', opts.from);
+	if (opts.to) params.set('to', opts.to);
+	return orgApi(fetch, cookies).get<ApiAuditLogList>(`/api/organization/audit-logs?${params}`);
+};
 
 export const getQualityControls = (fetch: typeof globalThis.fetch, cookies: Cookies) =>
 	orgApi(fetch, cookies).get<ApiQualityControl[]>('/api/organization/quality-controls');

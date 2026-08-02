@@ -5,7 +5,9 @@ import type { KnownRole } from '$lib/config/roles';
 const ok = <T>(data: T) => ({ ok: true as const, status: 200, data });
 
 vi.mock('$lib/Api/organization.server', () => ({
-	getAuditLogs: vi.fn(async () => ok([])),
+	getAuditLogs: vi.fn(async () =>
+		ok({ data: [], pagination: { page: 1, limit: 25, total: 0, totalPages: 0 } })
+	),
 	getMembers: vi.fn(async () =>
 		ok({ data: [], pagination: { page: 1, limit: 25, total: 0, totalPages: 0 } })
 	)

@@ -421,9 +421,9 @@ describe('construction des paramètres de requête', () => {
 		expect(chemin()).toBe('/api/organization/movements?limit=10&lotId=lot-1');
 	});
 
-	it('getAuditLogs plafonne le journal à 30 entrées par défaut', async () => {
+	it('getAuditLogs pagine dès la première page', async () => {
 		await org.getAuditLogs(fetchEspion, cookies);
-		expect(chemin()).toBe('/api/organization/audit-logs?limit=30');
+		expect(chemin()).toBe('/api/organization/audit-logs?page=1&limit=25');
 	});
 
 	it('les référentiels masquent les archives sauf demande explicite', async () => {
