@@ -92,6 +92,33 @@ export type ApiRecallResult = {
 	depthSaturated: boolean;
 };
 
+/**
+ * Expédition rendue par la SIMULATION. L'API y sert une projection réduite : ni contact, ni e-mail,
+ * ni adresse du client — le rappel réel est réservé aux rôles qualité, la simulation est ouverte à
+ * la lecture. Ne pas réintroduire ces champs ici : ils n'arriveront jamais.
+ */
+export type ApiSimulatedShipment = {
+	shipmentId: string;
+	shipmentRef: string;
+	customerName: string;
+	dateEnvoi: string;
+	statutLivraison: string;
+	dateLivraison: string | null;
+	transporteur: string;
+	batchIds: string[];
+};
+
+export type ApiRecallSimulation = {
+	/** Total exact des lots que le rappel bloquerait, LOT SOURCE COMPRIS — ne pas y ajouter 1. */
+	impactedCount: number;
+	impactedBatchIds: string[];
+	impactedBatchIdsTruncated: boolean;
+	affectedShipmentsCount: number;
+	affectedShipments: ApiSimulatedShipment[];
+	affectedShipmentsTruncated: boolean;
+	depthSaturated: boolean;
+};
+
 export type ApiPagination = { page: number; limit: number; total: number; totalPages: number };
 
 export type ApiBatchPage = {
@@ -174,6 +201,24 @@ export async function getBatchList(
 export function getGenealogy(fetch: typeof globalThis.fetch, cookies: Cookies, lotId: string) {
 	return api(fetch, cookies, { useApiKey: false }).get<ApiGenealogy>(
 		`/api/traceability/batches/${encodeURIComponent(lotId)}/genealogy`
+	);
+}
+
+/**
+ * Impact d'un rappel, calculé par l'API SANS rien écrire. Même règle que le rappel réel, donc les
+ * deux écrans ne peuvent pas annoncer deux chiffres différents — recalculer l'impact côté front
+ * aurait dupliqué cette règle et l'aurait laissée dériver au premier changement.
+ *
+ * `useApiKey: false`, comme `getGenealogy` : la route est gardée par la session, la clé n'y sert à
+ * rien et l'envoyer expédierait un secret serveur sur un appel qui ne le demande pas.
+ */
+export function getRecallSimulation(
+	fetch: typeof globalThis.fetch,
+	cookies: Cookies,
+	lotId: string
+) {
+	return api(fetch, cookies, { useApiKey: false }).get<ApiRecallSimulation>(
+		`/api/traceability/batches/${encodeURIComponent(lotId)}/recall-simulation`
 	);
 }
 
