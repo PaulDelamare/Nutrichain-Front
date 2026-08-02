@@ -1,7 +1,13 @@
 import { error, fail } from '@sveltejs/kit';
-import { refusDecisionQualite } from '$lib/server/guards';
+import { denyShelfWithdrawal, refusDecisionQualite } from '$lib/server/guards';
 import type { Actions, PageServerLoad } from './$types';
-import { getBatchById, releaseQuarantine, scrapBatch } from '$lib/Api/logistics.server';
+import {
+	getBatchById,
+	getShelfWithdrawals,
+	recordShelfWithdrawal,
+	releaseQuarantine,
+	scrapBatch
+} from '$lib/Api/logistics.server';
 import { getAuditLogs, getMovements } from '$lib/Api/organization.server';
 import { getBatchList, getGenealogy, triggerRecall } from '$lib/Api/traceability.server';
 import type { ApiBatch, ApiOrigin } from '$lib/Api/traceability.server';
@@ -75,20 +81,23 @@ async function enrichBatch(
 }
 
 export const load: PageServerLoad = async ({ fetch, cookies, params }) => {
-	const [res, origines] = await Promise.all([
+	const [res, origines, withdrawals] = await Promise.all([
 		getBatchById(fetch, cookies, params.lotId),
-		loadOrigins(fetch, cookies, params.lotId)
+		loadOrigins(fetch, cookies, params.lotId),
+		// Dégradation silencieuse : un 403 ou une API antérieure ne doit pas priver l'écran du reste.
+		getShelfWithdrawals(fetch, cookies, params.lotId)
 	]);
+	const magasins = withdrawals.ok ? withdrawals.data.clients : [];
 
 	if (res.ok) {
 		const enriched = await enrichBatch(fetch, cookies, res.data, params.lotId);
-		return { sheet: batchToSheet(enriched), origines, source: 'api' as const };
+		return { sheet: batchToSheet(enriched), origines, magasins, source: 'api' as const };
 	}
 
 	const fromCatalog = await loadFromCatalog(fetch, cookies, params.lotId);
 	if (fromCatalog) {
 		const enriched = await enrichBatch(fetch, cookies, fromCatalog, params.lotId);
-		return { sheet: batchToSheet(enriched), origines, source: 'api' as const };
+		return { sheet: batchToSheet(enriched), origines, magasins, source: 'api' as const };
 	}
 
 	if (res.status === 404) {
@@ -129,6 +138,42 @@ export const actions = {
 		const res = await scrapBatch(fetch, cookies, params.lotId, motif);
 		if (!res.ok) return fail(res.status, { scrapError: res.message });
 		return { scrapped: true };
+	},
+
+	/**
+	 * Retrait du rayon d'un magasin. Garde volontairement PLUS large que la décision qualité : c'est
+	 * un fait rapporté par le magasin, et l'opérateur qui prend l'appel doit pouvoir l'enregistrer.
+	 * Elle reproduit exactement celle de l'API — une garde plus stricte ici refuserait ce que le
+	 * serveur accepte, sans rien protéger.
+	 */
+	withdraw: async ({ request, fetch, cookies, params, locals }) => {
+		const refus = denyShelfWithdrawal(locals.user);
+		if (refus) return fail(403, { withdrawError: refus });
+
+		const form = await request.formData();
+		const idClient = String(form.get('id_client') ?? '').trim();
+		const quantite = Number(form.get('quantite'));
+		const motif = String(form.get('motif') ?? '').trim();
+		const constateAupresDe = String(form.get('constate_aupres_de') ?? '').trim();
+
+		if (!idClient) return fail(400, { withdrawError: 'Magasin manquant.' });
+		if (!Number.isFinite(quantite) || quantite <= 0) {
+			return fail(400, { withdrawError: 'Quantité retirée requise, strictement positive.' });
+		}
+		if (motif.length < 5) {
+			return fail(400, { withdrawError: 'Motif du retrait requis (au moins 5 caractères).' });
+		}
+
+		const res = await recordShelfWithdrawal(fetch, cookies, params.lotId, {
+			id_client: idClient,
+			quantite,
+			motif,
+			...(constateAupresDe ? { constate_aupres_de: constateAupresDe } : {})
+		});
+
+		if (!res.ok) return fail(res.status, { withdrawError: res.message });
+
+		return { withdrawn: res.data };
 	},
 
 	recall: async ({ request, fetch, cookies, params, locals }) => {

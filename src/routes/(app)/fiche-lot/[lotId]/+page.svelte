@@ -5,6 +5,7 @@
 	import LocationPanel from '$lib/components/lot-sheet/LocationPanel.svelte';
 	import OriginPanel from '$lib/components/lot-sheet/OriginPanel.svelte';
 	import LotActionsPanel from '$lib/components/lot-sheet/LotActionsPanel.svelte';
+	import ShelfWithdrawalPanel from '$lib/components/lot-sheet/ShelfWithdrawalPanel.svelte';
 	import PageHead from '$lib/components/page/PageHead.svelte';
 	import { usePageSearch } from '$lib/context/pageSearch.svelte';
 	import { filterRowsByText } from '$lib/utils/pageSearch/filterByText';
@@ -53,6 +54,13 @@
 		<IdentityCard sheet={data.sheet} />
 		<OriginPanel origines={data.origines} />
 		<HistoryPanel {events} temperature={data.sheet.temperature} />
+		<!-- Sous l'historique : le retrait en magasin est la suite du parcours du lot, pas une action
+		     de pilotage. Les mouvements qu'il produit apparaissent dans la frise juste au-dessus. -->
+		<ShelfWithdrawalPanel
+			magasins={data.magasins ?? []}
+			role={data.user.role}
+			erreur={form?.withdrawError}
+		/>
 	</div>
 	<div class="side">
 		<LotActionsPanel

@@ -10,11 +10,15 @@ const getGenealogy = vi.fn();
 const getMovements = vi.fn();
 const getAuditLogs = vi.fn();
 const getBatchList = vi.fn();
+const getShelfWithdrawals = vi.fn();
+const recordShelfWithdrawal = vi.fn();
 
 vi.mock('$lib/Api/logistics.server', () => ({
 	getBatchById: (...a: unknown[]) => getBatchById(...a),
 	releaseQuarantine: vi.fn(),
-	scrapBatch: (...a: unknown[]) => scrapBatch(...a)
+	scrapBatch: (...a: unknown[]) => scrapBatch(...a),
+	getShelfWithdrawals: (...a: unknown[]) => getShelfWithdrawals(...a),
+	recordShelfWithdrawal: (...a: unknown[]) => recordShelfWithdrawal(...a)
 }));
 
 vi.mock('$lib/Api/organization.server', () => ({
@@ -38,6 +42,10 @@ beforeEach(() => {
 	getMovements.mockResolvedValue(ok([]));
 	getAuditLogs.mockResolvedValue(ok([]));
 	getBatchList.mockResolvedValue(ok([]));
+	getShelfWithdrawals.mockResolvedValue(ok({ batchId: 'lot-1', clients: [] }));
+	recordShelfWithdrawal.mockResolvedValue(
+		ok({ id: 'r-1', quantiteLivree: '40', quantiteRetiree: '10', resteARetirer: '30', unite: 'KG' })
+	);
 });
 
 describe('chargement de la fiche lot — historique', () => {
@@ -200,5 +208,105 @@ describe('mise au rebut', () => {
 		expect(res.data).toMatchObject({
 			scrapError: 'Seul un lot en quarantaine ou sous rappel peut etre mis au rebut.'
 		});
+	});
+});
+
+describe('retrait en magasin', () => {
+	const soumettre = (
+		role: string,
+		champs: Record<string, string> = {
+			id_client: 'client-1',
+			quantite: '10',
+			motif: 'Retrait du rayon apres rappel'
+		}
+	) =>
+		(actions as any).withdraw({
+			request: { formData: async () => new Map(Object.entries(champs)) },
+			fetch: vi.fn(),
+			cookies: {},
+			params: { lotId: 'lot-1' },
+			locals: { user: { role } }
+		});
+
+	/**
+	 * La garde est volontairement PLUS large que la décision qualité : un retrait est un fait
+	 * rapporté par un magasin, pas une décision. Refuser l'opérateur ici bloquerait celui qui prend
+	 * l'appel, alors que l'API l'accepte.
+	 */
+	it("autorise l'opérateur comme le rôle qualité", async () => {
+		await soumettre('operator');
+		await soumettre('quality');
+
+		expect(recordShelfWithdrawal).toHaveBeenCalledTimes(2);
+	});
+
+	it('refuse le rôle en lecture seule', async () => {
+		const resultat = await soumettre('viewer');
+
+		expect(resultat.status).toBe(403);
+		expect(recordShelfWithdrawal).not.toHaveBeenCalled();
+	});
+
+	it("n'envoie pas d'unité : elle est reprise du lot côté API", async () => {
+		await soumettre('operator', {
+			id_client: 'client-1',
+			quantite: '10',
+			motif: 'Retrait du rayon apres rappel',
+			unite: 'G'
+		});
+
+		expect(recordShelfWithdrawal.mock.calls[0][3]).not.toHaveProperty('unite');
+	});
+
+	it('refuse une quantité nulle, négative ou absente', async () => {
+		const zero = await soumettre('operator', {
+			id_client: 'c-1',
+			quantite: '0',
+			motif: 'Motif suffisant'
+		});
+		const negative = await soumettre('operator', {
+			id_client: 'c-1',
+			quantite: '-5',
+			motif: 'Motif suffisant'
+		});
+
+		expect(zero.status).toBe(400);
+		expect(negative.status).toBe(400);
+		expect(recordShelfWithdrawal).not.toHaveBeenCalled();
+	});
+
+	it('remonte le refus de l’API sans le traduire', async () => {
+		recordShelfWithdrawal.mockResolvedValue(err('Retrait supérieur à ce qui a été livré'));
+
+		const resultat = await soumettre('quality');
+
+		expect(resultat.status).toBe(409);
+		expect(resultat.data.withdrawError).toBe('Retrait supérieur à ce qui a été livré');
+	});
+
+	it("charge l'avancement par magasin avec la fiche", async () => {
+		getShelfWithdrawals.mockResolvedValue(
+			ok({
+				batchId: 'lot-1',
+				clients: [{ customerId: 'c-1', customerName: 'Super U', resteARetirer: '30' }]
+			})
+		);
+
+		const resultat = await run();
+
+		expect(resultat.magasins).toHaveLength(1);
+	});
+
+	/**
+	 * Le panneau est un confort : son indisponibilité ne doit pas priver l'utilisateur de la fiche,
+	 * qui porte le statut du lot et son historique.
+	 */
+	it('rend la fiche même si l’avancement est refusé', async () => {
+		getShelfWithdrawals.mockResolvedValue({ ok: false, status: 403, message: 'refus' });
+
+		const resultat = await run();
+
+		expect(resultat.sheet).toBeDefined();
+		expect(resultat.magasins).toEqual([]);
 	});
 });

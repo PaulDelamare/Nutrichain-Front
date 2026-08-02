@@ -426,6 +426,9 @@ const AUDIT_ACTION_LABELS: Record<string, string> = {
 	MOVE_BATCH: 'Lot déplacé',
 	SCRAP_BATCH: 'Lot mis au rebut',
 	MISE_AU_REBUT: 'Mise au rebut',
+	// Les deux vocabulaires du registre : l action d audit et le type de mouvement.
+	BATCH_WITHDRAWN_FROM_SHELF: 'Retrait du rayon d un magasin',
+	RETRAIT_MAGASIN: 'Retrait du rayon',
 
 	CONTROLE_QUALITE: 'Contrôle qualité',
 	CREATE_QUALITY_CONTROL: 'Contrôle qualité enregistré',
