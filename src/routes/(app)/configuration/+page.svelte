@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { enhance } from '$app/forms';
 	import { resolve } from '$app/paths';
+	import { Tabs } from '@skeletonlabs/skeleton-svelte';
 	import PageHead from '$lib/components/page/PageHead.svelte';
 	import ConfigList from '$lib/components/config/ConfigList.svelte';
 	import ImportCsv from '$lib/components/config/ImportCsv.svelte';
@@ -35,6 +36,19 @@
 			envoi = false;
 		};
 	};
+
+	type TabId = 'locations' | 'suppliers' | 'customers' | 'products' | 'equipment';
+
+	let activeTab = $state<TabId>('locations');
+
+	// Le compteur affiche le nombre d'entrees du referentiel (actives et inactives, comme la liste).
+	const tabs = $derived([
+		{ id: 'locations' as TabId, label: 'Emplacements', count: data.locations.length },
+		{ id: 'suppliers' as TabId, label: 'Fournisseurs', count: data.suppliers.length },
+		{ id: 'customers' as TabId, label: 'Clients', count: data.customers.length },
+		{ id: 'products' as TabId, label: 'Produits', count: data.products.length },
+		{ id: 'equipment' as TabId, label: 'Matériel', count: data.equipment.length }
+	]);
 </script>
 
 <PageHead
@@ -46,286 +60,371 @@
 	<p class="banner">Chargement partiel — {data.error}</p>
 {/if}
 
-<div class="grid">
-	<section>
-		<h2>Emplacements</h2>
-		<p class="hint">Quais, chambres froides, zones de production. Requis pour créer un matériel.</p>
-		<form method="POST" action="?/createLocation" use:enhance={pendant}>
-			<input
-				name="nom"
-				placeholder="Nom (ex. Chambre froide A)"
-				required
-				minlength="2"
-				value={form?.nom ?? ''}
-			/>
-			<input name="type" placeholder="Type (ex. COLD_STORAGE)" required minlength="2" />
-			<input name="description" placeholder="Description (optionnel)" />
-			<button type="submit" disabled={envoi}>Ajouter</button>
-		</form>
-		<p class="hint sub-hint">
-			Position sur la carte — c'est la seule source du repère affiché sur la fiche lot. Laissez les
-			deux champs vides pour la retirer.
-		</p>
-		<form method="POST" action="?/setLocationCoordinates" use:enhance={pendant}>
-			<select name="id" required aria-label="Emplacement à positionner">
-				{#each data.locations as lieu (lieu.id)}
-					<option value={lieu.id}>{lieu.nom}</option>
-				{/each}
-			</select>
-			<input
-				name="latitude"
-				type="number"
-				step="0.000001"
-				min="-90"
-				max="90"
-				placeholder="Latitude (ex. 48.832910)"
-			/>
-			<input
-				name="longitude"
-				type="number"
-				step="0.000001"
-				min="-180"
-				max="180"
-				placeholder="Longitude (ex. 2.286540)"
-			/>
-			<button type="submit" disabled={envoi || data.locations.length === 0}>Positionner</button>
-		</form>
-		{#if form?.locationError}<p class="error" role="alert">{form.locationError}</p>{/if}
-		<ConfigList
-			items={data.locations.map((l) => ({
-				id: l.id,
-				title: l.nom,
-				subtitle: `${l.type} · ${formatCoordinates(l.latitude, l.longitude) ?? 'sans position'}`,
-				is_active: l.is_active
-			}))}
-			toggleAction="?/toggleLocation"
-			emptyLabel="Aucun emplacement. Ajoutez-en un pour créer du matériel."
-			{envoi}
-			{pendant}
-		/>
-	</section>
-
-	<section>
-		<h2>Fournisseurs</h2>
-		<p class="hint">L'amont de la traçabilité. Requis pour enregistrer une réception.</p>
-		<form method="POST" action="?/createSupplier" use:enhance={pendant}>
-			<input
-				name="nom_ferme"
-				placeholder="Nom (ex. Ferme des Aubépines)"
-				required
-				minlength="2"
-				value={form?.nom_ferme ?? ''}
-			/>
-			<input name="adresse_siege" placeholder="Adresse du siège" required minlength="2" />
-			<input name="type_produit" placeholder="Type de produit (optionnel)" />
-			<button type="submit" disabled={envoi}>Ajouter</button>
-		</form>
-		{#if form?.supplierError}<p class="error" role="alert">{form.supplierError}</p>{/if}
-		{#if form?.supplierUpdated}
-			<p class="ok" role="status">Fournisseur mis à jour.</p>
-		{/if}
-		<ConfigList
-			items={data.suppliers.map((s) => ({
-				id: s.id,
-				title: s.nom_ferme,
-				subtitle: s.adresse_siege,
-				is_active: s.is_active
-			}))}
-			toggleAction="?/toggleSupplier"
-			emptyLabel="Aucun fournisseur. Ajoutez-en un pour réceptionner."
-			{envoi}
-			{pendant}
-		/>
-		{#if data.suppliers.some((s) => s.is_active)}
-			<form method="POST" action="?/updateSupplier" use:enhance={pendant} class="edit-supplier">
-				<p class="hint">Modifier un fournisseur actif</p>
-				<select name="id" required>
-					<option value="">Choisir…</option>
-					{#each data.suppliers.filter((s) => s.is_active) as s (s.id)}
-						<option value={s.id}>{s.nom_ferme}</option>
-					{/each}
-				</select>
-				<input name="nom_ferme" placeholder="Nom" required minlength="2" />
-				<input name="adresse_siege" placeholder="Adresse du siège" required minlength="2" />
-				<input name="type_produit" placeholder="Type de produit (optionnel)" />
-				<input name="contact_qualite" placeholder="Contact qualité (optionnel)" />
-				<button type="submit" disabled={envoi}>Enregistrer</button>
-			</form>
-		{/if}
-	</section>
-
-	<section>
-		<h2>Clients</h2>
-		<p class="hint">L'aval de la traçabilité. Requis pour enregistrer une expédition.</p>
-		<form method="POST" action="?/createCustomer" use:enhance={pendant}>
-			<input
-				name="nom_enseigne"
-				placeholder="Enseigne (ex. Super U Rennes)"
-				required
-				minlength="2"
-				value={form?.nom_enseigne ?? ''}
-			/>
-			<input name="adresse_livraison" placeholder="Adresse de livraison" required minlength="2" />
-			<input name="email" type="email" placeholder="E-mail (optionnel)" />
-			<button type="submit" disabled={envoi}>Ajouter</button>
-		</form>
-		{#if form?.customerError}<p class="error" role="alert">{form.customerError}</p>{/if}
-		<ConfigList
-			items={data.customers.map((c) => ({
-				id: c.id,
-				title: c.nom_enseigne,
-				subtitle: c.adresse_livraison,
-				is_active: c.is_active
-			}))}
-			toggleAction="?/toggleCustomer"
-			emptyLabel="Aucun client. Ajoutez-en un pour expédier."
-			{envoi}
-			{pendant}
-		/>
-		<ImportCsv
-			action="?/importCustomers"
-			columns="nom_enseigne, adresse_livraison, email, contact_urgence"
-			report={importReportFor('customers')}
-			error={importErrorFor('customers')}
-			{envoi}
-			{pendant}
-		/>
-	</section>
-
-	<section>
-		<h2>Produits</h2>
-		<p class="hint">Le catalogue. Requis pour réceptionner et pour produire (transformation).</p>
-		<form method="POST" action="?/createProduct" use:enhance={pendant} class="produit">
-			<input
-				name="nom"
-				placeholder="Nom (ex. Yaourt nature 125g)"
-				required
-				minlength="2"
-				value={form?.nom ?? ''}
-			/>
-			<input
-				name="code_gtin"
-				placeholder="Code GTIN (8 à 14 chiffres)"
-				required
-				inputmode="numeric"
-			/>
-			<input name="categorie" placeholder="Catégorie (ex. Frais)" required minlength="2" />
-			<input name="unite_reference" placeholder="Unité (ex. KG)" required />
-			<input
-				name="duree_conservation_defaut"
-				type="number"
-				min="0"
-				placeholder="Conservation (jours)"
-				required
-			/>
-			<input
-				name="seuil_alerte_stock"
-				type="number"
-				min="0"
-				step="0.01"
-				placeholder="Seuil d'alerte stock"
-				required
-			/>
-			<button type="submit" disabled={envoi}>Ajouter</button>
-		</form>
-		{#if form?.productError}<p class="error" role="alert">{form.productError}</p>{/if}
-		<ConfigList
-			items={data.products.map((p) => ({
-				id: p.id,
-				title: p.nom,
-				subtitle: `${p.code_gtin} · ${p.categorie}`,
-				is_active: p.is_active
-			}))}
-			toggleAction="?/toggleProduct"
-			emptyLabel="Aucun produit. Ajoutez-en un pour réceptionner ou produire."
-			{envoi}
-			{pendant}
-		/>
-		<ImportCsv
-			action="?/importProducts"
-			columns="nom, code_gtin, categorie, duree_conservation_defaut, seuil_alerte_stock, unite_reference"
-			report={importReportFor('products')}
-			error={importErrorFor('products')}
-			{envoi}
-			{pendant}
-		/>
-	</section>
-
-	<section>
-		<h2>Matériel</h2>
-		<p class="hint">
-			Frigos, congélateurs, cuves… rattachés à un emplacement. Requis pour réceptionner et pour la
-			surveillance IoT. Imprimez l'étiquette QR après création.
-		</p>
-		{#if activeLocations.length === 0}
-			<p class="hint">Créez d'abord un emplacement actif pour pouvoir ajouter du matériel.</p>
-		{:else}
-			<form method="POST" action="?/createEquipment" use:enhance={pendant}>
-				<input
-					name="nom"
-					placeholder="Nom (ex. Frigo réception A)"
-					required
-					minlength="3"
-					value={form?.nom ?? ''}
-				/>
-				<select name="type" bind:value={typeMateriel} aria-label="Type de matériel">
-					{#each EQUIPMENT_TYPE_OPTIONS as opt (opt.value)}
-						<option value={opt.value}>{opt.label}</option>
-					{/each}
-				</select>
-				<select name="id_lieu" required aria-label="Emplacement">
-					{#each activeLocations as lieu (lieu.id)}
-						<option value={lieu.id}>{lieu.nom}</option>
-					{/each}
-				</select>
-				<input
-					name="temp_seuil_max"
-					type="number"
-					step="0.1"
-					placeholder={seuilRequis ? 'Seuil max °C (requis)' : 'Seuil max °C (optionnel)'}
-					required={seuilRequis}
-				/>
-				<input name="sensor_id" placeholder="ID capteur IoT (optionnel)" />
-				<button type="submit" disabled={envoi}>Ajouter</button>
-			</form>
-		{/if}
-		{#if form?.equipmentError}<p class="error" role="alert">{form.equipmentError}</p>{/if}
-		<ul class="equip-list">
-			{#each data.equipment as item (item.id)}
-				<li>
-					<div>
-						<span class="title">{item.nom}</span>
-						<span class="sub">
-							{equipmentTypeLabel(item.type)}
-							{#if item.lieu?.nom}· {item.lieu.nom}{/if}
-							{#if item.temp_seuil_max != null}· seuil {item.temp_seuil_max} °C{/if}
-							· {item.statut}
-						</span>
-					</div>
-					<a
-						class="label-link"
-						href={resolve('/(app)/configuration/equipment/[id]/label', {
-							id: encodeURIComponent(item.id)
-						})}
-						target="_blank"
-						rel="noopener"
-					>
-						Étiquette QR
-					</a>
-				</li>
-			{:else}
-				<li class="empty">Aucun matériel. Ajoutez-en un pour réceptionner et suivre le froid.</li>
+<div class="tabs">
+	<Tabs value={activeTab} onValueChange={(e) => (activeTab = e.value as TabId)}>
+		<Tabs.List>
+			{#each tabs as tab (tab.id)}
+				<Tabs.Trigger value={tab.id}>
+					{tab.label}
+					<span class="tab-count">{tab.count}</span>
+				</Tabs.Trigger>
 			{/each}
-		</ul>
-	</section>
+		</Tabs.List>
+
+		<Tabs.Content value="locations">
+			<section>
+				<h2>Emplacements</h2>
+				<p class="hint">
+					Quais, chambres froides, zones de production. Requis pour créer un matériel.
+				</p>
+				<form method="POST" action="?/createLocation" use:enhance={pendant}>
+					<input
+						name="nom"
+						placeholder="Nom (ex. Chambre froide A)"
+						required
+						minlength="2"
+						value={form?.nom ?? ''}
+					/>
+					<input name="type" placeholder="Type (ex. COLD_STORAGE)" required minlength="2" />
+					<input name="description" placeholder="Description (optionnel)" />
+					<button type="submit" disabled={envoi}>Ajouter</button>
+				</form>
+				<p class="hint sub-hint">
+					Position sur la carte — c'est la seule source du repère affiché sur la fiche lot. Laissez
+					les deux champs vides pour la retirer.
+				</p>
+				<form method="POST" action="?/setLocationCoordinates" use:enhance={pendant}>
+					<select name="id" required aria-label="Emplacement à positionner">
+						{#each data.locations as lieu (lieu.id)}
+							<option value={lieu.id}>{lieu.nom}</option>
+						{/each}
+					</select>
+					<input
+						name="latitude"
+						type="number"
+						step="0.000001"
+						min="-90"
+						max="90"
+						placeholder="Latitude (ex. 48.832910)"
+					/>
+					<input
+						name="longitude"
+						type="number"
+						step="0.000001"
+						min="-180"
+						max="180"
+						placeholder="Longitude (ex. 2.286540)"
+					/>
+					<button type="submit" disabled={envoi || data.locations.length === 0}>Positionner</button>
+				</form>
+				{#if form?.locationError}<p class="error" role="alert">{form.locationError}</p>{/if}
+				<ConfigList
+					items={data.locations.map((l) => ({
+						id: l.id,
+						title: l.nom,
+						subtitle: `${l.type} · ${formatCoordinates(l.latitude, l.longitude) ?? 'sans position'}`,
+						is_active: l.is_active
+					}))}
+					toggleAction="?/toggleLocation"
+					emptyLabel="Aucun emplacement. Ajoutez-en un pour créer du matériel."
+					{envoi}
+					{pendant}
+				/>
+			</section>
+		</Tabs.Content>
+
+		<Tabs.Content value="suppliers">
+			<section>
+				<h2>Fournisseurs</h2>
+				<p class="hint">L'amont de la traçabilité. Requis pour enregistrer une réception.</p>
+				<form method="POST" action="?/createSupplier" use:enhance={pendant}>
+					<input
+						name="nom_ferme"
+						placeholder="Nom (ex. Ferme des Aubépines)"
+						required
+						minlength="2"
+						value={form?.nom_ferme ?? ''}
+					/>
+					<input name="adresse_siege" placeholder="Adresse du siège" required minlength="2" />
+					<input name="type_produit" placeholder="Type de produit (optionnel)" />
+					<button type="submit" disabled={envoi}>Ajouter</button>
+				</form>
+				{#if form?.supplierError}<p class="error" role="alert">{form.supplierError}</p>{/if}
+				{#if form?.supplierUpdated}
+					<p class="ok" role="status">Fournisseur mis à jour.</p>
+				{/if}
+				<ConfigList
+					items={data.suppliers.map((s) => ({
+						id: s.id,
+						title: s.nom_ferme,
+						subtitle: s.adresse_siege,
+						is_active: s.is_active
+					}))}
+					toggleAction="?/toggleSupplier"
+					emptyLabel="Aucun fournisseur. Ajoutez-en un pour réceptionner."
+					{envoi}
+					{pendant}
+				/>
+				{#if data.suppliers.some((s) => s.is_active)}
+					<form method="POST" action="?/updateSupplier" use:enhance={pendant} class="edit-supplier">
+						<p class="hint">Modifier un fournisseur actif</p>
+						<select name="id" required>
+							<option value="">Choisir…</option>
+							{#each data.suppliers.filter((s) => s.is_active) as s (s.id)}
+								<option value={s.id}>{s.nom_ferme}</option>
+							{/each}
+						</select>
+						<input name="nom_ferme" placeholder="Nom" required minlength="2" />
+						<input name="adresse_siege" placeholder="Adresse du siège" required minlength="2" />
+						<input name="type_produit" placeholder="Type de produit (optionnel)" />
+						<input name="contact_qualite" placeholder="Contact qualité (optionnel)" />
+						<button type="submit" disabled={envoi}>Enregistrer</button>
+					</form>
+				{/if}
+			</section>
+		</Tabs.Content>
+
+		<Tabs.Content value="customers">
+			<section>
+				<h2>Clients</h2>
+				<p class="hint">L'aval de la traçabilité. Requis pour enregistrer une expédition.</p>
+				<form method="POST" action="?/createCustomer" use:enhance={pendant}>
+					<input
+						name="nom_enseigne"
+						placeholder="Enseigne (ex. Super U Rennes)"
+						required
+						minlength="2"
+						value={form?.nom_enseigne ?? ''}
+					/>
+					<input
+						name="adresse_livraison"
+						placeholder="Adresse de livraison"
+						required
+						minlength="2"
+					/>
+					<input name="email" type="email" placeholder="E-mail (optionnel)" />
+					<button type="submit" disabled={envoi}>Ajouter</button>
+				</form>
+				{#if form?.customerError}<p class="error" role="alert">{form.customerError}</p>{/if}
+				<ConfigList
+					items={data.customers.map((c) => ({
+						id: c.id,
+						title: c.nom_enseigne,
+						subtitle: c.adresse_livraison,
+						is_active: c.is_active
+					}))}
+					toggleAction="?/toggleCustomer"
+					emptyLabel="Aucun client. Ajoutez-en un pour expédier."
+					{envoi}
+					{pendant}
+				/>
+				<ImportCsv
+					action="?/importCustomers"
+					columns="nom_enseigne, adresse_livraison, email, contact_urgence"
+					report={importReportFor('customers')}
+					error={importErrorFor('customers')}
+					{envoi}
+					{pendant}
+				/>
+			</section>
+		</Tabs.Content>
+
+		<Tabs.Content value="products">
+			<section>
+				<h2>Produits</h2>
+				<p class="hint">
+					Le catalogue. Requis pour réceptionner et pour produire (transformation).
+				</p>
+				<form method="POST" action="?/createProduct" use:enhance={pendant} class="produit">
+					<input
+						name="nom"
+						placeholder="Nom (ex. Yaourt nature 125g)"
+						required
+						minlength="2"
+						value={form?.nom ?? ''}
+					/>
+					<input
+						name="code_gtin"
+						placeholder="Code GTIN (8 à 14 chiffres)"
+						required
+						inputmode="numeric"
+					/>
+					<input name="categorie" placeholder="Catégorie (ex. Frais)" required minlength="2" />
+					<input name="unite_reference" placeholder="Unité (ex. KG)" required />
+					<input
+						name="duree_conservation_defaut"
+						type="number"
+						min="0"
+						placeholder="Conservation (jours)"
+						required
+					/>
+					<input
+						name="seuil_alerte_stock"
+						type="number"
+						min="0"
+						step="0.01"
+						placeholder="Seuil d'alerte stock"
+						required
+					/>
+					<button type="submit" disabled={envoi}>Ajouter</button>
+				</form>
+				{#if form?.productError}<p class="error" role="alert">{form.productError}</p>{/if}
+				<ConfigList
+					items={data.products.map((p) => ({
+						id: p.id,
+						title: p.nom,
+						subtitle: `${p.code_gtin} · ${p.categorie}`,
+						is_active: p.is_active
+					}))}
+					toggleAction="?/toggleProduct"
+					emptyLabel="Aucun produit. Ajoutez-en un pour réceptionner ou produire."
+					{envoi}
+					{pendant}
+				/>
+				<ImportCsv
+					action="?/importProducts"
+					columns="nom, code_gtin, categorie, duree_conservation_defaut, seuil_alerte_stock, unite_reference"
+					report={importReportFor('products')}
+					error={importErrorFor('products')}
+					{envoi}
+					{pendant}
+				/>
+			</section>
+		</Tabs.Content>
+
+		<Tabs.Content value="equipment">
+			<section>
+				<h2>Matériel</h2>
+				<p class="hint">
+					Frigos, congélateurs, cuves… rattachés à un emplacement. Requis pour réceptionner et pour
+					la surveillance IoT. Imprimez l'étiquette QR après création.
+				</p>
+				{#if activeLocations.length === 0}
+					<p class="hint">Créez d'abord un emplacement actif pour pouvoir ajouter du matériel.</p>
+				{:else}
+					<form method="POST" action="?/createEquipment" use:enhance={pendant}>
+						<input
+							name="nom"
+							placeholder="Nom (ex. Frigo réception A)"
+							required
+							minlength="3"
+							value={form?.nom ?? ''}
+						/>
+						<select name="type" bind:value={typeMateriel} aria-label="Type de matériel">
+							{#each EQUIPMENT_TYPE_OPTIONS as opt (opt.value)}
+								<option value={opt.value}>{opt.label}</option>
+							{/each}
+						</select>
+						<select name="id_lieu" required aria-label="Emplacement">
+							{#each activeLocations as lieu (lieu.id)}
+								<option value={lieu.id}>{lieu.nom}</option>
+							{/each}
+						</select>
+						<input
+							name="temp_seuil_max"
+							type="number"
+							step="0.1"
+							placeholder={seuilRequis ? 'Seuil max °C (requis)' : 'Seuil max °C (optionnel)'}
+							required={seuilRequis}
+						/>
+						<input name="sensor_id" placeholder="ID capteur IoT (optionnel)" />
+						<button type="submit" disabled={envoi}>Ajouter</button>
+					</form>
+				{/if}
+				{#if form?.equipmentError}<p class="error" role="alert">{form.equipmentError}</p>{/if}
+				<ul class="equip-list">
+					{#each data.equipment as item (item.id)}
+						<li>
+							<div>
+								<span class="title">{item.nom}</span>
+								<span class="sub">
+									{equipmentTypeLabel(item.type)}
+									{#if item.lieu?.nom}· {item.lieu.nom}{/if}
+									{#if item.temp_seuil_max != null}· seuil {item.temp_seuil_max} °C{/if}
+									· {item.statut}
+								</span>
+							</div>
+							<a
+								class="label-link"
+								href={resolve('/(app)/configuration/equipment/[id]/label', {
+									id: encodeURIComponent(item.id)
+								})}
+								target="_blank"
+								rel="noopener"
+							>
+								Étiquette QR
+							</a>
+						</li>
+					{:else}
+						<li class="empty">
+							Aucun matériel. Ajoutez-en un pour réceptionner et suivre le froid.
+						</li>
+					{/each}
+				</ul>
+			</section>
+		</Tabs.Content>
+	</Tabs>
 </div>
 
 <style>
-	.grid {
-		display: grid;
-		grid-template-columns: repeat(auto-fit, minmax(23rem, 1fr));
-		gap: 1rem;
-		align-items: start;
+	/* Le composant Tabs (Skeleton/Zag) est livre sans style : on l'habille avec la charte --nc-*.
+	   Les elements sont rendus par le composant enfant, donc on cible ses hooks (role, data-*, aria)
+	   via :global sous le conteneur scope .tabs pour ne pas fuir sur le reste de l'app. */
+	.tabs :global([role='tablist']) {
+		display: flex;
+		gap: 0.25rem;
+		margin-bottom: 1rem;
+		border-bottom: 1px solid #e2e8f0;
+		overflow-x: auto;
+	}
+
+	.tabs :global([role='tab']) {
+		display: inline-flex;
+		align-items: center;
+		gap: 0.4rem;
+		flex-shrink: 0;
+		margin-bottom: -1px;
+		padding: 0.6rem 0.9rem;
+		border: none;
+		border-bottom: 2px solid transparent;
+		background: none;
+		font: inherit;
+		font-size: 0.875rem;
+		font-weight: 500;
+		white-space: nowrap;
+		color: var(--nc-text-muted);
+		cursor: pointer;
+	}
+
+	.tabs :global([role='tab']:hover) {
+		color: var(--nc-text);
+	}
+
+	.tabs :global([role='tab'][data-selected]) {
+		color: var(--nc-brand);
+		border-bottom-color: var(--nc-brand);
+	}
+
+	.tabs :global([role='tab']:focus-visible) {
+		outline: 2px solid var(--nc-brand-ring);
+		outline-offset: -2px;
+		border-radius: 0.25rem;
+	}
+
+	.tabs :global(.tab-count) {
+		min-width: 1.35rem;
+		padding: 0.05rem 0.35rem;
+		border-radius: 999px;
+		background: #f1f5f9;
+		color: var(--nc-text-subtle);
+		font-size: 0.75rem;
+		font-weight: 600;
+		text-align: center;
+	}
+
+	.tabs :global([role='tab'][data-selected] .tab-count) {
+		background: var(--nc-brand-soft);
+		color: var(--nc-brand);
 	}
 
 	section {
