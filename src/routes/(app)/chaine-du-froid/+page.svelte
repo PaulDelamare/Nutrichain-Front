@@ -3,30 +3,9 @@
 	import TemperatureChart from '$lib/components/cold/TemperatureChart.svelte';
 	import PageHead from '$lib/components/page/PageHead.svelte';
 	import Placeholder from '$lib/components/page/Placeholder.svelte';
-	import { usePageSearch } from '$lib/context/pageSearch.svelte';
-	import { filterRowsByText } from '$lib/utils/pageSearch/filterByText';
 	import type { ActionData, PageData } from './$types';
 
 	let { data, form }: { data: PageData; form: ActionData } = $props();
-
-	const pageSearch = usePageSearch();
-
-	$effect(() => {
-		pageSearch.configure('Rechercher site, zone, alerte…');
-		return () => pageSearch.deactivate();
-	});
-
-	const alerts = $derived(
-		filterRowsByText(data.alerts, pageSearch.query, (a) => [
-			a.id,
-			a.site,
-			a.zone,
-			a.tempActuelle,
-			a.statut,
-			a.depuis,
-			...a.lotsImpactes.map((l) => l.produit)
-		])
-	);
 </script>
 
 <PageHead
@@ -54,11 +33,7 @@
 {/if}
 
 {#if data.alerts.length > 0}
-	{#if alerts.length > 0}
-		<ColdAlertTable rows={alerts} role={data.user.role} {form} />
-	{:else}
-		<Placeholder message="Aucune alerte ne correspond à la recherche." />
-	{/if}
+	<ColdAlertTable rows={data.alerts} role={data.user.role} {form} />
 {:else if !data.error}
 	<Placeholder message="Aucune alerte de chaîne du froid active." />
 {/if}

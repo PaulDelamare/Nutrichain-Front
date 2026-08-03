@@ -7,22 +7,11 @@
 	import LotActionsPanel from '$lib/components/lot-sheet/LotActionsPanel.svelte';
 	import ShelfWithdrawalPanel from '$lib/components/lot-sheet/ShelfWithdrawalPanel.svelte';
 	import PageHead from '$lib/components/page/PageHead.svelte';
-	import { usePageSearch } from '$lib/context/pageSearch.svelte';
-	import { filterRowsByText } from '$lib/utils/pageSearch/filterByText';
 	import type { ActionData, PageData } from './$types';
 
 	let { data, form }: { data: PageData; form: ActionData } = $props();
 
-	const pageSearch = usePageSearch();
-
-	$effect(() => {
-		pageSearch.configure('Rechercher dans l’historique du lot…');
-		return () => pageSearch.deactivate();
-	});
-
-	const events = $derived(
-		filterRowsByText(data.sheet.events, pageSearch.query, (e) => [e.time, e.day, e.title, e.detail])
-	);
+	const events = $derived(data.sheet.events);
 </script>
 
 <header class="page-top">

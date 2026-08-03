@@ -56,12 +56,6 @@ describe('chargement de la recherche de lots', () => {
 		expect(requete()).toMatchObject({ page: 4, limit: 25 });
 	});
 
-	it('délègue la recherche à l’API plutôt que de filtrer les lignes reçues', async () => {
-		await run('?q=260711-000201');
-
-		expect(requete()).toMatchObject({ search: '260711-000201' });
-	});
-
 	/**
 	 * ⚠️ Le cœur de ce lot : les filtres de colonnes partent à l'API (filtrage sur TOUTE
 	 * l'organisation), au lieu d'être appliqués sur la seule page reçue côté front.
@@ -128,11 +122,5 @@ describe('chargement de la recherche de lots', () => {
 		expect(data.error).toBe('API injoignable');
 		expect(data.lots).toEqual([]);
 		expect(data.pagination.totalPages).toBe(0);
-	});
-
-	it('n’envoie pas de recherche vide — l’API répondrait par un filtre inutile', async () => {
-		await run('?q=%20%20');
-
-		expect(requete()?.search).toBeUndefined();
 	});
 });

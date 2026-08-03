@@ -3,7 +3,6 @@
 	import { page } from '$app/stores';
 	import { headerTitle, navPourRole } from '$lib/config/nav';
 	import type { KnownRole } from '$lib/config/roles';
-	import { initPageSearchContext } from '$lib/context/pageSearch.svelte';
 	import SideNav from './SideNav.svelte';
 	import TopBar from './TopBar.svelte';
 
@@ -16,14 +15,8 @@
 	const groups = $derived(navPourRole(role));
 
 	let collapsed = $state(false);
-	const pageSearch = initPageSearchContext();
 
 	const title = $derived(headerTitle($page.url.pathname));
-
-	$effect(() => {
-		void $page.url.pathname;
-		pageSearch.resetQuery();
-	});
 </script>
 
 <div class="shell">

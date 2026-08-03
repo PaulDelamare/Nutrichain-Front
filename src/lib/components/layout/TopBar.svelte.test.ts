@@ -2,12 +2,10 @@ import { page } from 'vitest/browser';
 import { describe, expect, it } from 'vitest';
 import { render, type SvelteComponentOptions } from 'vitest-browser-svelte';
 import TopBar from './TopBar.svelte';
-import { PAGE_SEARCH_KEY, PageSearchContext } from '$lib/context/pageSearch.svelte';
 
 function renderTopBar() {
 	render(TopBar, {
-		props: { title: 'Tableau de bord', coldAlerts: null },
-		context: new Map([[PAGE_SEARCH_KEY, new PageSearchContext()]])
+		props: { title: 'Tableau de bord', coldAlerts: null }
 	} as unknown as SvelteComponentOptions<typeof TopBar>);
 }
 
@@ -36,8 +34,7 @@ describe('TopBar — déconnexion', () => {
 describe('TopBar — alerte froid', () => {
 	function renderWithAlerts(coldAlerts: number | null) {
 		render(TopBar, {
-			props: { title: 'Tableau de bord', coldAlerts },
-			context: new Map([[PAGE_SEARCH_KEY, new PageSearchContext()]])
+			props: { title: 'Tableau de bord', coldAlerts }
 		} as unknown as SvelteComponentOptions<typeof TopBar>);
 	}
 

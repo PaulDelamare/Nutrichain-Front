@@ -2,7 +2,6 @@ import { page } from 'vitest/browser';
 import { describe, expect, it, vi } from 'vitest';
 import { render, type SvelteComponentOptions } from 'vitest-browser-svelte';
 import Page from './(app)/tableau-de-bord/+page.svelte';
-import { PAGE_SEARCH_KEY, PageSearchContext } from '$lib/context/pageSearch.svelte';
 import { buildDashboardCharts } from '$lib/utils/org/dashboardCharts';
 
 vi.mock('$app/stores', async () => {
@@ -22,8 +21,7 @@ function renderDashboard() {
 				recentActivity: [],
 				tasks: []
 			}
-		},
-		context: new Map([[PAGE_SEARCH_KEY, new PageSearchContext()]])
+		}
 	} as unknown as SvelteComponentOptions<typeof Page>);
 }
 
