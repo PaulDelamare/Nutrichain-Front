@@ -259,8 +259,40 @@ export type ApiQuarantineBatch = {
 export const getQuarantineBatches = (fetch: typeof globalThis.fetch, cookies: Cookies) =>
 	orgApi(fetch, cookies).get<ApiQuarantineBatch[]>('/api/organization/quarantine-batches');
 
+// Tableau simple (chaîne du froid, plan d'usine, sélecteurs) : PAS de `page`, l'API renvoie tout.
 export const getEquipment = (fetch: typeof globalThis.fetch, cookies: Cookies) =>
 	orgApi(fetch, cookies).get<ApiEquipment[]>('/api/organization/equipment');
+
+export type ApiEquipmentList = {
+	data: ApiEquipment[];
+	pagination: { page: number; limit: number; total: number; totalPages: number };
+};
+
+export type EquipmentQuery = {
+	page?: number;
+	limit?: number;
+	// Filtres de colonnes appliqués côté API (voir GET /organization/equipment, chemin paginé).
+	nom?: string;
+	type?: string;
+};
+
+/**
+ * Chemin PAGINÉ de l'onglet Configuration : `page` présent → l'API renvoie l'enveloppe { data,
+ * pagination }. `getEquipment` ci-dessus reste le tableau complet pour la chaîne du froid.
+ */
+export const getEquipmentPaginated = (
+	fetch: typeof globalThis.fetch,
+	cookies: Cookies,
+	opts: EquipmentQuery = {}
+) => {
+	const params = new URLSearchParams();
+	params.set('page', String(opts.page ?? 1));
+	params.set('limit', String(opts.limit ?? 25));
+	const nom = opts.nom?.trim();
+	if (nom) params.set('nom', nom);
+	if (opts.type) params.set('type', opts.type);
+	return orgApi(fetch, cookies).get<ApiEquipmentList>(`/api/organization/equipment?${params}`);
+};
 
 export const createEquipment = (
 	fetch: typeof globalThis.fetch,
@@ -322,15 +354,38 @@ export const getMovements = (
 export const getSuppliers = (fetch: typeof globalThis.fetch, cookies: Cookies) =>
 	orgApi(fetch, cookies).get<ApiSupplier[]>('/api/organization/suppliers');
 
+export type ApiSupplierList = {
+	data: ApiSupplierComplet[];
+	pagination: { page: number; limit: number; total: number; totalPages: number };
+};
+
+export type SupplierQuery = {
+	page?: number;
+	limit?: number;
+	// Filtres de colonnes appliqués côté API (voir GET /organization/suppliers, chemin paginé).
+	nom?: string;
+	statut?: string;
+};
+
 /**
- * Écran d'administration : les archivés AUSSI, pour pouvoir les réactiver — et la fiche complète.
- * N'a de sens qu'appelé derrière `exigerAdministrateur` : c'est le rôle, côté API, qui décide de la
- * projection. Un rôle terrain recevrait ici une charge utile plus pauvre que le type ne l'annonce.
+ * Écran d'administration : chemin PAGINÉ. `page` présent → l'API renvoie l'enveloppe { data,
+ * pagination } et, pour l'administration, les archivés aussi (filtre `statut` absent = tous) avec la
+ * fiche complète. N'a de sens qu'appelé derrière `exigerAdministrateur` : c'est le rôle, côté API,
+ * qui décide de la projection. `getSuppliers` (sans page) reste le tableau simple des sélecteurs.
  */
-export const getSuppliersForConfig = (fetch: typeof globalThis.fetch, cookies: Cookies) =>
-	orgApi(fetch, cookies).get<ApiSupplierComplet[]>(
-		'/api/organization/suppliers?includeArchived=true'
-	);
+export const getSuppliersForConfig = (
+	fetch: typeof globalThis.fetch,
+	cookies: Cookies,
+	opts: SupplierQuery = {}
+) => {
+	const params = new URLSearchParams();
+	params.set('page', String(opts.page ?? 1));
+	params.set('limit', String(opts.limit ?? 25));
+	const nom = opts.nom?.trim();
+	if (nom) params.set('nom', nom);
+	if (opts.statut) params.set('statut', opts.statut);
+	return orgApi(fetch, cookies).get<ApiSupplierList>(`/api/organization/suppliers?${params}`);
+};
 
 export const createSupplier = (
 	fetch: typeof globalThis.fetch,
@@ -379,6 +434,48 @@ export const getLocations = (
 		`/api/organization/locations${includeArchived ? '?includeArchived=true' : ''}`
 	);
 
+export type ApiLocationList = {
+	data: ApiLocation[];
+	pagination: { page: number; limit: number; total: number; totalPages: number };
+};
+
+export type LocationQuery = {
+	page?: number;
+	limit?: number;
+	// Filtres de colonnes appliqués côté API (voir GET /organization/locations, chemin paginé).
+	nom?: string;
+	type?: string;
+	statut?: string;
+};
+
+// Chemin PAGINÉ (écran Configuration) : `page` présent → l'API renvoie l'enveloppe { data,
+// pagination }. `getLocations` ci-dessus (sans page) reste le tableau simple pour les sélecteurs.
+export const getLocationsForConfig = (
+	fetch: typeof globalThis.fetch,
+	cookies: Cookies,
+	opts: LocationQuery = {}
+) => {
+	const params = new URLSearchParams();
+	params.set('page', String(opts.page ?? 1));
+	params.set('limit', String(opts.limit ?? 25));
+	const nom = opts.nom?.trim();
+	if (nom) params.set('nom', nom);
+	if (opts.type) params.set('type', opts.type);
+	if (opts.statut) params.set('statut', opts.statut);
+	return orgApi(fetch, cookies).get<ApiLocationList>(`/api/organization/locations?${params}`);
+};
+
+export type ApiConfigCounts = {
+	locations: number;
+	suppliers: number;
+	customers: number;
+	products: number;
+	equipment: number;
+};
+
+export const getConfigCounts = (fetch: typeof globalThis.fetch, cookies: Cookies) =>
+	orgApi(fetch, cookies).get<ApiConfigCounts>('/api/organization/config-counts');
+
 export const createLocation = (
 	fetch: typeof globalThis.fetch,
 	cookies: Cookies,
@@ -426,17 +523,68 @@ export const setLocationActive = (
 export const getCustomers = (fetch: typeof globalThis.fetch, cookies: Cookies) =>
 	orgApi(fetch, cookies).get<ApiCustomer[]>('/api/organization/customers');
 
-/** Écran d'administration : les archivés aussi, et la fiche complète. Voir `getSuppliersForConfig`. */
-export const getCustomersForConfig = (fetch: typeof globalThis.fetch, cookies: Cookies) =>
-	orgApi(fetch, cookies).get<ApiCustomerComplet[]>(
-		'/api/organization/customers?includeArchived=true'
-	);
+export type ApiCustomerList = {
+	data: ApiCustomerComplet[];
+	pagination: { page: number; limit: number; total: number; totalPages: number };
+};
+
+export type CustomerQuery = {
+	page?: number;
+	limit?: number;
+	// Filtres de colonnes appliqués côté API (voir GET /organization/customers, chemin paginé).
+	nom?: string;
+	statut?: string;
+};
+
+/**
+ * Écran d'administration : chemin PAGINÉ. `page` présent → l'API renvoie l'enveloppe { data,
+ * pagination } et, pour l'administration (statut absent), les archivés compris, avec la fiche
+ * complète. Voir `getSuppliersForConfig`. `getCustomers` (sans page) reste le tableau simple.
+ */
+export const getCustomersForConfig = (
+	fetch: typeof globalThis.fetch,
+	cookies: Cookies,
+	opts: CustomerQuery = {}
+) => {
+	const params = new URLSearchParams();
+	params.set('page', String(opts.page ?? 1));
+	params.set('limit', String(opts.limit ?? 25));
+	const nom = opts.nom?.trim();
+	if (nom) params.set('nom', nom);
+	if (opts.statut) params.set('statut', opts.statut);
+	return orgApi(fetch, cookies).get<ApiCustomerList>(`/api/organization/customers?${params}`);
+};
 
 export const createCustomer = (
 	fetch: typeof globalThis.fetch,
 	cookies: Cookies,
-	body: { nom_enseigne: string; adresse_livraison: string; email?: string }
+	body: {
+		nom_enseigne: string;
+		adresse_livraison: string;
+		email?: string;
+		contact_urgence?: string;
+		notes?: string;
+	}
 ) => orgApi(fetch, cookies).post<ApiCustomer>('/api/organization/customers', body);
+
+export const updateCustomer = (
+	fetch: typeof globalThis.fetch,
+	cookies: Cookies,
+	id: string,
+	// Les champs facultatifs (email, contact, notes) acceptent `null` : vidés dans la modale, ils
+	// s'effacent en base (l'API les déclare `nullable`).
+	body: Partial<{
+		nom_enseigne: string;
+		adresse_livraison: string;
+		email: string | null;
+		contact_urgence: string | null;
+		notes: string | null;
+	}>
+) =>
+	orgApi(fetch, cookies).patch<ApiCustomer>(
+		`/api/organization/customers/${encodeURIComponent(id)}`,
+		body
+	);
 
 export const setCustomerActive = (
 	fetch: typeof globalThis.fetch,
@@ -457,6 +605,32 @@ export type ApiProductFull = {
 	is_active: boolean;
 };
 
+/**
+ * Fiche produit complète servie par le chemin PAGINÉ (écran Configuration) : la durée de
+ * conservation, le seuil de stock et l'unité s'y ajoutent pour préremplir la modale d'édition. Le
+ * chemin non paginé (`getProductsForConfig`, sélecteurs) n'en a pas besoin et garde `ApiProductFull`.
+ */
+export type ApiProductComplet = ApiProductFull & {
+	duree_conservation_defaut: number;
+	seuil_alerte_stock: string | number;
+	unite_reference: string;
+};
+
+export type ApiProductList = {
+	data: ApiProductComplet[];
+	pagination: { page: number; limit: number; total: number; totalPages: number };
+};
+
+export type ProductQuery = {
+	page?: number;
+	limit?: number;
+	// Filtres de colonnes appliqués côté API (voir GET /traceability/products, chemin paginé).
+	nom?: string;
+	statut?: string;
+};
+
+// Tableau simple (sélecteurs de réception/transformation) : PAS de `page`, l'API renvoie le
+// tableau. `includeArchived` reste pour l'administration hors chemin paginé.
 export const getProductsForConfig = (
 	fetch: typeof globalThis.fetch,
 	cookies: Cookies,
@@ -465,6 +639,25 @@ export const getProductsForConfig = (
 	orgApi(fetch, cookies).get<ApiProductFull[]>(
 		`/api/traceability/products${includeArchived ? '?includeArchived=true' : ''}`
 	);
+
+/**
+ * Chemin PAGINÉ de l'onglet Configuration : `page` présent → l'API renvoie l'enveloppe { data,
+ * pagination } et, pour l'administration (statut absent), les archivés compris. `getProductsForConfig`
+ * ci-dessus reste le tableau simple des sélecteurs.
+ */
+export const getProductsPaginated = (
+	fetch: typeof globalThis.fetch,
+	cookies: Cookies,
+	opts: ProductQuery = {}
+) => {
+	const params = new URLSearchParams();
+	params.set('page', String(opts.page ?? 1));
+	params.set('limit', String(opts.limit ?? 25));
+	const nom = opts.nom?.trim();
+	if (nom) params.set('nom', nom);
+	if (opts.statut) params.set('statut', opts.statut);
+	return orgApi(fetch, cookies).get<ApiProductList>(`/api/traceability/products?${params}`);
+};
 
 export const createProduct = (
 	fetch: typeof globalThis.fetch,
@@ -478,6 +671,24 @@ export const createProduct = (
 		unite_reference: string;
 	}
 ) => orgApi(fetch, cookies).post<ApiProductFull>('/api/organization/products', body);
+
+// Le GTIN et l'unité de référence ne sont PAS éditables (identité GS1, cohérence des lots) : ils
+// sont absents du corps accepté par l'API.
+export const updateProduct = (
+	fetch: typeof globalThis.fetch,
+	cookies: Cookies,
+	id: string,
+	body: Partial<{
+		nom: string;
+		categorie: string;
+		duree_conservation_defaut: number;
+		seuil_alerte_stock: number;
+	}>
+) =>
+	orgApi(fetch, cookies).patch<ApiProductFull>(
+		`/api/organization/products/${encodeURIComponent(id)}`,
+		body
+	);
 
 export const setProductActive = (
 	fetch: typeof globalThis.fetch,

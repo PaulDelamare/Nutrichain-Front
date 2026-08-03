@@ -12,32 +12,31 @@
 	import ActionReservee from '$lib/components/ui/ActionReservee.svelte';
 	import { peutAdministrer, type KnownRole } from '$lib/config/roles';
 	import { debounce } from '$lib/utils/debounce';
-	import { formatCoordinates } from '$lib/utils/geo/coordinates';
 	import { pageHref } from '$lib/utils/pageSearch/pageHref';
 	import {
-		locationsSearchParams,
-		locationsPageSizeParams
-	} from '$lib/utils/config/locationsSearchParams';
-	import { emptyLocationFilters, type LocationFilters } from '$lib/types/location';
-	import type { ApiLocation, ApiLocationList } from '$lib/Api/organization.server';
+		productsSearchParams,
+		productsPageSizeParams
+	} from '$lib/utils/config/productsSearchParams';
+	import { emptyProductFilters, type ProductFilters } from '$lib/types/product';
+	import type { ApiProductComplet, ApiProductList } from '$lib/Api/organization.server';
 
-	type LocationForm = {
-		locationError?: string;
-		locationCreated?: unknown;
-		locationUpdated?: unknown;
+	type ProductForm = {
+		productError?: string;
+		productCreated?: unknown;
+		productUpdated?: unknown;
 	} | null;
 
 	type Props = {
-		locations: ApiLocationList;
-		filters: LocationFilters;
+		products: ApiProductList;
+		filters: ProductFilters;
 		pageSize: number;
 		pageSizeOptions: number[];
-		form?: LocationForm;
+		form?: ProductForm;
 		role: KnownRole;
 	};
 
 	let {
-		locations,
+		products,
 		filters: dataFilters,
 		pageSize,
 		pageSizeOptions,
@@ -47,26 +46,9 @@
 
 	const canManage = $derived(peutAdministrer(role));
 
-	// Suggestions de type (datalist) : standards + ceux vus sur la page courante. `type` reste libre.
-	const STANDARD_TYPES = [
-		'Réception',
-		'Chambre froide',
-		'Production',
-		'Zone de stockage',
-		'Expédition'
-	];
-	const typeSuggestions = $derived(
-		Array.from(
-			new Set([
-				...STANDARD_TYPES,
-				...locations.data.map((l) => l.type).filter((t): t is string => !!t)
-			])
-		).sort()
-	);
-
 	// --- Filtres pilotés par l'URL (requête filtrée côté API) ---
 	// eslint-disable-next-line svelte/prefer-writable-derived
-	let filters = $state(emptyLocationFilters());
+	let filters = $state(emptyProductFilters());
 	$effect(() => {
 		filters = { ...dataFilters };
 	});
@@ -90,7 +72,7 @@
 	onDestroy(() => applyDebounced.cancel());
 
 	function apply() {
-		navigate(locationsSearchParams($page.url.searchParams, filters));
+		navigate(productsSearchParams($page.url.searchParams, filters));
 	}
 
 	async function applyImmediately() {
@@ -101,22 +83,22 @@
 
 	function changePageSize(event: Event) {
 		const size = Number((event.currentTarget as HTMLSelectElement).value);
-		navigate(locationsPageSizeParams($page.url.searchParams, size));
+		navigate(productsPageSizeParams($page.url.searchParams, size));
 	}
 
 	const columns = $derived(
 		canManage
-			? ['Nom', 'Type', 'Position', 'Statut', 'Actions']
-			: ['Nom', 'Type', 'Position', 'Statut']
+			? ['Nom', 'GTIN', 'Catégorie', 'Statut', 'Actions']
+			: ['Nom', 'GTIN', 'Catégorie', 'Statut']
 	);
 
 	// Modale partagée create / edit.
-	type Editing = { mode: 'create' } | { mode: 'edit'; location: ApiLocation } | null;
+	type Editing = { mode: 'create' } | { mode: 'edit'; product: ApiProductComplet } | null;
 	let editing = $state<Editing>(null);
 	let envoi = $state(false);
 
 	const modalTitle = $derived(
-		editing?.mode === 'edit' ? "Modifier l'emplacement" : 'Ajouter un emplacement'
+		editing?.mode === 'edit' ? 'Modifier le produit' : 'Ajouter un produit'
 	);
 
 	const onSave: SubmitFunction = () => {
@@ -132,14 +114,14 @@
 		};
 	};
 
-	const coordValue = (v: string | number | null | undefined) =>
+	const numValue = (v: string | number | null | undefined) =>
 		v == null || v === '' ? '' : String(v);
 </script>
 
 <div class="topbar">
 	{#if canManage}
 		<button type="button" class="add" onclick={() => (editing = { mode: 'create' })}>
-			Ajouter un emplacement
+			Ajouter un produit
 		</button>
 	{/if}
 </div>
@@ -149,7 +131,7 @@
 		<span>Nom</span>
 		<input
 			type="text"
-			placeholder="Nom de l'emplacement"
+			placeholder="Nom du produit"
 			bind:value={filters.nom}
 			oninput={() => applyDebounced()}
 		/>
@@ -167,7 +149,7 @@
 <div class="toolbar">
 	<label class="page-size">
 		<span>Afficher</span>
-		<select value={String(pageSize)} onchange={changePageSize} aria-label="Emplacements par page">
+		<select value={String(pageSize)} onchange={changePageSize} aria-label="Produits par page">
 			{#each pageSizeOptions as size (size)}
 				<option value={String(size)}>{size} par page</option>
 			{/each}
@@ -178,28 +160,28 @@
 <div class="results">
 	<DataTable
 		{columns}
-		rows={locations.data}
-		rowKey={(l) => l.id}
-		empty="Aucun emplacement ne correspond aux filtres."
+		rows={products.data}
+		rowKey={(p) => p.id}
+		empty="Aucun produit ne correspond aux filtres."
 	>
-		{#snippet row(l)}
-			<td class="nom">{l.nom}</td>
-			<td>{l.type ?? '—'}</td>
-			<td>{formatCoordinates(l.latitude, l.longitude) ?? 'sans position'}</td>
-			<td>{l.is_active ? 'Actif' : 'Archivé'}</td>
+		{#snippet row(p)}
+			<td class="nom">{p.nom}</td>
+			<td class="mono">{p.code_gtin}</td>
+			<td>{p.categorie}</td>
+			<td>{p.is_active ? 'Actif' : 'Archivé'}</td>
 			{#if canManage}
 				<td class="actions">
 					<button
 						type="button"
 						class="link-btn"
-						onclick={() => (editing = { mode: 'edit', location: l })}
+						onclick={() => (editing = { mode: 'edit', product: p })}
 					>
 						Éditer
 					</button>
-					<form method="POST" action="?/toggleLocation" use:enhance={onSave} class="inline">
-						<input type="hidden" name="id" value={l.id} />
-						<input type="hidden" name="active" value={String(!l.is_active)} />
-						<button type="submit" class="link-btn">{l.is_active ? 'Archiver' : 'Réactiver'}</button>
+					<form method="POST" action="?/toggleProduct" use:enhance={onSave} class="inline">
+						<input type="hidden" name="id" value={p.id} />
+						<input type="hidden" name="active" value={String(!p.is_active)} />
+						<button type="submit" class="link-btn">{p.is_active ? 'Archiver' : 'Réactiver'}</button>
 					</form>
 				</td>
 			{/if}
@@ -208,30 +190,30 @@
 </div>
 
 <Pagination
-	page={locations.pagination.page}
-	totalPages={locations.pagination.totalPages}
-	total={locations.pagination.total}
-	unit="emplacements"
+	page={products.pagination.page}
+	totalPages={products.pagination.totalPages}
+	total={products.pagination.total}
+	unit="produits"
 	hrefFor={hrefForPage}
 />
 
-{#if !canManage && locations.pagination.total > 0}
-	<ActionReservee action="La gestion des emplacements" {role} />
+{#if !canManage && products.pagination.total > 0}
+	<ActionReservee action="La gestion des produits" {role} />
 {/if}
 
 <Modal open={editing !== null} title={modalTitle} onclose={() => (editing = null)}>
 	{#if editing}
 		<form
 			method="POST"
-			action={editing.mode === 'edit' ? '?/updateLocation' : '?/createLocation'}
+			action={editing.mode === 'edit' ? '?/updateProduct' : '?/createProduct'}
 			use:enhance={onSave}
 			class="modal-form"
 		>
-			{#if form?.locationError}
-				<p class="err" role="alert">❌ {form.locationError}</p>
+			{#if form?.productError}
+				<p class="err" role="alert">❌ {form.productError}</p>
 			{/if}
 			{#if editing.mode === 'edit'}
-				<input type="hidden" name="id" value={editing.location.id} />
+				<input type="hidden" name="id" value={editing.product.id} />
 			{/if}
 
 			<label>
@@ -241,62 +223,63 @@
 					required
 					minlength="2"
 					maxlength="120"
-					value={editing.mode === 'edit' ? editing.location.nom : ''}
+					value={editing.mode === 'edit' ? editing.product.nom : ''}
 				/>
 			</label>
+
+			{#if editing.mode === 'create'}
+				<label>
+					<span>Code GTIN (8 à 14 chiffres)</span>
+					<input name="code_gtin" required inputmode="numeric" placeholder="Ex. : 3456789012345" />
+				</label>
+			{:else}
+				<p class="ro">
+					GTIN {editing.product.code_gtin} · unité {editing.product.unite_reference} — non modifiables
+					(identité GS1).
+				</p>
+			{/if}
 
 			<label>
-				<span>Type (facultatif)</span>
+				<span>Catégorie</span>
 				<input
-					name="type"
-					list="location-types"
-					maxlength="60"
-					placeholder="Ex. : Chambre froide"
-					value={editing.mode === 'edit' ? (editing.location.type ?? '') : ''}
-				/>
-				<datalist id="location-types">
-					{#each typeSuggestions as t (t)}
-						<option value={t}></option>
-					{/each}
-				</datalist>
-			</label>
-
-			<label>
-				<span>Description (facultatif)</span>
-				<input
-					name="description"
-					maxlength="300"
-					value={editing.mode === 'edit' ? (editing.location.description ?? '') : ''}
+					name="categorie"
+					required
+					minlength="2"
+					maxlength="80"
+					value={editing.mode === 'edit' ? editing.product.categorie : ''}
 				/>
 			</label>
 
-			<p class="hint">
-				Position sur la carte (facultatif) — c'est la seule source du repère de la fiche lot.
-				Laissez les deux champs vides pour la retirer.
-			</p>
+			{#if editing.mode === 'create'}
+				<label>
+					<span>Unité de référence (ex. KG)</span>
+					<input name="unite_reference" required maxlength="20" />
+				</label>
+			{/if}
+
 			<div class="row">
 				<label>
-					<span>Latitude</span>
+					<span>Conservation (jours)</span>
 					<input
-						name="latitude"
+						name="duree_conservation_defaut"
 						type="number"
-						step="0.000001"
-						min="-90"
-						max="90"
-						placeholder="48.832910"
-						value={editing.mode === 'edit' ? coordValue(editing.location.latitude) : ''}
+						min="0"
+						max="3650"
+						required
+						value={editing.mode === 'edit'
+							? numValue(editing.product.duree_conservation_defaut)
+							: ''}
 					/>
 				</label>
 				<label>
-					<span>Longitude</span>
+					<span>Seuil d'alerte stock</span>
 					<input
-						name="longitude"
+						name="seuil_alerte_stock"
 						type="number"
-						step="0.000001"
-						min="-180"
-						max="180"
-						placeholder="2.286540"
-						value={editing.mode === 'edit' ? coordValue(editing.location.longitude) : ''}
+						min="0"
+						step="0.01"
+						required
+						value={editing.mode === 'edit' ? numValue(editing.product.seuil_alerte_stock) : ''}
 					/>
 				</label>
 			</div>
@@ -364,6 +347,11 @@
 		color: var(--nc-text);
 	}
 
+	.mono {
+		font-family: ui-monospace, monospace;
+		font-size: 0.8125rem;
+	}
+
 	.actions {
 		display: flex;
 		align-items: center;
@@ -423,8 +411,8 @@
 		color: var(--nc-text);
 	}
 
-	.hint {
-		margin: 0.25rem 0 0;
+	.ro {
+		margin: 0;
 		font-size: 0.75rem;
 		font-weight: 400;
 		color: var(--nc-text-subtle);

@@ -1,9 +1,17 @@
 import { page } from 'vitest/browser';
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
+import { readable } from 'svelte/store';
 import { render, type SvelteComponentOptions } from 'vitest-browser-svelte';
 import LocationsListing from './LocationsListing.svelte';
-import type { ApiLocation } from '$lib/Api/organization.server';
+import type { ApiLocation, ApiLocationList } from '$lib/Api/organization.server';
 import type { KnownRole } from '$lib/config/roles';
+
+// Composant piloté par l'URL : on fige un `$page` (la navigation reste inerte, les tests ne la
+// déclenchent pas). On préserve les autres exports des modules `$app/*`.
+vi.mock('$app/stores', async (orig) => ({
+	...(await orig<Record<string, unknown>>()),
+	page: readable({ url: new URL('http://test/configuration?tab=locations') })
+}));
 
 function loc(partial: Partial<ApiLocation> = {}): ApiLocation {
 	return {
@@ -18,9 +26,23 @@ function loc(partial: Partial<ApiLocation> = {}): ApiLocation {
 	};
 }
 
-function renderListing(locations: ApiLocation[], role: KnownRole = 'admin') {
+function list(rows: ApiLocation[]): ApiLocationList {
+	return {
+		data: rows,
+		pagination: { page: 1, limit: 25, total: rows.length, totalPages: 1 }
+	};
+}
+
+function renderListing(rows: ApiLocation[], role: KnownRole = 'admin') {
 	render(LocationsListing, {
-		props: { locations, role, form: null }
+		props: {
+			locations: list(rows),
+			filters: { nom: '', statut: 'tous' },
+			pageSize: 25,
+			pageSizeOptions: [10, 25, 50, 100],
+			role,
+			form: null
+		}
 	} as unknown as SvelteComponentOptions<typeof LocationsListing>);
 }
 
@@ -47,7 +69,6 @@ describe('LocationsListing', () => {
 	it('ouvre la modale de création avec la position intégrée', async () => {
 		renderListing([loc()]);
 		await page.getByRole('button', { name: 'Ajouter un emplacement' }).click();
-		// Le bouton de soumission « Ajouter » n'existe que dans la modale ouverte.
 		await expect.element(page.getByRole('button', { name: 'Ajouter' })).toBeInTheDocument();
 		await expect.element(page.getByPlaceholder('2.286540')).toBeInTheDocument();
 	});
@@ -56,7 +77,6 @@ describe('LocationsListing', () => {
 		renderListing([loc({ nom: 'Quai central', type: 'Réception', latitude: 48.83291 })]);
 		await page.getByRole('button', { name: 'Éditer' }).click();
 		await expect.element(page.getByRole('button', { name: 'Enregistrer' })).toBeInTheDocument();
-		// Type et position sont préremplis depuis la ligne cliquée (même câblage que le nom).
 		await expect.element(page.getByPlaceholder('Ex. : Chambre froide')).toHaveValue('Réception');
 		await expect.element(page.getByPlaceholder('48.832910')).toHaveValue(48.83291);
 	});

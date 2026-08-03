@@ -3,9 +3,11 @@ import type { Actions, PageServerLoad } from './$types';
 import {
 	getSuppliersForConfig,
 	getLocations,
+	getLocationsForConfig,
+	getConfigCounts,
 	getCustomersForConfig,
-	getProductsForConfig,
-	getEquipment,
+	getProductsPaginated,
+	getEquipmentPaginated,
 	createSupplier,
 	updateSupplier,
 	setSupplierActive,
@@ -13,37 +15,148 @@ import {
 	updateLocation,
 	setLocationActive,
 	createCustomer,
+	updateCustomer,
 	setCustomerActive,
 	createProduct,
+	updateProduct,
 	setProductActive,
 	createEquipment
+} from '$lib/Api/organization.server';
+import type {
+	ApiSupplierList,
+	ApiCustomerList,
+	ApiProductList,
+	ApiEquipmentList,
+	ApiLocation
 } from '$lib/Api/organization.server';
 import { importProductsCsv, importCustomersCsv } from '$lib/Api/connectors.server';
 import { exigerAdministrateur, refusAdministration } from '$lib/server/guards';
 import { COLD_EQUIPMENT_TYPES, estTypeMateriel } from '$lib/config/equipment';
 import { parseCoordinateFields } from '$lib/utils/geo/coordinates';
 
-export const load: PageServerLoad = async ({ fetch, cookies, locals }) => {
+const TAB_IDS = ['locations', 'suppliers', 'customers', 'products', 'equipment'] as const;
+type TabId = (typeof TAB_IDS)[number];
+const PAGE_SIZE_OPTIONS = [10, 25, 50, 100] as const;
+const DEFAULT_PAGE_SIZE = 25;
+const emptyPagination = { page: 1, limit: DEFAULT_PAGE_SIZE, total: 0, totalPages: 0 };
+
+function parseTab(raw: string | null): TabId {
+	return (TAB_IDS as readonly string[]).includes(raw ?? '') ? (raw as TabId) : 'locations';
+}
+function parsePage(raw: string | null): number {
+	const n = Number(raw);
+	return Number.isInteger(n) && n >= 1 ? n : 1;
+}
+function parseLimit(raw: string | null): number {
+	const n = Number(raw);
+	return (PAGE_SIZE_OPTIONS as readonly number[]).includes(n) ? n : DEFAULT_PAGE_SIZE;
+}
+
+/**
+ * Onglets = navigation URL : le load ne charge QUE l'onglet actif (`?tab=`), paginé/filtré côté
+ * API pour les onglets convertis. Les compteurs des badges viennent d'un seul appel dédié. Les
+ * onglets pas encore migrés tombent sur leur chemin actuel (tableau complet) quand ils sont actifs.
+ */
+export const load: PageServerLoad = async ({ fetch, cookies, locals, url }) => {
 	exigerAdministrateur(locals.user, "La configuration de l'usine");
 
-	// includeArchived : l'écran d'administration montre TOUT, y compris les archivés, pour réactiver.
-	const [suppliers, locations, customers, products, equipment] = await Promise.all([
-		getSuppliersForConfig(fetch, cookies),
-		getLocations(fetch, cookies, true),
-		getCustomersForConfig(fetch, cookies),
-		getProductsForConfig(fetch, cookies, true),
-		getEquipment(fetch, cookies)
-	]);
+	const p = url.searchParams;
+	const tab = parseTab(p.get('tab'));
+	const page = parsePage(p.get('page'));
+	const limit = parseLimit(p.get('limit'));
 
-	const first = [suppliers, locations, customers, products, equipment].find((r) => !r.ok);
+	const countsRes = await getConfigCounts(fetch, cookies);
+	const counts = countsRes.ok
+		? countsRes.data
+		: { locations: 0, suppliers: 0, customers: 0, products: 0, equipment: 0 };
+
+	// Filtres de l'onglet actif (non préfixés : un seul onglet est actif dans l'URL à la fois).
+	const nom = p.get('nom')?.trim() || undefined;
+	const statut = p.get('statut')?.trim() || undefined;
+
+	// Défauts : les onglets inactifs sont rendus vides (masqués par le composant Tabs).
+	let locations: import('$lib/Api/organization.server').ApiLocationList = {
+		data: [],
+		pagination: { ...emptyPagination, limit }
+	};
+	let suppliers: ApiSupplierList = { data: [], pagination: { ...emptyPagination, limit } };
+	let customers: ApiCustomerList = { data: [], pagination: { ...emptyPagination, limit } };
+	let products: ApiProductList = { data: [], pagination: { ...emptyPagination, limit } };
+	let equipment: ApiEquipmentList = { data: [], pagination: { ...emptyPagination, limit } };
+	let activeLocations: ApiLocation[] = [];
+	let error: string | undefined = countsRes.ok ? undefined : countsRes.message;
+
+	if (tab === 'locations') {
+		const res = await getLocationsForConfig(fetch, cookies, {
+			page,
+			limit,
+			nom,
+			statut: statut === 'tous' ? undefined : statut
+		});
+		if (res.ok) locations = res.data;
+		else error = res.message;
+	} else if (tab === 'suppliers') {
+		const res = await getSuppliersForConfig(fetch, cookies, {
+			page,
+			limit,
+			nom,
+			statut: statut === 'tous' ? undefined : statut
+		});
+		if (res.ok) suppliers = res.data;
+		else error = res.message;
+	} else if (tab === 'customers') {
+		const res = await getCustomersForConfig(fetch, cookies, {
+			page,
+			limit,
+			nom,
+			statut: statut === 'tous' ? undefined : statut
+		});
+		if (res.ok) customers = res.data;
+		else error = res.message;
+	} else if (tab === 'products') {
+		const res = await getProductsPaginated(fetch, cookies, {
+			page,
+			limit,
+			nom,
+			statut: statut === 'tous' ? undefined : statut
+		});
+		if (res.ok) products = res.data;
+		else error = res.message;
+	} else if (tab === 'equipment') {
+		const [eq, locs] = await Promise.all([
+			getEquipmentPaginated(fetch, cookies, {
+				page,
+				limit,
+				nom,
+				type: p.get('type')?.trim() || undefined
+			}),
+			// Liste des emplacements actifs pour le sélecteur de la modale Matériel (non paginé).
+			getLocations(fetch, cookies, false)
+		]);
+		if (eq.ok) equipment = eq.data;
+		else error = eq.message;
+		if (locs.ok) activeLocations = locs.data;
+	}
 
 	return {
-		suppliers: suppliers.ok ? suppliers.data : [],
-		locations: locations.ok ? locations.data : [],
-		customers: customers.ok ? customers.data : [],
-		products: products.ok ? products.data : [],
-		equipment: equipment.ok ? equipment.data : [],
-		error: first && !first.ok ? first.message : undefined
+		activeTab: tab,
+		counts,
+		locations,
+		locationFilters: { nom: nom ?? '', statut: statut ?? 'tous' },
+		// Filtres partagés (mêmes params `nom`/`statut`) : un seul onglet est actif à la fois.
+		supplierFilters: { nom: nom ?? '', statut: statut ?? 'tous' },
+		customerFilters: { nom: nom ?? '', statut: statut ?? 'tous' },
+		productFilters: { nom: nom ?? '', statut: statut ?? 'tous' },
+		// Le matériel filtre par type (label exact), pas par statut : il ne s'archive pas.
+		equipmentFilters: { nom: nom ?? '', type: p.get('type')?.trim() || 'tous' },
+		pageSize: limit,
+		pageSizeOptions: [...PAGE_SIZE_OPTIONS],
+		suppliers,
+		customers,
+		products,
+		equipment,
+		activeLocations,
+		error
 	};
 };
 
@@ -56,6 +169,7 @@ export const actions = {
 		const nom_ferme = champ(form, 'nom_ferme');
 		const adresse_siege = champ(form, 'adresse_siege');
 		const type_produit = champ(form, 'type_produit');
+		const contact_qualite = champ(form, 'contact_qualite');
 
 		const refus = refusAdministration(locals.user);
 		if (refus) return fail(403, { supplierError: refus, nom_ferme });
@@ -66,7 +180,8 @@ export const actions = {
 		const res = await createSupplier(fetch, cookies, {
 			nom_ferme,
 			adresse_siege,
-			...(type_produit ? { type_produit } : {})
+			...(type_produit ? { type_produit } : {}),
+			...(contact_qualite ? { contact_qualite } : {})
 		});
 		if (!res.ok) return fail(res.status, { supplierError: res.message, nom_ferme });
 		return { supplierCreated: res.data };
@@ -193,6 +308,8 @@ export const actions = {
 		const nom_enseigne = champ(form, 'nom_enseigne');
 		const adresse_livraison = champ(form, 'adresse_livraison');
 		const email = champ(form, 'email');
+		const contact_urgence = champ(form, 'contact_urgence');
+		const notes = champ(form, 'notes');
 
 		const refus = refusAdministration(locals.user);
 		if (refus) return fail(403, { customerError: refus, nom_enseigne });
@@ -206,10 +323,42 @@ export const actions = {
 		const res = await createCustomer(fetch, cookies, {
 			nom_enseigne,
 			adresse_livraison,
-			...(email ? { email } : {})
+			...(email ? { email } : {}),
+			...(contact_urgence ? { contact_urgence } : {}),
+			...(notes ? { notes } : {})
 		});
 		if (!res.ok) return fail(res.status, { customerError: res.message, nom_enseigne });
 		return { customerCreated: res.data };
+	},
+
+	updateCustomer: async ({ request, fetch, cookies, locals }) => {
+		const form = await request.formData();
+		const id = champ(form, 'id');
+		const nom_enseigne = champ(form, 'nom_enseigne');
+		const adresse_livraison = champ(form, 'adresse_livraison');
+		const email = champ(form, 'email');
+		const contact_urgence = champ(form, 'contact_urgence');
+		const notes = champ(form, 'notes');
+
+		const refus = refusAdministration(locals.user);
+		if (refus) return fail(403, { customerError: refus, nom_enseigne });
+		if (!id || nom_enseigne.length < 2 || adresse_livraison.length < 2) {
+			return fail(400, {
+				customerError: 'Identifiant, enseigne et adresse de livraison requis.',
+				nom_enseigne
+			});
+		}
+
+		// Champs facultatifs vides ⇒ on les EFFACE (null), comme la modale le laisse entendre.
+		const res = await updateCustomer(fetch, cookies, id, {
+			nom_enseigne,
+			adresse_livraison,
+			email: email || null,
+			contact_urgence: contact_urgence || null,
+			notes: notes || null
+		});
+		if (!res.ok) return fail(res.status, { customerError: res.message, nom_enseigne });
+		return { customerUpdated: res.data };
 	},
 
 	toggleCustomer: async ({ request, fetch, cookies, locals }) => {
@@ -261,6 +410,37 @@ export const actions = {
 		});
 		if (!res.ok) return fail(res.status, { productError: res.message, nom });
 		return { productCreated: res.data };
+	},
+
+	updateProduct: async ({ request, fetch, cookies, locals }) => {
+		const form = await request.formData();
+		const id = champ(form, 'id');
+		const nom = champ(form, 'nom');
+		const categorie = champ(form, 'categorie');
+		const duree_conservation_defaut = nombre(form, 'duree_conservation_defaut');
+		const seuil_alerte_stock = nombre(form, 'seuil_alerte_stock');
+
+		const refus = refusAdministration(locals.user);
+		if (refus) return fail(403, { productError: refus, nom });
+		// Le GTIN et l'unité ne sont PAS éditables (identité GS1) : la modale ne les propose pas.
+		if (
+			!id ||
+			nom.length < 2 ||
+			categorie.length < 2 ||
+			!Number.isFinite(duree_conservation_defaut) ||
+			!Number.isFinite(seuil_alerte_stock)
+		) {
+			return fail(400, { productError: 'Nom, catégorie, conservation et seuil requis.', nom });
+		}
+
+		const res = await updateProduct(fetch, cookies, id, {
+			nom,
+			categorie,
+			duree_conservation_defaut,
+			seuil_alerte_stock
+		});
+		if (!res.ok) return fail(res.status, { productError: res.message, nom });
+		return { productUpdated: res.data };
 	},
 
 	toggleProduct: async ({ request, fetch, cookies, locals }) => {

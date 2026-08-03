@@ -1,24 +1,19 @@
 <script lang="ts">
-	import { enhance } from '$app/forms';
+	import { goto } from '$app/navigation';
 	import { resolve } from '$app/paths';
 	import { Tabs } from '@skeletonlabs/skeleton-svelte';
 	import PageHead from '$lib/components/page/PageHead.svelte';
-	import ConfigList from '$lib/components/config/ConfigList.svelte';
 	import ImportCsv from '$lib/components/config/ImportCsv.svelte';
 	import LocationsListing from '$lib/components/config/LocationsListing.svelte';
-	import {
-		COLD_EQUIPMENT_TYPES,
-		EQUIPMENT_TYPE_OPTIONS,
-		equipmentTypeLabel,
-		type EquipmentType
-	} from '$lib/config/equipment';
+	import SupplierListing from '$lib/components/config/SupplierListing.svelte';
+	import CustomerListing from '$lib/components/config/CustomerListing.svelte';
+	import ProductListing from '$lib/components/config/ProductListing.svelte';
+	import EquipmentListing from '$lib/components/config/EquipmentListing.svelte';
 	import type { ActionData, PageData } from './$types';
 
 	let { data, form }: { data: PageData; form: ActionData } = $props();
 
-	const activeLocations = $derived(data.locations.filter((l) => l.is_active));
-
-	// Le résultat d'un import CSV est routé vers la section (produits / clients) qui l'a déclenché.
+	// Le résultat d'un import CSV est routé vers l'onglet (produits / clients) qui l'a déclenché.
 	const importReportFor = (kind: 'products' | 'customers') =>
 		(form && 'importReport' in form && form.importKind === kind ? form.importReport : null) ?? null;
 	const importErrorFor = (kind: 'products' | 'customers') =>
@@ -26,9 +21,8 @@
 			? form.importError
 			: null) ?? null;
 
+	// `pendant` / `envoi` : état d'envoi partagé par les imports CSV (clients, produits).
 	let envoi = $state(false);
-	let typeMateriel = $state<EquipmentType>('FRIGO');
-	const seuilRequis = $derived(COLD_EQUIPMENT_TYPES.includes(typeMateriel));
 	const pendant = () => {
 		envoi = true;
 		return async ({ update }: { update: () => Promise<void> }) => {
@@ -39,15 +33,21 @@
 
 	type TabId = 'locations' | 'suppliers' | 'customers' | 'products' | 'equipment';
 
-	let activeTab = $state<TabId>('locations');
+	// Onglets = navigation URL : le load ne charge que l'onglet actif, donc changer d'onglet
+	// recharge (et remet pagination/filtres à zéro). L'onglet actif vient de l'URL, pas d'un état.
+	function selectTab(id: TabId) {
+		if (id === data.activeTab) return;
+		// eslint-disable-next-line svelte/no-navigation-without-resolve
+		goto(`${resolve('/configuration')}?tab=${id}`, { noScroll: true, keepFocus: true });
+	}
 
-	// Le compteur affiche le nombre d'entrees du referentiel (actives et inactives, comme la liste).
+	// Le compteur affiche le total du référentiel (un seul appel dédié, indépendant de la page).
 	const tabs = $derived([
-		{ id: 'locations' as TabId, label: 'Emplacements', count: data.locations.length },
-		{ id: 'suppliers' as TabId, label: 'Fournisseurs', count: data.suppliers.length },
-		{ id: 'customers' as TabId, label: 'Clients', count: data.customers.length },
-		{ id: 'products' as TabId, label: 'Produits', count: data.products.length },
-		{ id: 'equipment' as TabId, label: 'Matériel', count: data.equipment.length }
+		{ id: 'locations' as TabId, label: 'Emplacements', count: data.counts.locations },
+		{ id: 'suppliers' as TabId, label: 'Fournisseurs', count: data.counts.suppliers },
+		{ id: 'customers' as TabId, label: 'Clients', count: data.counts.customers },
+		{ id: 'products' as TabId, label: 'Produits', count: data.counts.products },
+		{ id: 'equipment' as TabId, label: 'Matériel', count: data.counts.equipment }
 	]);
 </script>
 
@@ -61,7 +61,7 @@
 {/if}
 
 <div class="tabs">
-	<Tabs value={activeTab} onValueChange={(e) => (activeTab = e.value as TabId)}>
+	<Tabs value={data.activeTab} onValueChange={(e) => selectTab(e.value as TabId)}>
 		<Tabs.List>
 			{#each tabs as tab (tab.id)}
 				<Tabs.Trigger value={tab.id}>
@@ -72,94 +72,37 @@
 		</Tabs.List>
 
 		<Tabs.Content value="locations">
-			<LocationsListing locations={data.locations} {form} role={data.user.role} />
+			<LocationsListing
+				locations={data.locations}
+				filters={data.locationFilters}
+				pageSize={data.pageSize}
+				pageSizeOptions={data.pageSizeOptions}
+				{form}
+				role={data.user.role}
+			/>
 		</Tabs.Content>
 
 		<Tabs.Content value="suppliers">
-			<section>
-				<h2>Fournisseurs</h2>
-				<p class="hint">L'amont de la traçabilité. Requis pour enregistrer une réception.</p>
-				<form method="POST" action="?/createSupplier" use:enhance={pendant}>
-					<input
-						name="nom_ferme"
-						placeholder="Nom (ex. Ferme des Aubépines)"
-						required
-						minlength="2"
-						value={form?.nom_ferme ?? ''}
-					/>
-					<input name="adresse_siege" placeholder="Adresse du siège" required minlength="2" />
-					<input name="type_produit" placeholder="Type de produit (optionnel)" />
-					<button type="submit" disabled={envoi}>Ajouter</button>
-				</form>
-				{#if form?.supplierError}<p class="error" role="alert">{form.supplierError}</p>{/if}
-				{#if form?.supplierUpdated}
-					<p class="ok" role="status">Fournisseur mis à jour.</p>
-				{/if}
-				<ConfigList
-					items={data.suppliers.map((s) => ({
-						id: s.id,
-						title: s.nom_ferme,
-						subtitle: s.adresse_siege,
-						is_active: s.is_active
-					}))}
-					toggleAction="?/toggleSupplier"
-					emptyLabel="Aucun fournisseur. Ajoutez-en un pour réceptionner."
-					{envoi}
-					{pendant}
-				/>
-				{#if data.suppliers.some((s) => s.is_active)}
-					<form method="POST" action="?/updateSupplier" use:enhance={pendant} class="edit-supplier">
-						<p class="hint">Modifier un fournisseur actif</p>
-						<select name="id" required>
-							<option value="">Choisir…</option>
-							{#each data.suppliers.filter((s) => s.is_active) as s (s.id)}
-								<option value={s.id}>{s.nom_ferme}</option>
-							{/each}
-						</select>
-						<input name="nom_ferme" placeholder="Nom" required minlength="2" />
-						<input name="adresse_siege" placeholder="Adresse du siège" required minlength="2" />
-						<input name="type_produit" placeholder="Type de produit (optionnel)" />
-						<input name="contact_qualite" placeholder="Contact qualité (optionnel)" />
-						<button type="submit" disabled={envoi}>Enregistrer</button>
-					</form>
-				{/if}
-			</section>
+			<SupplierListing
+				suppliers={data.suppliers}
+				filters={data.supplierFilters}
+				pageSize={data.pageSize}
+				pageSizeOptions={data.pageSizeOptions}
+				{form}
+				role={data.user.role}
+			/>
 		</Tabs.Content>
 
 		<Tabs.Content value="customers">
-			<section>
-				<h2>Clients</h2>
-				<p class="hint">L'aval de la traçabilité. Requis pour enregistrer une expédition.</p>
-				<form method="POST" action="?/createCustomer" use:enhance={pendant}>
-					<input
-						name="nom_enseigne"
-						placeholder="Enseigne (ex. Super U Rennes)"
-						required
-						minlength="2"
-						value={form?.nom_enseigne ?? ''}
-					/>
-					<input
-						name="adresse_livraison"
-						placeholder="Adresse de livraison"
-						required
-						minlength="2"
-					/>
-					<input name="email" type="email" placeholder="E-mail (optionnel)" />
-					<button type="submit" disabled={envoi}>Ajouter</button>
-				</form>
-				{#if form?.customerError}<p class="error" role="alert">{form.customerError}</p>{/if}
-				<ConfigList
-					items={data.customers.map((c) => ({
-						id: c.id,
-						title: c.nom_enseigne,
-						subtitle: c.adresse_livraison,
-						is_active: c.is_active
-					}))}
-					toggleAction="?/toggleCustomer"
-					emptyLabel="Aucun client. Ajoutez-en un pour expédier."
-					{envoi}
-					{pendant}
-				/>
+			<CustomerListing
+				customers={data.customers}
+				filters={data.customerFilters}
+				pageSize={data.pageSize}
+				pageSizeOptions={data.pageSizeOptions}
+				{form}
+				role={data.user.role}
+			/>
+			<div class="import-block">
 				<ImportCsv
 					action="?/importCustomers"
 					columns="nom_enseigne, adresse_livraison, email, contact_urgence"
@@ -168,61 +111,19 @@
 					{envoi}
 					{pendant}
 				/>
-			</section>
+			</div>
 		</Tabs.Content>
 
 		<Tabs.Content value="products">
-			<section>
-				<h2>Produits</h2>
-				<p class="hint">
-					Le catalogue. Requis pour réceptionner et pour produire (transformation).
-				</p>
-				<form method="POST" action="?/createProduct" use:enhance={pendant} class="produit">
-					<input
-						name="nom"
-						placeholder="Nom (ex. Yaourt nature 125g)"
-						required
-						minlength="2"
-						value={form?.nom ?? ''}
-					/>
-					<input
-						name="code_gtin"
-						placeholder="Code GTIN (8 à 14 chiffres)"
-						required
-						inputmode="numeric"
-					/>
-					<input name="categorie" placeholder="Catégorie (ex. Frais)" required minlength="2" />
-					<input name="unite_reference" placeholder="Unité (ex. KG)" required />
-					<input
-						name="duree_conservation_defaut"
-						type="number"
-						min="0"
-						placeholder="Conservation (jours)"
-						required
-					/>
-					<input
-						name="seuil_alerte_stock"
-						type="number"
-						min="0"
-						step="0.01"
-						placeholder="Seuil d'alerte stock"
-						required
-					/>
-					<button type="submit" disabled={envoi}>Ajouter</button>
-				</form>
-				{#if form?.productError}<p class="error" role="alert">{form.productError}</p>{/if}
-				<ConfigList
-					items={data.products.map((p) => ({
-						id: p.id,
-						title: p.nom,
-						subtitle: `${p.code_gtin} · ${p.categorie}`,
-						is_active: p.is_active
-					}))}
-					toggleAction="?/toggleProduct"
-					emptyLabel="Aucun produit. Ajoutez-en un pour réceptionner ou produire."
-					{envoi}
-					{pendant}
-				/>
+			<ProductListing
+				products={data.products}
+				filters={data.productFilters}
+				pageSize={data.pageSize}
+				pageSizeOptions={data.pageSizeOptions}
+				{form}
+				role={data.user.role}
+			/>
+			<div class="import-block">
 				<ImportCsv
 					action="?/importProducts"
 					columns="nom, code_gtin, categorie, duree_conservation_defaut, seuil_alerte_stock, unite_reference"
@@ -231,79 +132,19 @@
 					{envoi}
 					{pendant}
 				/>
-			</section>
+			</div>
 		</Tabs.Content>
 
 		<Tabs.Content value="equipment">
-			<section>
-				<h2>Matériel</h2>
-				<p class="hint">
-					Frigos, congélateurs, cuves… rattachés à un emplacement. Requis pour réceptionner et pour
-					la surveillance IoT. Imprimez l'étiquette QR après création.
-				</p>
-				{#if activeLocations.length === 0}
-					<p class="hint">Créez d'abord un emplacement actif pour pouvoir ajouter du matériel.</p>
-				{:else}
-					<form method="POST" action="?/createEquipment" use:enhance={pendant}>
-						<input
-							name="nom"
-							placeholder="Nom (ex. Frigo réception A)"
-							required
-							minlength="3"
-							value={form?.nom ?? ''}
-						/>
-						<select name="type" bind:value={typeMateriel} aria-label="Type de matériel">
-							{#each EQUIPMENT_TYPE_OPTIONS as opt (opt.value)}
-								<option value={opt.value}>{opt.label}</option>
-							{/each}
-						</select>
-						<select name="id_lieu" required aria-label="Emplacement">
-							{#each activeLocations as lieu (lieu.id)}
-								<option value={lieu.id}>{lieu.nom}</option>
-							{/each}
-						</select>
-						<input
-							name="temp_seuil_max"
-							type="number"
-							step="0.1"
-							placeholder={seuilRequis ? 'Seuil max °C (requis)' : 'Seuil max °C (optionnel)'}
-							required={seuilRequis}
-						/>
-						<input name="sensor_id" placeholder="ID capteur IoT (optionnel)" />
-						<button type="submit" disabled={envoi}>Ajouter</button>
-					</form>
-				{/if}
-				{#if form?.equipmentError}<p class="error" role="alert">{form.equipmentError}</p>{/if}
-				<ul class="equip-list">
-					{#each data.equipment as item (item.id)}
-						<li>
-							<div>
-								<span class="title">{item.nom}</span>
-								<span class="sub">
-									{equipmentTypeLabel(item.type)}
-									{#if item.lieu?.nom}· {item.lieu.nom}{/if}
-									{#if item.temp_seuil_max != null}· seuil {item.temp_seuil_max} °C{/if}
-									· {item.statut}
-								</span>
-							</div>
-							<a
-								class="label-link"
-								href={resolve('/(app)/configuration/equipment/[id]/label', {
-									id: encodeURIComponent(item.id)
-								})}
-								target="_blank"
-								rel="noopener"
-							>
-								Étiquette QR
-							</a>
-						</li>
-					{:else}
-						<li class="empty">
-							Aucun matériel. Ajoutez-en un pour réceptionner et suivre le froid.
-						</li>
-					{/each}
-				</ul>
-			</section>
+			<EquipmentListing
+				equipment={data.equipment}
+				filters={data.equipmentFilters}
+				activeLocations={data.activeLocations}
+				pageSize={data.pageSize}
+				pageSizeOptions={data.pageSizeOptions}
+				{form}
+				role={data.user.role}
+			/>
 		</Tabs.Content>
 	</Tabs>
 </div>
@@ -369,54 +210,6 @@
 		color: var(--nc-brand);
 	}
 
-	section {
-		padding: 1.25rem;
-		border: 1px solid #e2e8f0;
-		border-radius: 0.5rem;
-		background: #fff;
-	}
-
-	h2 {
-		margin: 0;
-		font-size: 1rem;
-		font-weight: 600;
-		color: var(--nc-text);
-	}
-
-	.hint {
-		margin: 0.25rem 0 1rem;
-		font-size: 0.8125rem;
-		color: var(--nc-text-muted);
-	}
-
-	form {
-		display: flex;
-		flex-wrap: wrap;
-		gap: 0.5rem;
-	}
-
-	input,
-	select {
-		flex: 1 1 8rem;
-		min-width: 0;
-		padding: 0.45rem 0.6rem;
-		border: 1px solid #cbd5e1;
-		border-radius: 0.375rem;
-		font-size: 0.875rem;
-		background: #fff;
-	}
-
-	button {
-		padding: 0.45rem 0.9rem;
-		border: none;
-		border-radius: 0.375rem;
-		background: var(--nc-brand-dark, #1b6b5c);
-		color: #fff;
-		font-size: 0.875rem;
-		font-weight: 500;
-		cursor: pointer;
-	}
-
 	.banner {
 		margin: 0 0 0.75rem;
 		padding: 0.5rem 0.75rem;
@@ -426,72 +219,10 @@
 		font-size: 0.8125rem;
 	}
 
-	.error {
-		margin: 0.5rem 0 0;
-		font-size: 0.8125rem;
-		color: #991b1b;
-	}
-
-	.ok {
-		margin: 0.5rem 0 0;
-		font-size: 0.8125rem;
-		color: #166534;
-	}
-
-	.edit-supplier {
-		margin-top: 1rem;
-		padding-top: 1rem;
-		border-top: 1px solid #f1f5f9;
-		display: grid;
-		grid-template-columns: repeat(auto-fill, minmax(10rem, 1fr));
-		gap: 0.5rem;
-		align-items: end;
-	}
-
-	.edit-supplier .hint {
-		grid-column: 1 / -1;
-		margin: 0;
-	}
-
-	.equip-list {
-		list-style: none;
-		margin: 0.75rem 0 0;
-		padding: 0;
-	}
-
-	.equip-list li {
-		display: flex;
-		align-items: center;
-		justify-content: space-between;
-		gap: 1rem;
-		padding: 0.6rem 0;
-		border-bottom: 1px solid #f1f5f9;
-	}
-
-	.equip-list li:last-child {
-		border-bottom: none;
-	}
-
-	.title {
-		font-weight: 500;
-		color: var(--nc-text);
-	}
-
-	.sub {
-		margin-left: 0.5rem;
-		font-size: 0.8125rem;
-		color: var(--nc-text-subtle);
-	}
-
-	.empty {
-		justify-content: flex-start;
-		color: var(--nc-text-subtle);
-		font-size: 0.875rem;
-	}
-
-	.label-link {
-		font-size: 0.8125rem;
-		color: var(--nc-text-muted);
-		white-space: nowrap;
+	/* Import CSV rendu sous le tableau/filtres de l'onglet (clients, produits). */
+	.import-block {
+		margin-top: 1.5rem;
+		padding-top: 1.25rem;
+		border-top: 1px solid #e2e8f0;
 	}
 </style>

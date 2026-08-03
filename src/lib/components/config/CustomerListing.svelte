@@ -12,32 +12,31 @@
 	import ActionReservee from '$lib/components/ui/ActionReservee.svelte';
 	import { peutAdministrer, type KnownRole } from '$lib/config/roles';
 	import { debounce } from '$lib/utils/debounce';
-	import { formatCoordinates } from '$lib/utils/geo/coordinates';
 	import { pageHref } from '$lib/utils/pageSearch/pageHref';
 	import {
-		locationsSearchParams,
-		locationsPageSizeParams
-	} from '$lib/utils/config/locationsSearchParams';
-	import { emptyLocationFilters, type LocationFilters } from '$lib/types/location';
-	import type { ApiLocation, ApiLocationList } from '$lib/Api/organization.server';
+		customersSearchParams,
+		customersPageSizeParams
+	} from '$lib/utils/config/customersSearchParams';
+	import { emptyCustomerFilters, type CustomerFilters } from '$lib/types/customer';
+	import type { ApiCustomerComplet, ApiCustomerList } from '$lib/Api/organization.server';
 
-	type LocationForm = {
-		locationError?: string;
-		locationCreated?: unknown;
-		locationUpdated?: unknown;
+	type CustomerForm = {
+		customerError?: string;
+		customerCreated?: unknown;
+		customerUpdated?: unknown;
 	} | null;
 
 	type Props = {
-		locations: ApiLocationList;
-		filters: LocationFilters;
+		customers: ApiCustomerList;
+		filters: CustomerFilters;
 		pageSize: number;
 		pageSizeOptions: number[];
-		form?: LocationForm;
+		form?: CustomerForm;
 		role: KnownRole;
 	};
 
 	let {
-		locations,
+		customers,
 		filters: dataFilters,
 		pageSize,
 		pageSizeOptions,
@@ -47,26 +46,9 @@
 
 	const canManage = $derived(peutAdministrer(role));
 
-	// Suggestions de type (datalist) : standards + ceux vus sur la page courante. `type` reste libre.
-	const STANDARD_TYPES = [
-		'Réception',
-		'Chambre froide',
-		'Production',
-		'Zone de stockage',
-		'Expédition'
-	];
-	const typeSuggestions = $derived(
-		Array.from(
-			new Set([
-				...STANDARD_TYPES,
-				...locations.data.map((l) => l.type).filter((t): t is string => !!t)
-			])
-		).sort()
-	);
-
 	// --- Filtres pilotés par l'URL (requête filtrée côté API) ---
 	// eslint-disable-next-line svelte/prefer-writable-derived
-	let filters = $state(emptyLocationFilters());
+	let filters = $state(emptyCustomerFilters());
 	$effect(() => {
 		filters = { ...dataFilters };
 	});
@@ -90,7 +72,7 @@
 	onDestroy(() => applyDebounced.cancel());
 
 	function apply() {
-		navigate(locationsSearchParams($page.url.searchParams, filters));
+		navigate(customersSearchParams($page.url.searchParams, filters));
 	}
 
 	async function applyImmediately() {
@@ -101,22 +83,22 @@
 
 	function changePageSize(event: Event) {
 		const size = Number((event.currentTarget as HTMLSelectElement).value);
-		navigate(locationsPageSizeParams($page.url.searchParams, size));
+		navigate(customersPageSizeParams($page.url.searchParams, size));
 	}
 
 	const columns = $derived(
 		canManage
-			? ['Nom', 'Type', 'Position', 'Statut', 'Actions']
-			: ['Nom', 'Type', 'Position', 'Statut']
+			? ['Enseigne', 'Adresse de livraison', 'E-mail', 'Statut', 'Actions']
+			: ['Enseigne', 'Adresse de livraison', 'E-mail', 'Statut']
 	);
 
 	// Modale partagée create / edit.
-	type Editing = { mode: 'create' } | { mode: 'edit'; location: ApiLocation } | null;
+	type Editing = { mode: 'create' } | { mode: 'edit'; customer: ApiCustomerComplet } | null;
 	let editing = $state<Editing>(null);
 	let envoi = $state(false);
 
 	const modalTitle = $derived(
-		editing?.mode === 'edit' ? "Modifier l'emplacement" : 'Ajouter un emplacement'
+		editing?.mode === 'edit' ? 'Modifier le client' : 'Ajouter un client'
 	);
 
 	const onSave: SubmitFunction = () => {
@@ -131,25 +113,22 @@
 			envoi = false;
 		};
 	};
-
-	const coordValue = (v: string | number | null | undefined) =>
-		v == null || v === '' ? '' : String(v);
 </script>
 
 <div class="topbar">
 	{#if canManage}
 		<button type="button" class="add" onclick={() => (editing = { mode: 'create' })}>
-			Ajouter un emplacement
+			Ajouter un client
 		</button>
 	{/if}
 </div>
 
 <NcFilterBar onapply={apply}>
 	<label class="field">
-		<span>Nom</span>
+		<span>Enseigne</span>
 		<input
 			type="text"
-			placeholder="Nom de l'emplacement"
+			placeholder="Nom de l'enseigne"
 			bind:value={filters.nom}
 			oninput={() => applyDebounced()}
 		/>
@@ -167,7 +146,7 @@
 <div class="toolbar">
 	<label class="page-size">
 		<span>Afficher</span>
-		<select value={String(pageSize)} onchange={changePageSize} aria-label="Emplacements par page">
+		<select value={String(pageSize)} onchange={changePageSize} aria-label="Clients par page">
 			{#each pageSizeOptions as size (size)}
 				<option value={String(size)}>{size} par page</option>
 			{/each}
@@ -178,28 +157,28 @@
 <div class="results">
 	<DataTable
 		{columns}
-		rows={locations.data}
-		rowKey={(l) => l.id}
-		empty="Aucun emplacement ne correspond aux filtres."
+		rows={customers.data}
+		rowKey={(c) => c.id}
+		empty="Aucun client ne correspond aux filtres."
 	>
-		{#snippet row(l)}
-			<td class="nom">{l.nom}</td>
-			<td>{l.type ?? '—'}</td>
-			<td>{formatCoordinates(l.latitude, l.longitude) ?? 'sans position'}</td>
-			<td>{l.is_active ? 'Actif' : 'Archivé'}</td>
+		{#snippet row(c)}
+			<td class="nom">{c.nom_enseigne}</td>
+			<td>{c.adresse_livraison}</td>
+			<td>{c.email ?? '—'}</td>
+			<td>{c.is_active ? 'Actif' : 'Archivé'}</td>
 			{#if canManage}
 				<td class="actions">
 					<button
 						type="button"
 						class="link-btn"
-						onclick={() => (editing = { mode: 'edit', location: l })}
+						onclick={() => (editing = { mode: 'edit', customer: c })}
 					>
 						Éditer
 					</button>
-					<form method="POST" action="?/toggleLocation" use:enhance={onSave} class="inline">
-						<input type="hidden" name="id" value={l.id} />
-						<input type="hidden" name="active" value={String(!l.is_active)} />
-						<button type="submit" class="link-btn">{l.is_active ? 'Archiver' : 'Réactiver'}</button>
+					<form method="POST" action="?/toggleCustomer" use:enhance={onSave} class="inline">
+						<input type="hidden" name="id" value={c.id} />
+						<input type="hidden" name="active" value={String(!c.is_active)} />
+						<button type="submit" class="link-btn">{c.is_active ? 'Archiver' : 'Réactiver'}</button>
 					</form>
 				</td>
 			{/if}
@@ -208,98 +187,81 @@
 </div>
 
 <Pagination
-	page={locations.pagination.page}
-	totalPages={locations.pagination.totalPages}
-	total={locations.pagination.total}
-	unit="emplacements"
+	page={customers.pagination.page}
+	totalPages={customers.pagination.totalPages}
+	total={customers.pagination.total}
+	unit="clients"
 	hrefFor={hrefForPage}
 />
 
-{#if !canManage && locations.pagination.total > 0}
-	<ActionReservee action="La gestion des emplacements" {role} />
+{#if !canManage && customers.pagination.total > 0}
+	<ActionReservee action="La gestion des clients" {role} />
 {/if}
 
 <Modal open={editing !== null} title={modalTitle} onclose={() => (editing = null)}>
 	{#if editing}
 		<form
 			method="POST"
-			action={editing.mode === 'edit' ? '?/updateLocation' : '?/createLocation'}
+			action={editing.mode === 'edit' ? '?/updateCustomer' : '?/createCustomer'}
 			use:enhance={onSave}
 			class="modal-form"
 		>
-			{#if form?.locationError}
-				<p class="err" role="alert">❌ {form.locationError}</p>
+			{#if form?.customerError}
+				<p class="err" role="alert">❌ {form.customerError}</p>
 			{/if}
 			{#if editing.mode === 'edit'}
-				<input type="hidden" name="id" value={editing.location.id} />
+				<input type="hidden" name="id" value={editing.customer.id} />
 			{/if}
 
 			<label>
-				<span>Nom</span>
+				<span>Enseigne</span>
 				<input
-					name="nom"
+					name="nom_enseigne"
 					required
 					minlength="2"
 					maxlength="120"
-					value={editing.mode === 'edit' ? editing.location.nom : ''}
+					value={editing.mode === 'edit' ? editing.customer.nom_enseigne : ''}
 				/>
 			</label>
 
 			<label>
-				<span>Type (facultatif)</span>
+				<span>Adresse de livraison</span>
 				<input
-					name="type"
-					list="location-types"
-					maxlength="60"
-					placeholder="Ex. : Chambre froide"
-					value={editing.mode === 'edit' ? (editing.location.type ?? '') : ''}
+					name="adresse_livraison"
+					required
+					minlength="2"
+					maxlength="200"
+					value={editing.mode === 'edit' ? editing.customer.adresse_livraison : ''}
 				/>
-				<datalist id="location-types">
-					{#each typeSuggestions as t (t)}
-						<option value={t}></option>
-					{/each}
-				</datalist>
 			</label>
 
 			<label>
-				<span>Description (facultatif)</span>
+				<span>E-mail (facultatif)</span>
 				<input
-					name="description"
-					maxlength="300"
-					value={editing.mode === 'edit' ? (editing.location.description ?? '') : ''}
+					name="email"
+					type="email"
+					maxlength="200"
+					value={editing.mode === 'edit' ? (editing.customer.email ?? '') : ''}
 				/>
 			</label>
 
-			<p class="hint">
-				Position sur la carte (facultatif) — c'est la seule source du repère de la fiche lot.
-				Laissez les deux champs vides pour la retirer.
-			</p>
-			<div class="row">
-				<label>
-					<span>Latitude</span>
-					<input
-						name="latitude"
-						type="number"
-						step="0.000001"
-						min="-90"
-						max="90"
-						placeholder="48.832910"
-						value={editing.mode === 'edit' ? coordValue(editing.location.latitude) : ''}
-					/>
-				</label>
-				<label>
-					<span>Longitude</span>
-					<input
-						name="longitude"
-						type="number"
-						step="0.000001"
-						min="-180"
-						max="180"
-						placeholder="2.286540"
-						value={editing.mode === 'edit' ? coordValue(editing.location.longitude) : ''}
-					/>
-				</label>
-			</div>
+			<label>
+				<span>Contact d'urgence (facultatif)</span>
+				<input
+					name="contact_urgence"
+					maxlength="120"
+					value={editing.mode === 'edit' ? (editing.customer.contact_urgence ?? '') : ''}
+				/>
+			</label>
+
+			<label>
+				<span>Notes (facultatif)</span>
+				<input
+					name="notes"
+					maxlength="500"
+					value={editing.mode === 'edit' ? (editing.customer.notes ?? '') : ''}
+				/>
+			</label>
 
 			<button type="submit" class="submit" disabled={envoi}>
 				{editing.mode === 'edit' ? 'Enregistrer' : 'Ajouter'}
@@ -405,15 +367,6 @@
 		color: var(--nc-text-muted);
 	}
 
-	.modal-form .row {
-		display: flex;
-		gap: 0.75rem;
-	}
-
-	.modal-form .row label {
-		flex: 1;
-	}
-
 	.modal-form input {
 		padding: 0.5rem 0.6rem;
 		border: 1px solid #cbd5e1;
@@ -421,13 +374,6 @@
 		font-size: 0.875rem;
 		font-weight: 400;
 		color: var(--nc-text);
-	}
-
-	.hint {
-		margin: 0.25rem 0 0;
-		font-size: 0.75rem;
-		font-weight: 400;
-		color: var(--nc-text-subtle);
 	}
 
 	.submit {
