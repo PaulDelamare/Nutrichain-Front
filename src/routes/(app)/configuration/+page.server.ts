@@ -15,6 +15,7 @@ import {
 	updateLocation,
 	setLocationActive,
 	createCustomer,
+	updateCustomer,
 	setCustomerActive,
 	createProduct,
 	setProductActive,
@@ -22,7 +23,7 @@ import {
 } from '$lib/Api/organization.server';
 import type {
 	ApiSupplierList,
-	ApiCustomerComplet,
+	ApiCustomerList,
 	ApiProductFull,
 	ApiEquipment,
 	ApiLocation
@@ -78,7 +79,7 @@ export const load: PageServerLoad = async ({ fetch, cookies, locals, url }) => {
 		pagination: { ...emptyPagination, limit }
 	};
 	let suppliers: ApiSupplierList = { data: [], pagination: { ...emptyPagination, limit } };
-	let customers: ApiCustomerComplet[] = [];
+	let customers: ApiCustomerList = { data: [], pagination: { ...emptyPagination, limit } };
 	let products: ApiProductFull[] = [];
 	let equipment: ApiEquipment[] = [];
 	let activeLocations: ApiLocation[] = [];
@@ -103,7 +104,12 @@ export const load: PageServerLoad = async ({ fetch, cookies, locals, url }) => {
 		if (res.ok) suppliers = res.data;
 		else error = res.message;
 	} else if (tab === 'customers') {
-		const res = await getCustomersForConfig(fetch, cookies);
+		const res = await getCustomersForConfig(fetch, cookies, {
+			page,
+			limit,
+			nom,
+			statut: statut === 'tous' ? undefined : statut
+		});
 		if (res.ok) customers = res.data;
 		else error = res.message;
 	} else if (tab === 'products') {
@@ -128,6 +134,7 @@ export const load: PageServerLoad = async ({ fetch, cookies, locals, url }) => {
 		locationFilters: { nom: nom ?? '', statut: statut ?? 'tous' },
 		// Filtres partagés (mêmes params `nom`/`statut`) : un seul onglet est actif à la fois.
 		supplierFilters: { nom: nom ?? '', statut: statut ?? 'tous' },
+		customerFilters: { nom: nom ?? '', statut: statut ?? 'tous' },
 		pageSize: limit,
 		pageSizeOptions: [...PAGE_SIZE_OPTIONS],
 		suppliers,
@@ -287,6 +294,8 @@ export const actions = {
 		const nom_enseigne = champ(form, 'nom_enseigne');
 		const adresse_livraison = champ(form, 'adresse_livraison');
 		const email = champ(form, 'email');
+		const contact_urgence = champ(form, 'contact_urgence');
+		const notes = champ(form, 'notes');
 
 		const refus = refusAdministration(locals.user);
 		if (refus) return fail(403, { customerError: refus, nom_enseigne });
@@ -300,10 +309,42 @@ export const actions = {
 		const res = await createCustomer(fetch, cookies, {
 			nom_enseigne,
 			adresse_livraison,
-			...(email ? { email } : {})
+			...(email ? { email } : {}),
+			...(contact_urgence ? { contact_urgence } : {}),
+			...(notes ? { notes } : {})
 		});
 		if (!res.ok) return fail(res.status, { customerError: res.message, nom_enseigne });
 		return { customerCreated: res.data };
+	},
+
+	updateCustomer: async ({ request, fetch, cookies, locals }) => {
+		const form = await request.formData();
+		const id = champ(form, 'id');
+		const nom_enseigne = champ(form, 'nom_enseigne');
+		const adresse_livraison = champ(form, 'adresse_livraison');
+		const email = champ(form, 'email');
+		const contact_urgence = champ(form, 'contact_urgence');
+		const notes = champ(form, 'notes');
+
+		const refus = refusAdministration(locals.user);
+		if (refus) return fail(403, { customerError: refus, nom_enseigne });
+		if (!id || nom_enseigne.length < 2 || adresse_livraison.length < 2) {
+			return fail(400, {
+				customerError: 'Identifiant, enseigne et adresse de livraison requis.',
+				nom_enseigne
+			});
+		}
+
+		// Champs facultatifs vides ⇒ on les EFFACE (null), comme la modale le laisse entendre.
+		const res = await updateCustomer(fetch, cookies, id, {
+			nom_enseigne,
+			adresse_livraison,
+			email: email || null,
+			contact_urgence: contact_urgence || null,
+			notes: notes || null
+		});
+		if (!res.ok) return fail(res.status, { customerError: res.message, nom_enseigne });
+		return { customerUpdated: res.data };
 	},
 
 	toggleCustomer: async ({ request, fetch, cookies, locals }) => {

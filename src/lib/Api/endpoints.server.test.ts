@@ -452,20 +452,19 @@ describe('construction des paramètres de requête', () => {
 
 	/**
 	 * #82 — Fournisseurs et clients ont DEUX lectures, parce que l'API en sert deux charges utiles
-	 * différentes selon le rôle. Les confondre derrière un booléen laissait croire au front qu'il
-	 * recevait toujours `is_active` : il refiltrait dessus, et vidait le sélecteur pour les rôles
-	 * terrain.
+	 * différentes selon le rôle : le sélecteur terrain (`getSuppliers`/`getCustomers`, identité
+	 * métier seule) et l'écran Configuration ci-dessous. Les confondre laissait croire au front
+	 * qu'il recevait toujours `is_active`, il refiltrait dessus et vidait le sélecteur terrain.
+	 *
+	 * Chemin PAGINÉ de l'onglet Configuration : l'API renvoie l'enveloppe { data, pagination } et,
+	 * pour l'administration (statut absent), les archivés compris.
 	 */
-	it('l’administration demande explicitement les archivés, les écrans terrain jamais', async () => {
-		await org.getCustomersForConfig(fetchEspion, cookies);
-		expect(chemin()).toBe('/api/organization/customers?includeArchived=true');
-	});
-
-	// Chemin PAGINÉ de l'onglet Configuration : l'API renvoie l'enveloppe { data, pagination } et,
-	// pour l'administration (statut absent), les archivés compris.
-	it('getSuppliersForConfig pagine dès la première page', async () => {
+	it('getSuppliersForConfig / getCustomersForConfig paginent dès la première page', async () => {
 		await org.getSuppliersForConfig(fetchEspion, cookies);
 		expect(chemin()).toBe('/api/organization/suppliers?page=1&limit=25');
+
+		await org.getCustomersForConfig(fetchEspion, cookies);
+		expect(chemin()).toBe('/api/organization/customers?page=1&limit=25');
 	});
 
 	it('getReceipts pagine dès la première page', async () => {

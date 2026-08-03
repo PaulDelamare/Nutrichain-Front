@@ -491,17 +491,68 @@ export const setLocationActive = (
 export const getCustomers = (fetch: typeof globalThis.fetch, cookies: Cookies) =>
 	orgApi(fetch, cookies).get<ApiCustomer[]>('/api/organization/customers');
 
-/** Écran d'administration : les archivés aussi, et la fiche complète. Voir `getSuppliersForConfig`. */
-export const getCustomersForConfig = (fetch: typeof globalThis.fetch, cookies: Cookies) =>
-	orgApi(fetch, cookies).get<ApiCustomerComplet[]>(
-		'/api/organization/customers?includeArchived=true'
-	);
+export type ApiCustomerList = {
+	data: ApiCustomerComplet[];
+	pagination: { page: number; limit: number; total: number; totalPages: number };
+};
+
+export type CustomerQuery = {
+	page?: number;
+	limit?: number;
+	// Filtres de colonnes appliqués côté API (voir GET /organization/customers, chemin paginé).
+	nom?: string;
+	statut?: string;
+};
+
+/**
+ * Écran d'administration : chemin PAGINÉ. `page` présent → l'API renvoie l'enveloppe { data,
+ * pagination } et, pour l'administration (statut absent), les archivés compris, avec la fiche
+ * complète. Voir `getSuppliersForConfig`. `getCustomers` (sans page) reste le tableau simple.
+ */
+export const getCustomersForConfig = (
+	fetch: typeof globalThis.fetch,
+	cookies: Cookies,
+	opts: CustomerQuery = {}
+) => {
+	const params = new URLSearchParams();
+	params.set('page', String(opts.page ?? 1));
+	params.set('limit', String(opts.limit ?? 25));
+	const nom = opts.nom?.trim();
+	if (nom) params.set('nom', nom);
+	if (opts.statut) params.set('statut', opts.statut);
+	return orgApi(fetch, cookies).get<ApiCustomerList>(`/api/organization/customers?${params}`);
+};
 
 export const createCustomer = (
 	fetch: typeof globalThis.fetch,
 	cookies: Cookies,
-	body: { nom_enseigne: string; adresse_livraison: string; email?: string }
+	body: {
+		nom_enseigne: string;
+		adresse_livraison: string;
+		email?: string;
+		contact_urgence?: string;
+		notes?: string;
+	}
 ) => orgApi(fetch, cookies).post<ApiCustomer>('/api/organization/customers', body);
+
+export const updateCustomer = (
+	fetch: typeof globalThis.fetch,
+	cookies: Cookies,
+	id: string,
+	// Les champs facultatifs (email, contact, notes) acceptent `null` : vidés dans la modale, ils
+	// s'effacent en base (l'API les déclare `nullable`).
+	body: Partial<{
+		nom_enseigne: string;
+		adresse_livraison: string;
+		email: string | null;
+		contact_urgence: string | null;
+		notes: string | null;
+	}>
+) =>
+	orgApi(fetch, cookies).patch<ApiCustomer>(
+		`/api/organization/customers/${encodeURIComponent(id)}`,
+		body
+	);
 
 export const setCustomerActive = (
 	fetch: typeof globalThis.fetch,

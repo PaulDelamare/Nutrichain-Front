@@ -8,6 +8,7 @@
 	import ImportCsv from '$lib/components/config/ImportCsv.svelte';
 	import LocationsListing from '$lib/components/config/LocationsListing.svelte';
 	import SupplierListing from '$lib/components/config/SupplierListing.svelte';
+	import CustomerListing from '$lib/components/config/CustomerListing.svelte';
 	import {
 		COLD_EQUIPMENT_TYPES,
 		EQUIPMENT_TYPE_OPTIONS,
@@ -104,39 +105,15 @@
 		</Tabs.Content>
 
 		<Tabs.Content value="customers">
-			<section>
-				<h2>Clients</h2>
-				<p class="hint">L'aval de la traçabilité. Requis pour enregistrer une expédition.</p>
-				<form method="POST" action="?/createCustomer" use:enhance={pendant}>
-					<input
-						name="nom_enseigne"
-						placeholder="Enseigne (ex. Super U Rennes)"
-						required
-						minlength="2"
-						value={form?.nom_enseigne ?? ''}
-					/>
-					<input
-						name="adresse_livraison"
-						placeholder="Adresse de livraison"
-						required
-						minlength="2"
-					/>
-					<input name="email" type="email" placeholder="E-mail (optionnel)" />
-					<button type="submit" disabled={envoi}>Ajouter</button>
-				</form>
-				{#if form?.customerError}<p class="error" role="alert">{form.customerError}</p>{/if}
-				<ConfigList
-					items={data.customers.map((c) => ({
-						id: c.id,
-						title: c.nom_enseigne,
-						subtitle: c.adresse_livraison,
-						is_active: c.is_active
-					}))}
-					toggleAction="?/toggleCustomer"
-					emptyLabel="Aucun client. Ajoutez-en un pour expédier."
-					{envoi}
-					{pendant}
-				/>
+			<CustomerListing
+				customers={data.customers}
+				filters={data.customerFilters}
+				pageSize={data.pageSize}
+				pageSizeOptions={data.pageSizeOptions}
+				{form}
+				role={data.user.role}
+			/>
+			<div class="import-block">
 				<ImportCsv
 					action="?/importCustomers"
 					columns="nom_enseigne, adresse_livraison, email, contact_urgence"
@@ -145,7 +122,7 @@
 					{envoi}
 					{pendant}
 				/>
-			</section>
+			</div>
 		</Tabs.Content>
 
 		<Tabs.Content value="products">
@@ -407,6 +384,13 @@
 		margin: 0.5rem 0 0;
 		font-size: 0.8125rem;
 		color: #991b1b;
+	}
+
+	/* Import CSV rendu sous le tableau/filtres de l'onglet (clients, produits). */
+	.import-block {
+		margin-top: 1.5rem;
+		padding-top: 1.25rem;
+		border-top: 1px solid #e2e8f0;
 	}
 
 	.equip-list {
