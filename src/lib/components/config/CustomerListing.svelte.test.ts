@@ -76,8 +76,8 @@ describe('CustomerListing', () => {
 		renderListing([cust({ nom_enseigne: 'Carrefour City', email: 'city@carrefour.fr' })]);
 		await page.getByRole('button', { name: 'Éditer' }).click();
 		await expect.element(page.getByRole('button', { name: 'Enregistrer' })).toBeInTheDocument();
-		await expect.element(page.getByRole('textbox', { name: 'E-mail (facultatif)' })).toHaveValue(
-			'city@carrefour.fr'
-		);
+		await expect
+			.element(page.getByRole('textbox', { name: 'E-mail (facultatif)' }))
+			.toHaveValue('city@carrefour.fr');
 	});
 });

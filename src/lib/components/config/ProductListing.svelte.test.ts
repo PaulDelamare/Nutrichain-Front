@@ -56,7 +56,9 @@ describe('ProductListing', () => {
 	});
 
 	it('affiche le nom, le GTIN et la catégorie', async () => {
-		renderListing([prod({ nom: 'Beurre doux', code_gtin: '3011111111111', categorie: 'Crémerie' })]);
+		renderListing([
+			prod({ nom: 'Beurre doux', code_gtin: '3011111111111', categorie: 'Crémerie' })
+		]);
 		await expect.element(page.getByText('Beurre doux')).toBeInTheDocument();
 		await expect.element(page.getByRole('cell', { name: '3011111111111' })).toBeInTheDocument();
 		await expect.element(page.getByRole('cell', { name: 'Crémerie' })).toBeInTheDocument();

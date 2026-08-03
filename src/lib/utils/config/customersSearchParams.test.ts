@@ -22,7 +22,9 @@ describe('customersSearchParams', () => {
 
 	it('pose le statut sauf la sentinelle « tous »', () => {
 		expect(
-			customersSearchParams(params(), { ...emptyCustomerFilters(), statut: 'archive' }).get('statut')
+			customersSearchParams(params(), { ...emptyCustomerFilters(), statut: 'archive' }).get(
+				'statut'
+			)
 		).toBe('archive');
 		expect(
 			customersSearchParams(params(), { ...emptyCustomerFilters(), statut: 'tous' }).has('statut')

@@ -34,9 +34,7 @@ function list(rows: ApiEquipment[]): ApiEquipmentList {
 	};
 }
 
-const LOCS: ApiLocation[] = [
-	{ id: 'l1', nom: 'Quai de réception', type: null, is_active: true }
-];
+const LOCS: ApiLocation[] = [{ id: 'l1', nom: 'Quai de réception', type: null, is_active: true }];
 
 function renderListing(
 	rows: ApiEquipment[],
@@ -67,7 +65,9 @@ describe('EquipmentListing', () => {
 	it('traduit le type, affiche l’emplacement et un lien vers l’étiquette QR', async () => {
 		renderListing([eq({ nom: 'Cellule 12', type: 'CONGELATEUR' })]);
 		await expect.element(page.getByText('Cellule 12')).toBeInTheDocument();
-		await expect.element(page.getByRole('cell', { name: 'Congélateur', exact: true })).toBeInTheDocument();
+		await expect
+			.element(page.getByRole('cell', { name: 'Congélateur', exact: true }))
+			.toBeInTheDocument();
 		await expect.element(page.getByRole('link', { name: 'Étiquette QR' })).toBeInTheDocument();
 	});
 
@@ -79,7 +79,9 @@ describe('EquipmentListing', () => {
 	it('invite à créer un emplacement quand aucun emplacement actif n’existe', async () => {
 		renderListing([], 'admin', []);
 		await expect
-			.element(page.getByText("Créez d'abord un emplacement actif pour pouvoir ajouter du matériel."))
+			.element(
+				page.getByText("Créez d'abord un emplacement actif pour pouvoir ajouter du matériel.")
+			)
 			.toBeInTheDocument();
 		expect(page.getByRole('button', { name: 'Ajouter un matériel' }).elements()).toHaveLength(0);
 	});

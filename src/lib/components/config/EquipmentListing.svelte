@@ -213,7 +213,13 @@
 
 		<label>
 			<span>Nom</span>
-			<input name="nom" required minlength="3" maxlength="100" placeholder="Ex. : Frigo réception A" />
+			<input
+				name="nom"
+				required
+				minlength="3"
+				maxlength="100"
+				placeholder="Ex. : Frigo réception A"
+			/>
 		</label>
 
 		<label>

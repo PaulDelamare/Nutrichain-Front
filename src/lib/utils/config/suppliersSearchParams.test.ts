@@ -22,7 +22,9 @@ describe('suppliersSearchParams', () => {
 
 	it('pose le statut sauf la sentinelle « tous »', () => {
 		expect(
-			suppliersSearchParams(params(), { ...emptySupplierFilters(), statut: 'archive' }).get('statut')
+			suppliersSearchParams(params(), { ...emptySupplierFilters(), statut: 'archive' }).get(
+				'statut'
+			)
 		).toBe('archive');
 		expect(
 			suppliersSearchParams(params(), { ...emptySupplierFilters(), statut: 'tous' }).has('statut')

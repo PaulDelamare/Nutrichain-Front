@@ -233,7 +233,10 @@
 					<input name="code_gtin" required inputmode="numeric" placeholder="Ex. : 3456789012345" />
 				</label>
 			{:else}
-				<p class="ro">GTIN {editing.product.code_gtin} · unité {editing.product.unite_reference} — non modifiables (identité GS1).</p>
+				<p class="ro">
+					GTIN {editing.product.code_gtin} · unité {editing.product.unite_reference} — non modifiables
+					(identité GS1).
+				</p>
 			{/if}
 
 			<label>
@@ -263,7 +266,9 @@
 						min="0"
 						max="3650"
 						required
-						value={editing.mode === 'edit' ? numValue(editing.product.duree_conservation_defaut) : ''}
+						value={editing.mode === 'edit'
+							? numValue(editing.product.duree_conservation_defaut)
+							: ''}
 					/>
 				</label>
 				<label>
