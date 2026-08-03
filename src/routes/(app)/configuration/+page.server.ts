@@ -73,6 +73,8 @@ export const load: PageServerLoad = async ({ fetch, cookies, locals, url }) => {
 	// Filtres de l'onglet actif (non préfixés : un seul onglet est actif dans l'URL à la fois).
 	const nom = p.get('nom')?.trim() || undefined;
 	const statut = p.get('statut')?.trim() || undefined;
+	// `gtin` ne concerne que l'onglet Produits (recherche sur le code GS1).
+	const gtin = p.get('gtin')?.trim() || undefined;
 
 	// Défauts : les onglets inactifs sont rendus vides (masqués par le composant Tabs).
 	let locations: import('$lib/Api/organization.server').ApiLocationList = {
@@ -118,6 +120,7 @@ export const load: PageServerLoad = async ({ fetch, cookies, locals, url }) => {
 			page,
 			limit,
 			nom,
+			gtin,
 			statut: statut === 'tous' ? undefined : statut
 		});
 		if (res.ok) products = res.data;
@@ -146,7 +149,7 @@ export const load: PageServerLoad = async ({ fetch, cookies, locals, url }) => {
 		// Filtres partagés (mêmes params `nom`/`statut`) : un seul onglet est actif à la fois.
 		supplierFilters: { nom: nom ?? '', statut: statut ?? 'tous' },
 		customerFilters: { nom: nom ?? '', statut: statut ?? 'tous' },
-		productFilters: { nom: nom ?? '', statut: statut ?? 'tous' },
+		productFilters: { nom: nom ?? '', gtin: gtin ?? '', statut: statut ?? 'tous' },
 		// Le matériel filtre par type (label exact), pas par statut : il ne s'archive pas.
 		equipmentFilters: { nom: nom ?? '', type: p.get('type')?.trim() || 'tous' },
 		pageSize: limit,

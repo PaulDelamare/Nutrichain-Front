@@ -38,7 +38,7 @@ function renderListing(rows: ApiProductComplet[], role: KnownRole = 'admin') {
 	render(ProductListing, {
 		props: {
 			products: list(rows),
-			filters: { nom: '', statut: 'tous' },
+			filters: { nom: '', gtin: '', statut: 'tous' },
 			pageSize: 25,
 			pageSizeOptions: [10, 25, 50, 100],
 			role,
@@ -62,6 +62,11 @@ describe('ProductListing', () => {
 		await expect.element(page.getByText('Beurre doux')).toBeInTheDocument();
 		await expect.element(page.getByRole('cell', { name: '3011111111111' })).toBeInTheDocument();
 		await expect.element(page.getByRole('cell', { name: 'Crémerie' })).toBeInTheDocument();
+	});
+
+	it('offre un filtre GTIN dans la barre de filtres', async () => {
+		renderListing([prod()]);
+		await expect.element(page.getByRole('textbox', { name: 'GTIN' })).toBeInTheDocument();
 	});
 
 	it('n’offre ni ajout ni édition à un rôle en lecture seule', async () => {
