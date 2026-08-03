@@ -137,6 +137,16 @@
 		/>
 	</label>
 	<label class="field">
+		<span>GTIN</span>
+		<input
+			type="text"
+			inputmode="numeric"
+			placeholder="Code GTIN"
+			bind:value={filters.gtin}
+			oninput={() => applyDebounced()}
+		/>
+	</label>
+	<label class="field">
 		<span>Statut</span>
 		<select bind:value={filters.statut} onchange={applyImmediately}>
 			<option value="tous">Tous les statuts</option>

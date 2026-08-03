@@ -27,6 +27,7 @@ export function productsSearchParams(
 	const params = new URLSearchParams(current);
 	params.set('tab', 'products');
 	setText(params, 'nom', filters.nom);
+	setText(params, 'gtin', filters.gtin);
 	setSelect(params, 'statut', filters.statut);
 	params.delete('page');
 	return params;

@@ -18,6 +18,15 @@ describe('productsSearchParams', () => {
 		).toBe('yaourt');
 	});
 
+	it('ignore un gtin de moins de 3 caractères, le pose dès 3 (trimé)', () => {
+		expect(
+			productsSearchParams(params(), { ...emptyProductFilters(), gtin: '34' }).has('gtin')
+		).toBe(false);
+		expect(
+			productsSearchParams(params(), { ...emptyProductFilters(), gtin: '  3456789 ' }).get('gtin')
+		).toBe('3456789');
+	});
+
 	it('pose le statut sauf la sentinelle « tous »', () => {
 		expect(
 			productsSearchParams(params(), { ...emptyProductFilters(), statut: 'archive' }).get('statut')

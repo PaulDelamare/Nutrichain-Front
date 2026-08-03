@@ -626,6 +626,7 @@ export type ProductQuery = {
 	limit?: number;
 	// Filtres de colonnes appliqués côté API (voir GET /traceability/products, chemin paginé).
 	nom?: string;
+	gtin?: string;
 	statut?: string;
 };
 
@@ -655,6 +656,8 @@ export const getProductsPaginated = (
 	params.set('limit', String(opts.limit ?? 25));
 	const nom = opts.nom?.trim();
 	if (nom) params.set('nom', nom);
+	const gtin = opts.gtin?.trim();
+	if (gtin) params.set('gtin', gtin);
 	if (opts.statut) params.set('statut', opts.statut);
 	return orgApi(fetch, cookies).get<ApiProductList>(`/api/traceability/products?${params}`);
 };
