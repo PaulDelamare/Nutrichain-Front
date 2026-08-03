@@ -447,6 +447,13 @@ describe('construction des paramètres de requête', () => {
 		expect(chemin()).toBe('/api/traceability/products?page=1&limit=25');
 	});
 
+	// Chemin PAGINÉ de l'onglet Configuration (matériel). `getEquipment` (tableau complet) reste
+	// pour la chaîne du froid et les autres écrans du plan d'usine.
+	it('getEquipmentPaginated pagine dès la première page', async () => {
+		await org.getEquipmentPaginated(fetchEspion, cookies);
+		expect(chemin()).toBe('/api/organization/equipment?page=1&limit=25');
+	});
+
 	it('getLocationsForConfig pagine (chemin paginé de la page Configuration)', async () => {
 		await org.getLocationsForConfig(fetchEspion, cookies);
 		expect(chemin()).toBe('/api/organization/locations?page=1&limit=25');

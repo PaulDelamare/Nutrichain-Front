@@ -1,5 +1,4 @@
 <script lang="ts">
-	import { enhance } from '$app/forms';
 	import { goto } from '$app/navigation';
 	import { resolve } from '$app/paths';
 	import { Tabs } from '@skeletonlabs/skeleton-svelte';
@@ -9,19 +8,10 @@
 	import SupplierListing from '$lib/components/config/SupplierListing.svelte';
 	import CustomerListing from '$lib/components/config/CustomerListing.svelte';
 	import ProductListing from '$lib/components/config/ProductListing.svelte';
-	import {
-		COLD_EQUIPMENT_TYPES,
-		EQUIPMENT_TYPE_OPTIONS,
-		equipmentTypeLabel,
-		type EquipmentType
-	} from '$lib/config/equipment';
+	import EquipmentListing from '$lib/components/config/EquipmentListing.svelte';
 	import type { ActionData, PageData } from './$types';
 
 	let { data, form }: { data: PageData; form: ActionData } = $props();
-
-	// Emplacements actifs pour le sélecteur de la modale Matériel (chargés à part par le load quand
-	// l'onglet Matériel est actif). Les autres onglets sont vides ⇒ tableau vide masqué.
-	const activeLocations = $derived(data.activeLocations);
 
 	// Le résultat d'un import CSV est routé vers l'onglet (produits / clients) qui l'a déclenché.
 	const importReportFor = (kind: 'products' | 'customers') =>
@@ -31,9 +21,8 @@
 			? form.importError
 			: null) ?? null;
 
+	// `pendant` / `envoi` : état d'envoi partagé par les imports CSV (clients, produits).
 	let envoi = $state(false);
-	let typeMateriel = $state<EquipmentType>('FRIGO');
-	const seuilRequis = $derived(COLD_EQUIPMENT_TYPES.includes(typeMateriel));
 	const pendant = () => {
 		envoi = true;
 		return async ({ update }: { update: () => Promise<void> }) => {
@@ -147,75 +136,15 @@
 		</Tabs.Content>
 
 		<Tabs.Content value="equipment">
-			<section>
-				<h2>Matériel</h2>
-				<p class="hint">
-					Frigos, congélateurs, cuves… rattachés à un emplacement. Requis pour réceptionner et pour
-					la surveillance IoT. Imprimez l'étiquette QR après création.
-				</p>
-				{#if activeLocations.length === 0}
-					<p class="hint">Créez d'abord un emplacement actif pour pouvoir ajouter du matériel.</p>
-				{:else}
-					<form method="POST" action="?/createEquipment" use:enhance={pendant}>
-						<input
-							name="nom"
-							placeholder="Nom (ex. Frigo réception A)"
-							required
-							minlength="3"
-							value={form?.nom ?? ''}
-						/>
-						<select name="type" bind:value={typeMateriel} aria-label="Type de matériel">
-							{#each EQUIPMENT_TYPE_OPTIONS as opt (opt.value)}
-								<option value={opt.value}>{opt.label}</option>
-							{/each}
-						</select>
-						<select name="id_lieu" required aria-label="Emplacement">
-							{#each activeLocations as lieu (lieu.id)}
-								<option value={lieu.id}>{lieu.nom}</option>
-							{/each}
-						</select>
-						<input
-							name="temp_seuil_max"
-							type="number"
-							step="0.1"
-							placeholder={seuilRequis ? 'Seuil max °C (requis)' : 'Seuil max °C (optionnel)'}
-							required={seuilRequis}
-						/>
-						<input name="sensor_id" placeholder="ID capteur IoT (optionnel)" />
-						<button type="submit" disabled={envoi}>Ajouter</button>
-					</form>
-				{/if}
-				{#if form?.equipmentError}<p class="error" role="alert">{form.equipmentError}</p>{/if}
-				<ul class="equip-list">
-					{#each data.equipment as item (item.id)}
-						<li>
-							<div>
-								<span class="title">{item.nom}</span>
-								<span class="sub">
-									{equipmentTypeLabel(item.type)}
-									{#if item.lieu?.nom}· {item.lieu.nom}{/if}
-									{#if item.temp_seuil_max != null}· seuil {item.temp_seuil_max} °C{/if}
-									· {item.statut}
-								</span>
-							</div>
-							<a
-								class="label-link"
-								href={resolve('/(app)/configuration/equipment/[id]/label', {
-									id: encodeURIComponent(item.id)
-								})}
-								target="_blank"
-								rel="noopener"
-							>
-								Étiquette QR
-							</a>
-						</li>
-					{:else}
-						<li class="empty">
-							Aucun matériel. Ajoutez-en un pour réceptionner et suivre le froid.
-						</li>
-					{/each}
-				</ul>
-			</section>
+			<EquipmentListing
+				equipment={data.equipment}
+				filters={data.equipmentFilters}
+				activeLocations={data.activeLocations}
+				pageSize={data.pageSize}
+				pageSizeOptions={data.pageSizeOptions}
+				{form}
+				role={data.user.role}
+			/>
 		</Tabs.Content>
 	</Tabs>
 </div>
@@ -281,54 +210,6 @@
 		color: var(--nc-brand);
 	}
 
-	section {
-		padding: 1.25rem;
-		border: 1px solid #e2e8f0;
-		border-radius: 0.5rem;
-		background: #fff;
-	}
-
-	h2 {
-		margin: 0;
-		font-size: 1rem;
-		font-weight: 600;
-		color: var(--nc-text);
-	}
-
-	.hint {
-		margin: 0.25rem 0 1rem;
-		font-size: 0.8125rem;
-		color: var(--nc-text-muted);
-	}
-
-	form {
-		display: flex;
-		flex-wrap: wrap;
-		gap: 0.5rem;
-	}
-
-	input,
-	select {
-		flex: 1 1 8rem;
-		min-width: 0;
-		padding: 0.45rem 0.6rem;
-		border: 1px solid #cbd5e1;
-		border-radius: 0.375rem;
-		font-size: 0.875rem;
-		background: #fff;
-	}
-
-	button {
-		padding: 0.45rem 0.9rem;
-		border: none;
-		border-radius: 0.375rem;
-		background: var(--nc-brand-dark, #1b6b5c);
-		color: #fff;
-		font-size: 0.875rem;
-		font-weight: 500;
-		cursor: pointer;
-	}
-
 	.banner {
 		margin: 0 0 0.75rem;
 		padding: 0.5rem 0.75rem;
@@ -338,58 +219,10 @@
 		font-size: 0.8125rem;
 	}
 
-	.error {
-		margin: 0.5rem 0 0;
-		font-size: 0.8125rem;
-		color: #991b1b;
-	}
-
 	/* Import CSV rendu sous le tableau/filtres de l'onglet (clients, produits). */
 	.import-block {
 		margin-top: 1.5rem;
 		padding-top: 1.25rem;
 		border-top: 1px solid #e2e8f0;
-	}
-
-	.equip-list {
-		list-style: none;
-		margin: 0.75rem 0 0;
-		padding: 0;
-	}
-
-	.equip-list li {
-		display: flex;
-		align-items: center;
-		justify-content: space-between;
-		gap: 1rem;
-		padding: 0.6rem 0;
-		border-bottom: 1px solid #f1f5f9;
-	}
-
-	.equip-list li:last-child {
-		border-bottom: none;
-	}
-
-	.title {
-		font-weight: 500;
-		color: var(--nc-text);
-	}
-
-	.sub {
-		margin-left: 0.5rem;
-		font-size: 0.8125rem;
-		color: var(--nc-text-subtle);
-	}
-
-	.empty {
-		justify-content: flex-start;
-		color: var(--nc-text-subtle);
-		font-size: 0.875rem;
-	}
-
-	.label-link {
-		font-size: 0.8125rem;
-		color: var(--nc-text-muted);
-		white-space: nowrap;
 	}
 </style>

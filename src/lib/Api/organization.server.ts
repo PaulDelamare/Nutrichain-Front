@@ -259,8 +259,40 @@ export type ApiQuarantineBatch = {
 export const getQuarantineBatches = (fetch: typeof globalThis.fetch, cookies: Cookies) =>
 	orgApi(fetch, cookies).get<ApiQuarantineBatch[]>('/api/organization/quarantine-batches');
 
+// Tableau simple (chaîne du froid, plan d'usine, sélecteurs) : PAS de `page`, l'API renvoie tout.
 export const getEquipment = (fetch: typeof globalThis.fetch, cookies: Cookies) =>
 	orgApi(fetch, cookies).get<ApiEquipment[]>('/api/organization/equipment');
+
+export type ApiEquipmentList = {
+	data: ApiEquipment[];
+	pagination: { page: number; limit: number; total: number; totalPages: number };
+};
+
+export type EquipmentQuery = {
+	page?: number;
+	limit?: number;
+	// Filtres de colonnes appliqués côté API (voir GET /organization/equipment, chemin paginé).
+	nom?: string;
+	type?: string;
+};
+
+/**
+ * Chemin PAGINÉ de l'onglet Configuration : `page` présent → l'API renvoie l'enveloppe { data,
+ * pagination }. `getEquipment` ci-dessus reste le tableau complet pour la chaîne du froid.
+ */
+export const getEquipmentPaginated = (
+	fetch: typeof globalThis.fetch,
+	cookies: Cookies,
+	opts: EquipmentQuery = {}
+) => {
+	const params = new URLSearchParams();
+	params.set('page', String(opts.page ?? 1));
+	params.set('limit', String(opts.limit ?? 25));
+	const nom = opts.nom?.trim();
+	if (nom) params.set('nom', nom);
+	if (opts.type) params.set('type', opts.type);
+	return orgApi(fetch, cookies).get<ApiEquipmentList>(`/api/organization/equipment?${params}`);
+};
 
 export const createEquipment = (
 	fetch: typeof globalThis.fetch,

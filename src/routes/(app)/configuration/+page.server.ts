@@ -7,7 +7,7 @@ import {
 	getConfigCounts,
 	getCustomersForConfig,
 	getProductsPaginated,
-	getEquipment,
+	getEquipmentPaginated,
 	createSupplier,
 	updateSupplier,
 	setSupplierActive,
@@ -26,7 +26,7 @@ import type {
 	ApiSupplierList,
 	ApiCustomerList,
 	ApiProductList,
-	ApiEquipment,
+	ApiEquipmentList,
 	ApiLocation
 } from '$lib/Api/organization.server';
 import { importProductsCsv, importCustomersCsv } from '$lib/Api/connectors.server';
@@ -82,7 +82,7 @@ export const load: PageServerLoad = async ({ fetch, cookies, locals, url }) => {
 	let suppliers: ApiSupplierList = { data: [], pagination: { ...emptyPagination, limit } };
 	let customers: ApiCustomerList = { data: [], pagination: { ...emptyPagination, limit } };
 	let products: ApiProductList = { data: [], pagination: { ...emptyPagination, limit } };
-	let equipment: ApiEquipment[] = [];
+	let equipment: ApiEquipmentList = { data: [], pagination: { ...emptyPagination, limit } };
 	let activeLocations: ApiLocation[] = [];
 	let error: string | undefined = countsRes.ok ? undefined : countsRes.message;
 
@@ -124,7 +124,12 @@ export const load: PageServerLoad = async ({ fetch, cookies, locals, url }) => {
 		else error = res.message;
 	} else if (tab === 'equipment') {
 		const [eq, locs] = await Promise.all([
-			getEquipment(fetch, cookies),
+			getEquipmentPaginated(fetch, cookies, {
+				page,
+				limit,
+				nom,
+				type: p.get('type')?.trim() || undefined
+			}),
 			// Liste des emplacements actifs pour le sélecteur de la modale Matériel (non paginé).
 			getLocations(fetch, cookies, false)
 		]);
@@ -142,6 +147,8 @@ export const load: PageServerLoad = async ({ fetch, cookies, locals, url }) => {
 		supplierFilters: { nom: nom ?? '', statut: statut ?? 'tous' },
 		customerFilters: { nom: nom ?? '', statut: statut ?? 'tous' },
 		productFilters: { nom: nom ?? '', statut: statut ?? 'tous' },
+		// Le matériel filtre par type (label exact), pas par statut : il ne s'archive pas.
+		equipmentFilters: { nom: nom ?? '', type: p.get('type')?.trim() || 'tous' },
 		pageSize: limit,
 		pageSizeOptions: [...PAGE_SIZE_OPTIONS],
 		suppliers,
