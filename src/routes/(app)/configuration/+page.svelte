@@ -4,11 +4,11 @@
 	import { resolve } from '$app/paths';
 	import { Tabs } from '@skeletonlabs/skeleton-svelte';
 	import PageHead from '$lib/components/page/PageHead.svelte';
-	import ConfigList from '$lib/components/config/ConfigList.svelte';
 	import ImportCsv from '$lib/components/config/ImportCsv.svelte';
 	import LocationsListing from '$lib/components/config/LocationsListing.svelte';
 	import SupplierListing from '$lib/components/config/SupplierListing.svelte';
 	import CustomerListing from '$lib/components/config/CustomerListing.svelte';
+	import ProductListing from '$lib/components/config/ProductListing.svelte';
 	import {
 		COLD_EQUIPMENT_TYPES,
 		EQUIPMENT_TYPE_OPTIONS,
@@ -126,57 +126,15 @@
 		</Tabs.Content>
 
 		<Tabs.Content value="products">
-			<section>
-				<h2>Produits</h2>
-				<p class="hint">
-					Le catalogue. Requis pour réceptionner et pour produire (transformation).
-				</p>
-				<form method="POST" action="?/createProduct" use:enhance={pendant} class="produit">
-					<input
-						name="nom"
-						placeholder="Nom (ex. Yaourt nature 125g)"
-						required
-						minlength="2"
-						value={form?.nom ?? ''}
-					/>
-					<input
-						name="code_gtin"
-						placeholder="Code GTIN (8 à 14 chiffres)"
-						required
-						inputmode="numeric"
-					/>
-					<input name="categorie" placeholder="Catégorie (ex. Frais)" required minlength="2" />
-					<input name="unite_reference" placeholder="Unité (ex. KG)" required />
-					<input
-						name="duree_conservation_defaut"
-						type="number"
-						min="0"
-						placeholder="Conservation (jours)"
-						required
-					/>
-					<input
-						name="seuil_alerte_stock"
-						type="number"
-						min="0"
-						step="0.01"
-						placeholder="Seuil d'alerte stock"
-						required
-					/>
-					<button type="submit" disabled={envoi}>Ajouter</button>
-				</form>
-				{#if form?.productError}<p class="error" role="alert">{form.productError}</p>{/if}
-				<ConfigList
-					items={data.products.map((p) => ({
-						id: p.id,
-						title: p.nom,
-						subtitle: `${p.code_gtin} · ${p.categorie}`,
-						is_active: p.is_active
-					}))}
-					toggleAction="?/toggleProduct"
-					emptyLabel="Aucun produit. Ajoutez-en un pour réceptionner ou produire."
-					{envoi}
-					{pendant}
-				/>
+			<ProductListing
+				products={data.products}
+				filters={data.productFilters}
+				pageSize={data.pageSize}
+				pageSizeOptions={data.pageSizeOptions}
+				{form}
+				role={data.user.role}
+			/>
+			<div class="import-block">
 				<ImportCsv
 					action="?/importProducts"
 					columns="nom, code_gtin, categorie, duree_conservation_defaut, seuil_alerte_stock, unite_reference"
@@ -185,7 +143,7 @@
 					{envoi}
 					{pendant}
 				/>
-			</section>
+			</div>
 		</Tabs.Content>
 
 		<Tabs.Content value="equipment">

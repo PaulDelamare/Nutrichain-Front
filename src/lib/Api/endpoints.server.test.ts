@@ -440,6 +440,13 @@ describe('construction des paramètres de requête', () => {
 		expect(chemin()).toBe('/api/traceability/products?includeArchived=true');
 	});
 
+	// Chemin PAGINÉ de l'onglet Configuration (produits). Le sélecteur terrain garde
+	// `getProductsForConfig` (tableau simple ci-dessus) — deux consommateurs distincts.
+	it('getProductsPaginated pagine dès la première page', async () => {
+		await org.getProductsPaginated(fetchEspion, cookies);
+		expect(chemin()).toBe('/api/traceability/products?page=1&limit=25');
+	});
+
 	it('getLocationsForConfig pagine (chemin paginé de la page Configuration)', async () => {
 		await org.getLocationsForConfig(fetchEspion, cookies);
 		expect(chemin()).toBe('/api/organization/locations?page=1&limit=25');

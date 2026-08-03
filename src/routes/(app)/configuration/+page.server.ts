@@ -6,7 +6,7 @@ import {
 	getLocationsForConfig,
 	getConfigCounts,
 	getCustomersForConfig,
-	getProductsForConfig,
+	getProductsPaginated,
 	getEquipment,
 	createSupplier,
 	updateSupplier,
@@ -18,13 +18,14 @@ import {
 	updateCustomer,
 	setCustomerActive,
 	createProduct,
+	updateProduct,
 	setProductActive,
 	createEquipment
 } from '$lib/Api/organization.server';
 import type {
 	ApiSupplierList,
 	ApiCustomerList,
-	ApiProductFull,
+	ApiProductList,
 	ApiEquipment,
 	ApiLocation
 } from '$lib/Api/organization.server';
@@ -80,7 +81,7 @@ export const load: PageServerLoad = async ({ fetch, cookies, locals, url }) => {
 	};
 	let suppliers: ApiSupplierList = { data: [], pagination: { ...emptyPagination, limit } };
 	let customers: ApiCustomerList = { data: [], pagination: { ...emptyPagination, limit } };
-	let products: ApiProductFull[] = [];
+	let products: ApiProductList = { data: [], pagination: { ...emptyPagination, limit } };
 	let equipment: ApiEquipment[] = [];
 	let activeLocations: ApiLocation[] = [];
 	let error: string | undefined = countsRes.ok ? undefined : countsRes.message;
@@ -113,7 +114,12 @@ export const load: PageServerLoad = async ({ fetch, cookies, locals, url }) => {
 		if (res.ok) customers = res.data;
 		else error = res.message;
 	} else if (tab === 'products') {
-		const res = await getProductsForConfig(fetch, cookies, true);
+		const res = await getProductsPaginated(fetch, cookies, {
+			page,
+			limit,
+			nom,
+			statut: statut === 'tous' ? undefined : statut
+		});
 		if (res.ok) products = res.data;
 		else error = res.message;
 	} else if (tab === 'equipment') {
@@ -135,6 +141,7 @@ export const load: PageServerLoad = async ({ fetch, cookies, locals, url }) => {
 		// Filtres partagés (mêmes params `nom`/`statut`) : un seul onglet est actif à la fois.
 		supplierFilters: { nom: nom ?? '', statut: statut ?? 'tous' },
 		customerFilters: { nom: nom ?? '', statut: statut ?? 'tous' },
+		productFilters: { nom: nom ?? '', statut: statut ?? 'tous' },
 		pageSize: limit,
 		pageSizeOptions: [...PAGE_SIZE_OPTIONS],
 		suppliers,
@@ -396,6 +403,37 @@ export const actions = {
 		});
 		if (!res.ok) return fail(res.status, { productError: res.message, nom });
 		return { productCreated: res.data };
+	},
+
+	updateProduct: async ({ request, fetch, cookies, locals }) => {
+		const form = await request.formData();
+		const id = champ(form, 'id');
+		const nom = champ(form, 'nom');
+		const categorie = champ(form, 'categorie');
+		const duree_conservation_defaut = nombre(form, 'duree_conservation_defaut');
+		const seuil_alerte_stock = nombre(form, 'seuil_alerte_stock');
+
+		const refus = refusAdministration(locals.user);
+		if (refus) return fail(403, { productError: refus, nom });
+		// Le GTIN et l'unité ne sont PAS éditables (identité GS1) : la modale ne les propose pas.
+		if (
+			!id ||
+			nom.length < 2 ||
+			categorie.length < 2 ||
+			!Number.isFinite(duree_conservation_defaut) ||
+			!Number.isFinite(seuil_alerte_stock)
+		) {
+			return fail(400, { productError: 'Nom, catégorie, conservation et seuil requis.', nom });
+		}
+
+		const res = await updateProduct(fetch, cookies, id, {
+			nom,
+			categorie,
+			duree_conservation_defaut,
+			seuil_alerte_stock
+		});
+		if (!res.ok) return fail(res.status, { productError: res.message, nom });
+		return { productUpdated: res.data };
 	},
 
 	toggleProduct: async ({ request, fetch, cookies, locals }) => {

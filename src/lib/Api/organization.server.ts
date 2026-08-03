@@ -573,6 +573,32 @@ export type ApiProductFull = {
 	is_active: boolean;
 };
 
+/**
+ * Fiche produit complète servie par le chemin PAGINÉ (écran Configuration) : la durée de
+ * conservation, le seuil de stock et l'unité s'y ajoutent pour préremplir la modale d'édition. Le
+ * chemin non paginé (`getProductsForConfig`, sélecteurs) n'en a pas besoin et garde `ApiProductFull`.
+ */
+export type ApiProductComplet = ApiProductFull & {
+	duree_conservation_defaut: number;
+	seuil_alerte_stock: string | number;
+	unite_reference: string;
+};
+
+export type ApiProductList = {
+	data: ApiProductComplet[];
+	pagination: { page: number; limit: number; total: number; totalPages: number };
+};
+
+export type ProductQuery = {
+	page?: number;
+	limit?: number;
+	// Filtres de colonnes appliqués côté API (voir GET /traceability/products, chemin paginé).
+	nom?: string;
+	statut?: string;
+};
+
+// Tableau simple (sélecteurs de réception/transformation) : PAS de `page`, l'API renvoie le
+// tableau. `includeArchived` reste pour l'administration hors chemin paginé.
 export const getProductsForConfig = (
 	fetch: typeof globalThis.fetch,
 	cookies: Cookies,
@@ -581,6 +607,25 @@ export const getProductsForConfig = (
 	orgApi(fetch, cookies).get<ApiProductFull[]>(
 		`/api/traceability/products${includeArchived ? '?includeArchived=true' : ''}`
 	);
+
+/**
+ * Chemin PAGINÉ de l'onglet Configuration : `page` présent → l'API renvoie l'enveloppe { data,
+ * pagination } et, pour l'administration (statut absent), les archivés compris. `getProductsForConfig`
+ * ci-dessus reste le tableau simple des sélecteurs.
+ */
+export const getProductsPaginated = (
+	fetch: typeof globalThis.fetch,
+	cookies: Cookies,
+	opts: ProductQuery = {}
+) => {
+	const params = new URLSearchParams();
+	params.set('page', String(opts.page ?? 1));
+	params.set('limit', String(opts.limit ?? 25));
+	const nom = opts.nom?.trim();
+	if (nom) params.set('nom', nom);
+	if (opts.statut) params.set('statut', opts.statut);
+	return orgApi(fetch, cookies).get<ApiProductList>(`/api/traceability/products?${params}`);
+};
 
 export const createProduct = (
 	fetch: typeof globalThis.fetch,
@@ -594,6 +639,24 @@ export const createProduct = (
 		unite_reference: string;
 	}
 ) => orgApi(fetch, cookies).post<ApiProductFull>('/api/organization/products', body);
+
+// Le GTIN et l'unité de référence ne sont PAS éditables (identité GS1, cohérence des lots) : ils
+// sont absents du corps accepté par l'API.
+export const updateProduct = (
+	fetch: typeof globalThis.fetch,
+	cookies: Cookies,
+	id: string,
+	body: Partial<{
+		nom: string;
+		categorie: string;
+		duree_conservation_defaut: number;
+		seuil_alerte_stock: number;
+	}>
+) =>
+	orgApi(fetch, cookies).patch<ApiProductFull>(
+		`/api/organization/products/${encodeURIComponent(id)}`,
+		body
+	);
 
 export const setProductActive = (
 	fetch: typeof globalThis.fetch,
