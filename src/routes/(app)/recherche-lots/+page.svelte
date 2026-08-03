@@ -6,40 +6,13 @@
 	import LotTable from '$lib/components/lots/LotTable.svelte';
 	import PageHead from '$lib/components/page/PageHead.svelte';
 	import Pagination from '$lib/components/page/Pagination.svelte';
-	import { usePageSearch } from '$lib/context/pageSearch.svelte';
 	import { BATCH_STATUSES, batchStatusLabel } from '$lib/vocab/batchStatus';
 	import { pageHref } from '$lib/utils/pageSearch/pageHref';
-	import { schedulePageSearchNavigation } from '$lib/utils/pageSearch/syncToUrl';
 	import { lotsPageSizeParams, lotsSearchParams } from '$lib/utils/lots/lotsSearchParams';
 	import { emptyLotFilters } from '$lib/types/lot';
 	import type { PageData } from './$types';
 
 	let { data }: { data: PageData } = $props();
-
-	const pageSearch = usePageSearch();
-
-	$effect(() => {
-		pageSearch.configure('Rechercher lot, GTIN, produit, site…');
-		return () => pageSearch.deactivate();
-	});
-
-	$effect(() => {
-		const urlQ = $page.url.searchParams.get('q') ?? '';
-		if (pageSearch.query !== urlQ) pageSearch.query = urlQ;
-	});
-
-	$effect(() => {
-		const q = pageSearch.query;
-		return schedulePageSearchNavigation(
-			resolve('/recherche-lots'),
-			$page.url.searchParams,
-			'q',
-			q,
-			{
-				resetParams: ['page']
-			}
-		);
-	});
 
 	const hrefForPage = $derived((target: number) =>
 		pageHref(resolve('/recherche-lots'), $page.url.searchParams, target)

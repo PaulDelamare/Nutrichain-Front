@@ -23,7 +23,6 @@ function parseLimit(raw: string | null): number {
 
 export const load: PageServerLoad = async ({ fetch, cookies, url }) => {
 	const p = url.searchParams;
-	const search = p.get('q')?.trim() || undefined;
 	const page = parsePage(p.get('page'));
 	const limit = parseLimit(p.get('limit'));
 	// Les filtres de colonnes voyagent dans l'URL : la requête part filtrée à l'API (plus de tri sur
@@ -35,7 +34,7 @@ export const load: PageServerLoad = async ({ fetch, cookies, url }) => {
 	const gtin = p.get('gtin')?.trim() || undefined;
 
 	const [res, equipment, products, locations] = await Promise.all([
-		getBatches(fetch, cookies, { search, page, limit, statut, produit, site, lot, gtin }),
+		getBatches(fetch, cookies, { page, limit, statut, produit, site, lot, gtin }),
 		getEquipment(fetch, cookies),
 		getProducts(fetch, cookies),
 		getLocations(fetch, cookies)
@@ -65,7 +64,6 @@ export const load: PageServerLoad = async ({ fetch, cookies, url }) => {
 		return {
 			lots: [],
 			error: res.message,
-			searchQuery: search ?? '',
 			pagination: { ...emptyPagination, limit },
 			pageSize: limit,
 			pageSizeOptions: [...PAGE_SIZE_OPTIONS],
@@ -84,7 +82,6 @@ export const load: PageServerLoad = async ({ fetch, cookies, url }) => {
 
 	return {
 		lots: res.data.data.map((b) => batchToRow(b, tempByEquipment)),
-		searchQuery: search ?? '',
 		pagination: res.data.pagination,
 		pageSize: limit,
 		pageSizeOptions: [...PAGE_SIZE_OPTIONS],

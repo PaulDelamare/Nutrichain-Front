@@ -7,32 +7,16 @@
 	import QuarantineListing from '$lib/components/nc/QuarantineListing.svelte';
 	import Modal from '$lib/components/ui/Modal.svelte';
 	import PageHead from '$lib/components/page/PageHead.svelte';
-	import { usePageSearch } from '$lib/context/pageSearch.svelte';
-	import { filterRowsByText } from '$lib/utils/pageSearch/filterByText';
 	import type { PendingQcLot } from '$lib/types/quality';
 	import type { QuarantineLot } from '$lib/types/nc';
 	import type { ActionData, PageData } from './$types';
 
 	let { data, form }: { data: PageData; form: ActionData } = $props();
 
-	const pageSearch = usePageSearch();
-
-	$effect(() => {
-		pageSearch.configure('Rechercher NC, lot en attente, lot en quarantaine…');
-		return () => pageSearch.deactivate();
-	});
-
-	// La barre de recherche globale du header reste, en amont des filtres par colonne : elle alimente
-	// chaque listing (son UX est vouée à disparaître, cf. plan).
-	const openNc = $derived(
-		filterRowsByText(data.openNc, pageSearch.query, (r) => [r.id, r.type, r.lot, r.statut])
-	);
-	const quarantineLots = $derived(
-		filterRowsByText(data.quarantineLots, pageSearch.query, (l) => [l.numero, l.detail])
-	);
-	const pendingQc = $derived(
-		filterRowsByText(data.pendingQc, pageSearch.query, (l) => [l.lot, l.produit, l.quantite])
-	);
+	// Chaque listing porte désormais ses propres filtres : ces listes partent brutes de l'API.
+	const openNc = $derived(data.openNc);
+	const quarantineLots = $derived(data.quarantineLots);
+	const pendingQc = $derived(data.pendingQc);
 
 	function exportList() {
 		const header = 'Lot;Détail';
@@ -51,8 +35,8 @@
 
 	let activeTab = $state<TabId>('pending');
 
-	// Le compteur suit la liste filtree par la recherche globale : un onglet vide signale qu'il faut
-	// aller voir ailleurs, sans quitter la page.
+	// Le compteur reflete le volume de chaque liste : un onglet vide signale qu'il faut aller voir
+	// ailleurs, sans quitter la page.
 	const tabs = $derived([
 		{ id: 'pending' as TabId, label: 'Lots en attente de contrôle', count: pendingQc.length },
 		{ id: 'nc' as TabId, label: 'NC ouvertes', count: openNc.length },

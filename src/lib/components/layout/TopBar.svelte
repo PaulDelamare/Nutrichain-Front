@@ -1,8 +1,6 @@
 <script lang="ts">
 	import { resolve } from '$app/paths';
 	import { enhance } from '$app/forms';
-	import SearchField from './SearchField.svelte';
-	import { usePageSearch } from '$lib/context/pageSearch.svelte';
 
 	type Props = {
 		title: string;
@@ -12,8 +10,6 @@
 	};
 
 	let { title, coldAlerts, sidebarCollapsed = false, onMenuToggle }: Props = $props();
-
-	const pageSearch = usePageSearch();
 </script>
 
 <header class="topbar">
@@ -40,14 +36,6 @@
 	</div>
 
 	<h1 class="topbar-title">{title}</h1>
-
-	<div class="topbar-search">
-		<SearchField
-			bind:value={pageSearch.query}
-			placeholder={pageSearch.placeholder}
-			disabled={!pageSearch.active}
-		/>
-	</div>
 
 	<div class="topbar-actions">
 		{#if coldAlerts !== null && coldAlerts > 0}
@@ -167,19 +155,13 @@
 		flex-shrink: 0;
 	}
 
-	.topbar-search {
-		display: flex;
-		flex: 1;
-		align-items: center;
-		justify-content: center;
-		min-width: 0;
-	}
-
 	.topbar-actions {
 		display: flex;
 		flex: 0 0 auto;
 		align-items: center;
 		gap: 1rem;
+		/* Sans la barre de recherche (flex:1) qui poussait les actions, on les colle à droite. */
+		margin-left: auto;
 	}
 
 	/* Rouge : c'est une alerte importante (le bleu « froid » sous-estimait la gravité). */
@@ -253,12 +235,6 @@
 		.topbar-actions {
 			order: 2;
 			margin-left: auto;
-		}
-
-		.topbar-search {
-			order: 3;
-			flex: 1 1 100%;
-			justify-content: stretch;
 		}
 	}
 </style>
