@@ -457,11 +457,15 @@ describe('construction des paramètres de requête', () => {
 	 * terrain.
 	 */
 	it('l’administration demande explicitement les archivés, les écrans terrain jamais', async () => {
-		await org.getSuppliersForConfig(fetchEspion, cookies);
-		expect(chemin()).toBe('/api/organization/suppliers?includeArchived=true');
-
 		await org.getCustomersForConfig(fetchEspion, cookies);
 		expect(chemin()).toBe('/api/organization/customers?includeArchived=true');
+	});
+
+	// Chemin PAGINÉ de l'onglet Configuration : l'API renvoie l'enveloppe { data, pagination } et,
+	// pour l'administration (statut absent), les archivés compris.
+	it('getSuppliersForConfig pagine dès la première page', async () => {
+		await org.getSuppliersForConfig(fetchEspion, cookies);
+		expect(chemin()).toBe('/api/organization/suppliers?page=1&limit=25');
 	});
 
 	it('getReceipts pagine dès la première page', async () => {

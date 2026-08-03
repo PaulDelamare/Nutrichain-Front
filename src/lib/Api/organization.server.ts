@@ -322,15 +322,38 @@ export const getMovements = (
 export const getSuppliers = (fetch: typeof globalThis.fetch, cookies: Cookies) =>
 	orgApi(fetch, cookies).get<ApiSupplier[]>('/api/organization/suppliers');
 
+export type ApiSupplierList = {
+	data: ApiSupplierComplet[];
+	pagination: { page: number; limit: number; total: number; totalPages: number };
+};
+
+export type SupplierQuery = {
+	page?: number;
+	limit?: number;
+	// Filtres de colonnes appliqués côté API (voir GET /organization/suppliers, chemin paginé).
+	nom?: string;
+	statut?: string;
+};
+
 /**
- * Écran d'administration : les archivés AUSSI, pour pouvoir les réactiver — et la fiche complète.
- * N'a de sens qu'appelé derrière `exigerAdministrateur` : c'est le rôle, côté API, qui décide de la
- * projection. Un rôle terrain recevrait ici une charge utile plus pauvre que le type ne l'annonce.
+ * Écran d'administration : chemin PAGINÉ. `page` présent → l'API renvoie l'enveloppe { data,
+ * pagination } et, pour l'administration, les archivés aussi (filtre `statut` absent = tous) avec la
+ * fiche complète. N'a de sens qu'appelé derrière `exigerAdministrateur` : c'est le rôle, côté API,
+ * qui décide de la projection. `getSuppliers` (sans page) reste le tableau simple des sélecteurs.
  */
-export const getSuppliersForConfig = (fetch: typeof globalThis.fetch, cookies: Cookies) =>
-	orgApi(fetch, cookies).get<ApiSupplierComplet[]>(
-		'/api/organization/suppliers?includeArchived=true'
-	);
+export const getSuppliersForConfig = (
+	fetch: typeof globalThis.fetch,
+	cookies: Cookies,
+	opts: SupplierQuery = {}
+) => {
+	const params = new URLSearchParams();
+	params.set('page', String(opts.page ?? 1));
+	params.set('limit', String(opts.limit ?? 25));
+	const nom = opts.nom?.trim();
+	if (nom) params.set('nom', nom);
+	if (opts.statut) params.set('statut', opts.statut);
+	return orgApi(fetch, cookies).get<ApiSupplierList>(`/api/organization/suppliers?${params}`);
+};
 
 export const createSupplier = (
 	fetch: typeof globalThis.fetch,

@@ -7,6 +7,7 @@
 	import ConfigList from '$lib/components/config/ConfigList.svelte';
 	import ImportCsv from '$lib/components/config/ImportCsv.svelte';
 	import LocationsListing from '$lib/components/config/LocationsListing.svelte';
+	import SupplierListing from '$lib/components/config/SupplierListing.svelte';
 	import {
 		COLD_EQUIPMENT_TYPES,
 		EQUIPMENT_TYPE_OPTIONS,
@@ -92,54 +93,14 @@
 		</Tabs.Content>
 
 		<Tabs.Content value="suppliers">
-			<section>
-				<h2>Fournisseurs</h2>
-				<p class="hint">L'amont de la traçabilité. Requis pour enregistrer une réception.</p>
-				<form method="POST" action="?/createSupplier" use:enhance={pendant}>
-					<input
-						name="nom_ferme"
-						placeholder="Nom (ex. Ferme des Aubépines)"
-						required
-						minlength="2"
-						value={form?.nom_ferme ?? ''}
-					/>
-					<input name="adresse_siege" placeholder="Adresse du siège" required minlength="2" />
-					<input name="type_produit" placeholder="Type de produit (optionnel)" />
-					<button type="submit" disabled={envoi}>Ajouter</button>
-				</form>
-				{#if form?.supplierError}<p class="error" role="alert">{form.supplierError}</p>{/if}
-				{#if form?.supplierUpdated}
-					<p class="ok" role="status">Fournisseur mis à jour.</p>
-				{/if}
-				<ConfigList
-					items={data.suppliers.map((s) => ({
-						id: s.id,
-						title: s.nom_ferme,
-						subtitle: s.adresse_siege,
-						is_active: s.is_active
-					}))}
-					toggleAction="?/toggleSupplier"
-					emptyLabel="Aucun fournisseur. Ajoutez-en un pour réceptionner."
-					{envoi}
-					{pendant}
-				/>
-				{#if data.suppliers.some((s) => s.is_active)}
-					<form method="POST" action="?/updateSupplier" use:enhance={pendant} class="edit-supplier">
-						<p class="hint">Modifier un fournisseur actif</p>
-						<select name="id" required>
-							<option value="">Choisir…</option>
-							{#each data.suppliers.filter((s) => s.is_active) as s (s.id)}
-								<option value={s.id}>{s.nom_ferme}</option>
-							{/each}
-						</select>
-						<input name="nom_ferme" placeholder="Nom" required minlength="2" />
-						<input name="adresse_siege" placeholder="Adresse du siège" required minlength="2" />
-						<input name="type_produit" placeholder="Type de produit (optionnel)" />
-						<input name="contact_qualite" placeholder="Contact qualité (optionnel)" />
-						<button type="submit" disabled={envoi}>Enregistrer</button>
-					</form>
-				{/if}
-			</section>
+			<SupplierListing
+				suppliers={data.suppliers}
+				filters={data.supplierFilters}
+				pageSize={data.pageSize}
+				pageSizeOptions={data.pageSizeOptions}
+				{form}
+				role={data.user.role}
+			/>
 		</Tabs.Content>
 
 		<Tabs.Content value="customers">
@@ -446,27 +407,6 @@
 		margin: 0.5rem 0 0;
 		font-size: 0.8125rem;
 		color: #991b1b;
-	}
-
-	.ok {
-		margin: 0.5rem 0 0;
-		font-size: 0.8125rem;
-		color: #166534;
-	}
-
-	.edit-supplier {
-		margin-top: 1rem;
-		padding-top: 1rem;
-		border-top: 1px solid #f1f5f9;
-		display: grid;
-		grid-template-columns: repeat(auto-fill, minmax(10rem, 1fr));
-		gap: 0.5rem;
-		align-items: end;
-	}
-
-	.edit-supplier .hint {
-		grid-column: 1 / -1;
-		margin: 0;
 	}
 
 	.equip-list {

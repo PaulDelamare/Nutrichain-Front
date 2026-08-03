@@ -21,7 +21,7 @@ import {
 	createEquipment
 } from '$lib/Api/organization.server';
 import type {
-	ApiSupplierComplet,
+	ApiSupplierList,
 	ApiCustomerComplet,
 	ApiProductFull,
 	ApiEquipment,
@@ -77,7 +77,7 @@ export const load: PageServerLoad = async ({ fetch, cookies, locals, url }) => {
 		data: [],
 		pagination: { ...emptyPagination, limit }
 	};
-	let suppliers: ApiSupplierComplet[] = [];
+	let suppliers: ApiSupplierList = { data: [], pagination: { ...emptyPagination, limit } };
 	let customers: ApiCustomerComplet[] = [];
 	let products: ApiProductFull[] = [];
 	let equipment: ApiEquipment[] = [];
@@ -94,7 +94,12 @@ export const load: PageServerLoad = async ({ fetch, cookies, locals, url }) => {
 		if (res.ok) locations = res.data;
 		else error = res.message;
 	} else if (tab === 'suppliers') {
-		const res = await getSuppliersForConfig(fetch, cookies);
+		const res = await getSuppliersForConfig(fetch, cookies, {
+			page,
+			limit,
+			nom,
+			statut: statut === 'tous' ? undefined : statut
+		});
 		if (res.ok) suppliers = res.data;
 		else error = res.message;
 	} else if (tab === 'customers') {
@@ -121,6 +126,8 @@ export const load: PageServerLoad = async ({ fetch, cookies, locals, url }) => {
 		counts,
 		locations,
 		locationFilters: { nom: nom ?? '', statut: statut ?? 'tous' },
+		// Filtres partagés (mêmes params `nom`/`statut`) : un seul onglet est actif à la fois.
+		supplierFilters: { nom: nom ?? '', statut: statut ?? 'tous' },
 		pageSize: limit,
 		pageSizeOptions: [...PAGE_SIZE_OPTIONS],
 		suppliers,
@@ -141,6 +148,7 @@ export const actions = {
 		const nom_ferme = champ(form, 'nom_ferme');
 		const adresse_siege = champ(form, 'adresse_siege');
 		const type_produit = champ(form, 'type_produit');
+		const contact_qualite = champ(form, 'contact_qualite');
 
 		const refus = refusAdministration(locals.user);
 		if (refus) return fail(403, { supplierError: refus, nom_ferme });
@@ -151,7 +159,8 @@ export const actions = {
 		const res = await createSupplier(fetch, cookies, {
 			nom_ferme,
 			adresse_siege,
-			...(type_produit ? { type_produit } : {})
+			...(type_produit ? { type_produit } : {}),
+			...(contact_qualite ? { contact_qualite } : {})
 		});
 		if (!res.ok) return fail(res.status, { supplierError: res.message, nom_ferme });
 		return { supplierCreated: res.data };
