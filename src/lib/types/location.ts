@@ -1,14 +1,11 @@
-// Filtres du listing des emplacements (Configuration), dans l'ordre du tableau. `tous` est la
-// sentinelle « pas de filtre » des selects.
-
+// Filtres de colonnes du listing des emplacements (Configuration), filtrés côté API. `tous` est la
+// sentinelle « pas de filtre » du select de statut.
 export type LocationFilters = {
 	nom: string;
-	type: string;
 	statut: string;
 };
 
 export const emptyLocationFilters = (): LocationFilters => ({
 	nom: '',
-	type: 'tous',
 	statut: 'tous'
 });

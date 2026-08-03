@@ -440,6 +440,16 @@ describe('construction des paramètres de requête', () => {
 		expect(chemin()).toBe('/api/traceability/products?includeArchived=true');
 	});
 
+	it('getLocationsForConfig pagine (chemin paginé de la page Configuration)', async () => {
+		await org.getLocationsForConfig(fetchEspion, cookies);
+		expect(chemin()).toBe('/api/organization/locations?page=1&limit=25');
+	});
+
+	it('getConfigCounts interroge l’endpoint de compteurs', async () => {
+		await org.getConfigCounts(fetchEspion, cookies);
+		expect(chemin()).toBe('/api/organization/config-counts');
+	});
+
 	/**
 	 * #82 — Fournisseurs et clients ont DEUX lectures, parce que l'API en sert deux charges utiles
 	 * différentes selon le rôle. Les confondre derrière un booléen laissait croire au front qu'il

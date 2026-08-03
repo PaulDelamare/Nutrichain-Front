@@ -1,6 +1,9 @@
 <script lang="ts">
-	import { onDestroy, tick } from 'svelte';
+	import { page } from '$app/stores';
 	import { enhance } from '$app/forms';
+	import { goto } from '$app/navigation';
+	import { resolve } from '$app/paths';
+	import { onDestroy, tick } from 'svelte';
 	import type { SubmitFunction } from '@sveltejs/kit';
 	import DataTable from '$lib/components/ui/DataTable.svelte';
 	import Modal from '$lib/components/ui/Modal.svelte';
@@ -9,10 +12,14 @@
 	import ActionReservee from '$lib/components/ui/ActionReservee.svelte';
 	import { peutAdministrer, type KnownRole } from '$lib/config/roles';
 	import { debounce } from '$lib/utils/debounce';
-	import { emptyLocationFilters } from '$lib/types/location';
-	import { filterLocations } from '$lib/utils/config/filterLocations';
 	import { formatCoordinates } from '$lib/utils/geo/coordinates';
-	import type { ApiLocation } from '$lib/Api/organization.server';
+	import { pageHref } from '$lib/utils/pageSearch/pageHref';
+	import {
+		locationsSearchParams,
+		locationsPageSizeParams
+	} from '$lib/utils/config/locationsSearchParams';
+	import { emptyLocationFilters, type LocationFilters } from '$lib/types/location';
+	import type { ApiLocation, ApiLocationList } from '$lib/Api/organization.server';
 
 	type LocationForm = {
 		locationError?: string;
@@ -21,18 +28,26 @@
 	} | null;
 
 	type Props = {
-		locations: ApiLocation[];
+		locations: ApiLocationList;
+		filters: LocationFilters;
+		pageSize: number;
+		pageSizeOptions: number[];
 		form?: LocationForm;
 		role: KnownRole;
 	};
 
-	let { locations, form = null, role }: Props = $props();
+	let {
+		locations,
+		filters: dataFilters,
+		pageSize,
+		pageSizeOptions,
+		form = null,
+		role
+	}: Props = $props();
 
 	const canManage = $derived(peutAdministrer(role));
 
-	const PAGE_SIZE = 10;
-
-	// Datalist : quelques types standard + ceux déjà utilisés par l'organisation. `type` reste libre.
+	// Suggestions de type (datalist) : standards + ceux vus sur la page courante. `type` reste libre.
 	const STANDARD_TYPES = [
 		'Réception',
 		'Chambre froide',
@@ -40,37 +55,53 @@
 		'Zone de stockage',
 		'Expédition'
 	];
-	const usedTypes = $derived(
-		Array.from(new Set(locations.map((l) => l.type).filter((t): t is string => !!t))).sort()
+	const typeSuggestions = $derived(
+		Array.from(
+			new Set([
+				...STANDARD_TYPES,
+				...locations.data.map((l) => l.type).filter((t): t is string => !!t)
+			])
+		).sort()
 	);
-	const typeSuggestions = $derived(Array.from(new Set([...STANDARD_TYPES, ...usedTypes])).sort());
-	const typeFilterOptions = $derived([
-		{ label: 'Tous les types', value: 'tous' },
-		...usedTypes.map((t) => ({ label: t, value: t }))
-	]);
 
-	// Filtres + pagination CLIENT (référentiel borné).
-	let draft = $state(emptyLocationFilters());
-	let applied = $state(emptyLocationFilters());
-	let pageN = $state(1);
+	// --- Filtres pilotés par l'URL (requête filtrée côté API) ---
+	// eslint-disable-next-line svelte/prefer-writable-derived
+	let filters = $state(emptyLocationFilters());
+	$effect(() => {
+		filters = { ...dataFilters };
+	});
 
-	const filtered = $derived(filterLocations(locations, applied));
-	const totalPages = $derived(Math.max(1, Math.ceil(filtered.length / PAGE_SIZE)));
-	const currentPage = $derived(Math.min(pageN, totalPages));
-	const pageRows = $derived(filtered.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE));
+	const hrefForPage = $derived((target: number) =>
+		pageHref(resolve('/configuration'), $page.url.searchParams, target)
+	);
+
+	function navigate(params: URLSearchParams) {
+		const qs = params.toString();
+		if (qs === $page.url.searchParams.toString()) return;
+		// eslint-disable-next-line svelte/no-navigation-without-resolve
+		goto(`${resolve('/configuration')}${qs ? `?${qs}` : ''}`, {
+			replaceState: true,
+			keepFocus: true,
+			noScroll: true
+		});
+	}
 
 	const applyDebounced = debounce(() => apply(), 500);
 	onDestroy(() => applyDebounced.cancel());
 
 	function apply() {
-		applied = { ...draft };
-		pageN = 1;
+		navigate(locationsSearchParams($page.url.searchParams, filters));
 	}
 
 	async function applyImmediately() {
 		applyDebounced.cancel();
 		await tick();
 		apply();
+	}
+
+	function changePageSize(event: Event) {
+		const size = Number((event.currentTarget as HTMLSelectElement).value);
+		navigate(locationsPageSizeParams($page.url.searchParams, size));
 	}
 
 	const columns = $derived(
@@ -88,8 +119,6 @@
 		editing?.mode === 'edit' ? "Modifier l'emplacement" : 'Ajouter un emplacement'
 	);
 
-	// use:enhance : succès → ferme la modale + rafraîchit ; échec → reste ouverte, erreur affichée,
-	// saisie conservée. Sert aussi au toggle (le `editing = null` y est un no-op).
 	const onSave: SubmitFunction = () => {
 		envoi = true;
 		return async ({ result, update }) => {
@@ -121,21 +150,13 @@
 		<input
 			type="text"
 			placeholder="Nom de l'emplacement"
-			bind:value={draft.nom}
+			bind:value={filters.nom}
 			oninput={() => applyDebounced()}
 		/>
 	</label>
 	<label class="field">
-		<span>Type</span>
-		<select bind:value={draft.type} onchange={applyImmediately}>
-			{#each typeFilterOptions as opt (opt.value)}
-				<option value={opt.value}>{opt.label}</option>
-			{/each}
-		</select>
-	</label>
-	<label class="field">
 		<span>Statut</span>
-		<select bind:value={draft.statut} onchange={applyImmediately}>
+		<select bind:value={filters.statut} onchange={applyImmediately}>
 			<option value="tous">Tous les statuts</option>
 			<option value="actif">Actif</option>
 			<option value="archive">Archivé</option>
@@ -143,10 +164,21 @@
 	</label>
 </NcFilterBar>
 
+<div class="toolbar">
+	<label class="page-size">
+		<span>Afficher</span>
+		<select value={String(pageSize)} onchange={changePageSize} aria-label="Emplacements par page">
+			{#each pageSizeOptions as size (size)}
+				<option value={String(size)}>{size} par page</option>
+			{/each}
+		</select>
+	</label>
+</div>
+
 <div class="results">
 	<DataTable
 		{columns}
-		rows={pageRows}
+		rows={locations.data}
 		rowKey={(l) => l.id}
 		empty="Aucun emplacement ne correspond aux filtres."
 	>
@@ -176,14 +208,14 @@
 </div>
 
 <Pagination
-	page={currentPage}
-	{totalPages}
-	total={filtered.length}
+	page={locations.pagination.page}
+	totalPages={locations.pagination.totalPages}
+	total={locations.pagination.total}
 	unit="emplacements"
-	onselect={(p) => (pageN = p)}
+	hrefFor={hrefForPage}
 />
 
-{#if !canManage && locations.length > 0}
+{#if !canManage && locations.pagination.total > 0}
 	<ActionReservee action="La gestion des emplacements" {role} />
 {/if}
 
@@ -299,8 +331,32 @@
 		background: var(--nc-brand-hover);
 	}
 
+	.toolbar {
+		display: flex;
+		justify-content: flex-end;
+		margin: 1rem 0 0.75rem;
+	}
+
+	.page-size {
+		display: inline-flex;
+		align-items: center;
+		gap: 0.5rem;
+		font-size: 0.8125rem;
+		color: var(--nc-text-muted);
+	}
+
+	.page-size select {
+		height: 2.25rem;
+		padding: 0 0.6rem;
+		border: 1px solid #e2e8f0;
+		border-radius: 0.375rem;
+		background: #fff;
+		font-size: 0.875rem;
+		color: var(--nc-text);
+	}
+
 	.results {
-		margin-top: 1rem;
+		margin-top: 0.25rem;
 	}
 
 	.nom {
@@ -388,6 +444,11 @@
 
 	.submit:hover {
 		background: var(--nc-brand-hover);
+	}
+
+	.submit:disabled {
+		opacity: 0.6;
+		cursor: progress;
 	}
 
 	.err {

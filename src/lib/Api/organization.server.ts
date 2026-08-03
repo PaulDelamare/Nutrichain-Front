@@ -379,6 +379,48 @@ export const getLocations = (
 		`/api/organization/locations${includeArchived ? '?includeArchived=true' : ''}`
 	);
 
+export type ApiLocationList = {
+	data: ApiLocation[];
+	pagination: { page: number; limit: number; total: number; totalPages: number };
+};
+
+export type LocationQuery = {
+	page?: number;
+	limit?: number;
+	// Filtres de colonnes appliqués côté API (voir GET /organization/locations, chemin paginé).
+	nom?: string;
+	type?: string;
+	statut?: string;
+};
+
+// Chemin PAGINÉ (écran Configuration) : `page` présent → l'API renvoie l'enveloppe { data,
+// pagination }. `getLocations` ci-dessus (sans page) reste le tableau simple pour les sélecteurs.
+export const getLocationsForConfig = (
+	fetch: typeof globalThis.fetch,
+	cookies: Cookies,
+	opts: LocationQuery = {}
+) => {
+	const params = new URLSearchParams();
+	params.set('page', String(opts.page ?? 1));
+	params.set('limit', String(opts.limit ?? 25));
+	const nom = opts.nom?.trim();
+	if (nom) params.set('nom', nom);
+	if (opts.type) params.set('type', opts.type);
+	if (opts.statut) params.set('statut', opts.statut);
+	return orgApi(fetch, cookies).get<ApiLocationList>(`/api/organization/locations?${params}`);
+};
+
+export type ApiConfigCounts = {
+	locations: number;
+	suppliers: number;
+	customers: number;
+	products: number;
+	equipment: number;
+};
+
+export const getConfigCounts = (fetch: typeof globalThis.fetch, cookies: Cookies) =>
+	orgApi(fetch, cookies).get<ApiConfigCounts>('/api/organization/config-counts');
+
 export const createLocation = (
 	fetch: typeof globalThis.fetch,
 	cookies: Cookies,

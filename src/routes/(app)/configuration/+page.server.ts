@@ -3,6 +3,8 @@ import type { Actions, PageServerLoad } from './$types';
 import {
 	getSuppliersForConfig,
 	getLocations,
+	getLocationsForConfig,
+	getConfigCounts,
 	getCustomersForConfig,
 	getProductsForConfig,
 	getEquipment,
@@ -18,32 +20,115 @@ import {
 	setProductActive,
 	createEquipment
 } from '$lib/Api/organization.server';
+import type {
+	ApiSupplierComplet,
+	ApiCustomerComplet,
+	ApiProductFull,
+	ApiEquipment,
+	ApiLocation
+} from '$lib/Api/organization.server';
 import { importProductsCsv, importCustomersCsv } from '$lib/Api/connectors.server';
 import { exigerAdministrateur, refusAdministration } from '$lib/server/guards';
 import { COLD_EQUIPMENT_TYPES, estTypeMateriel } from '$lib/config/equipment';
 import { parseCoordinateFields } from '$lib/utils/geo/coordinates';
 
-export const load: PageServerLoad = async ({ fetch, cookies, locals }) => {
+const TAB_IDS = ['locations', 'suppliers', 'customers', 'products', 'equipment'] as const;
+type TabId = (typeof TAB_IDS)[number];
+const PAGE_SIZE_OPTIONS = [10, 25, 50, 100] as const;
+const DEFAULT_PAGE_SIZE = 25;
+const emptyPagination = { page: 1, limit: DEFAULT_PAGE_SIZE, total: 0, totalPages: 0 };
+
+function parseTab(raw: string | null): TabId {
+	return (TAB_IDS as readonly string[]).includes(raw ?? '') ? (raw as TabId) : 'locations';
+}
+function parsePage(raw: string | null): number {
+	const n = Number(raw);
+	return Number.isInteger(n) && n >= 1 ? n : 1;
+}
+function parseLimit(raw: string | null): number {
+	const n = Number(raw);
+	return (PAGE_SIZE_OPTIONS as readonly number[]).includes(n) ? n : DEFAULT_PAGE_SIZE;
+}
+
+/**
+ * Onglets = navigation URL : le load ne charge QUE l'onglet actif (`?tab=`), paginé/filtré côté
+ * API pour les onglets convertis. Les compteurs des badges viennent d'un seul appel dédié. Les
+ * onglets pas encore migrés tombent sur leur chemin actuel (tableau complet) quand ils sont actifs.
+ */
+export const load: PageServerLoad = async ({ fetch, cookies, locals, url }) => {
 	exigerAdministrateur(locals.user, "La configuration de l'usine");
 
-	// includeArchived : l'écran d'administration montre TOUT, y compris les archivés, pour réactiver.
-	const [suppliers, locations, customers, products, equipment] = await Promise.all([
-		getSuppliersForConfig(fetch, cookies),
-		getLocations(fetch, cookies, true),
-		getCustomersForConfig(fetch, cookies),
-		getProductsForConfig(fetch, cookies, true),
-		getEquipment(fetch, cookies)
-	]);
+	const p = url.searchParams;
+	const tab = parseTab(p.get('tab'));
+	const page = parsePage(p.get('page'));
+	const limit = parseLimit(p.get('limit'));
 
-	const first = [suppliers, locations, customers, products, equipment].find((r) => !r.ok);
+	const countsRes = await getConfigCounts(fetch, cookies);
+	const counts = countsRes.ok
+		? countsRes.data
+		: { locations: 0, suppliers: 0, customers: 0, products: 0, equipment: 0 };
+
+	// Filtres de l'onglet actif (non préfixés : un seul onglet est actif dans l'URL à la fois).
+	const nom = p.get('nom')?.trim() || undefined;
+	const statut = p.get('statut')?.trim() || undefined;
+
+	// Défauts : les onglets inactifs sont rendus vides (masqués par le composant Tabs).
+	let locations: import('$lib/Api/organization.server').ApiLocationList = {
+		data: [],
+		pagination: { ...emptyPagination, limit }
+	};
+	let suppliers: ApiSupplierComplet[] = [];
+	let customers: ApiCustomerComplet[] = [];
+	let products: ApiProductFull[] = [];
+	let equipment: ApiEquipment[] = [];
+	let activeLocations: ApiLocation[] = [];
+	let error: string | undefined = countsRes.ok ? undefined : countsRes.message;
+
+	if (tab === 'locations') {
+		const res = await getLocationsForConfig(fetch, cookies, {
+			page,
+			limit,
+			nom,
+			statut: statut === 'tous' ? undefined : statut
+		});
+		if (res.ok) locations = res.data;
+		else error = res.message;
+	} else if (tab === 'suppliers') {
+		const res = await getSuppliersForConfig(fetch, cookies);
+		if (res.ok) suppliers = res.data;
+		else error = res.message;
+	} else if (tab === 'customers') {
+		const res = await getCustomersForConfig(fetch, cookies);
+		if (res.ok) customers = res.data;
+		else error = res.message;
+	} else if (tab === 'products') {
+		const res = await getProductsForConfig(fetch, cookies, true);
+		if (res.ok) products = res.data;
+		else error = res.message;
+	} else if (tab === 'equipment') {
+		const [eq, locs] = await Promise.all([
+			getEquipment(fetch, cookies),
+			// Liste des emplacements actifs pour le sélecteur de la modale Matériel (non paginé).
+			getLocations(fetch, cookies, false)
+		]);
+		if (eq.ok) equipment = eq.data;
+		else error = eq.message;
+		if (locs.ok) activeLocations = locs.data;
+	}
 
 	return {
-		suppliers: suppliers.ok ? suppliers.data : [],
-		locations: locations.ok ? locations.data : [],
-		customers: customers.ok ? customers.data : [],
-		products: products.ok ? products.data : [],
-		equipment: equipment.ok ? equipment.data : [],
-		error: first && !first.ok ? first.message : undefined
+		activeTab: tab,
+		counts,
+		locations,
+		locationFilters: { nom: nom ?? '', statut: statut ?? 'tous' },
+		pageSize: limit,
+		pageSizeOptions: [...PAGE_SIZE_OPTIONS],
+		suppliers,
+		customers,
+		products,
+		equipment,
+		activeLocations,
+		error
 	};
 };
 

@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { enhance } from '$app/forms';
+	import { goto } from '$app/navigation';
 	import { resolve } from '$app/paths';
 	import { Tabs } from '@skeletonlabs/skeleton-svelte';
 	import PageHead from '$lib/components/page/PageHead.svelte';
@@ -16,9 +17,11 @@
 
 	let { data, form }: { data: PageData; form: ActionData } = $props();
 
-	const activeLocations = $derived(data.locations.filter((l) => l.is_active));
+	// Emplacements actifs pour le sélecteur de la modale Matériel (chargés à part par le load quand
+	// l'onglet Matériel est actif). Les autres onglets sont vides ⇒ tableau vide masqué.
+	const activeLocations = $derived(data.activeLocations);
 
-	// Le résultat d'un import CSV est routé vers la section (produits / clients) qui l'a déclenché.
+	// Le résultat d'un import CSV est routé vers l'onglet (produits / clients) qui l'a déclenché.
 	const importReportFor = (kind: 'products' | 'customers') =>
 		(form && 'importReport' in form && form.importKind === kind ? form.importReport : null) ?? null;
 	const importErrorFor = (kind: 'products' | 'customers') =>
@@ -39,15 +42,21 @@
 
 	type TabId = 'locations' | 'suppliers' | 'customers' | 'products' | 'equipment';
 
-	let activeTab = $state<TabId>('locations');
+	// Onglets = navigation URL : le load ne charge que l'onglet actif, donc changer d'onglet
+	// recharge (et remet pagination/filtres à zéro). L'onglet actif vient de l'URL, pas d'un état.
+	function selectTab(id: TabId) {
+		if (id === data.activeTab) return;
+		// eslint-disable-next-line svelte/no-navigation-without-resolve
+		goto(`${resolve('/configuration')}?tab=${id}`, { noScroll: true, keepFocus: true });
+	}
 
-	// Le compteur affiche le nombre d'entrees du referentiel (actives et inactives, comme la liste).
+	// Le compteur affiche le total du référentiel (un seul appel dédié, indépendant de la page).
 	const tabs = $derived([
-		{ id: 'locations' as TabId, label: 'Emplacements', count: data.locations.length },
-		{ id: 'suppliers' as TabId, label: 'Fournisseurs', count: data.suppliers.length },
-		{ id: 'customers' as TabId, label: 'Clients', count: data.customers.length },
-		{ id: 'products' as TabId, label: 'Produits', count: data.products.length },
-		{ id: 'equipment' as TabId, label: 'Matériel', count: data.equipment.length }
+		{ id: 'locations' as TabId, label: 'Emplacements', count: data.counts.locations },
+		{ id: 'suppliers' as TabId, label: 'Fournisseurs', count: data.counts.suppliers },
+		{ id: 'customers' as TabId, label: 'Clients', count: data.counts.customers },
+		{ id: 'products' as TabId, label: 'Produits', count: data.counts.products },
+		{ id: 'equipment' as TabId, label: 'Matériel', count: data.counts.equipment }
 	]);
 </script>
 
@@ -61,7 +70,7 @@
 {/if}
 
 <div class="tabs">
-	<Tabs value={activeTab} onValueChange={(e) => (activeTab = e.value as TabId)}>
+	<Tabs value={data.activeTab} onValueChange={(e) => selectTab(e.value as TabId)}>
 		<Tabs.List>
 			{#each tabs as tab (tab.id)}
 				<Tabs.Trigger value={tab.id}>
@@ -72,7 +81,14 @@
 		</Tabs.List>
 
 		<Tabs.Content value="locations">
-			<LocationsListing locations={data.locations} {form} role={data.user.role} />
+			<LocationsListing
+				locations={data.locations}
+				filters={data.locationFilters}
+				pageSize={data.pageSize}
+				pageSizeOptions={data.pageSizeOptions}
+				{form}
+				role={data.user.role}
+			/>
 		</Tabs.Content>
 
 		<Tabs.Content value="suppliers">
