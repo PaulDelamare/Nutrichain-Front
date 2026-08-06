@@ -2,7 +2,7 @@ import { fail } from '@sveltejs/kit';
 import type { Actions, PageServerLoad } from './$types';
 import { getAlertBatches, resolveAlert, type ApiAlertBatch } from '$lib/Api/alerts.server';
 import { getAlerts, getEquipment } from '$lib/Api/organization.server';
-import { getSensorHistory } from '$lib/Api/iot.server';
+import { getSensorHistory, simulateColdChainIncident } from '$lib/Api/iot.server';
 import { refusDecisionQualite } from '$lib/server/guards';
 import { alertsToCold, listActiveColdAlerts, pickTelemetrySensor } from '$lib/utils/org/mappers';
 
@@ -101,5 +101,17 @@ export const actions = {
 		const res = await resolveAlert(fetch, cookies, alertId, note);
 		if (!res.ok) return fail(res.status, { resolveError: res.message, alertId });
 		return { resolved: true as const, alertId };
+	},
+
+	// Démonstration : déclenche un vrai incident (alerte + quarantaine) via l'API, pour montrer le
+	// mécanisme en direct. Même garde qualité que la clôture d'alerte — l'action bloque des lots.
+	simulate: async ({ fetch, cookies, locals }) => {
+		const refus = refusDecisionQualite(locals.user);
+		if (refus) return fail(403, { simulateError: refus });
+
+		const res = await simulateColdChainIncident(fetch, cookies);
+		if (!res.ok) return fail(res.status, { simulateError: res.message });
+
+		return { simulated: true as const, quarantinedCount: res.data.quarantinedCount };
 	}
 } satisfies Actions;
