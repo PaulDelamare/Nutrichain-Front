@@ -140,3 +140,30 @@ test('la traçabilité ciblée sur un lot affiche sa généalogie', async ({ pag
 	await expect(page.getByText('Lot analysé').first()).toBeVisible();
 	await expect(page.getByText('Impossible de charger la généalogie')).toHaveCount(0);
 });
+
+test('la fiche lot affiche un QR de traçabilité publique qui charge vraiment', async ({ page }) => {
+	await login(page);
+
+	// Récupère un lotId réel par le même chemin que le parcours de rappel.
+	await page.goto('/rappels-produits');
+	await ouvrirDeclencheur(page);
+	await page.locator(DECLENCHEUR_LOT).click();
+	await page.getByRole('option').first().click();
+	const lotId = await page.locator('input[name="lotId"]').inputValue();
+	expect(lotId).toBeTruthy();
+
+	await page.goto(`/fiche-lot/${lotId}`);
+	await page.waitForLoadState('networkidle');
+
+	const qr = page.getByRole('img', { name: /traçabilité publique/i });
+	await expect(qr).toBeVisible();
+	await expect(qr).toHaveAttribute('src', new RegExp(`/fiche-lot/${lotId}/label$`));
+
+	// Preuve de bout en bout : le PNG est RÉELLEMENT servi (front -> /label -> API -> QR),
+	// pas une balise <img> avec une src morte. `complete && naturalWidth > 0` = image décodée.
+	await expect
+		.poll(async () => qr.evaluate((el) => (el as HTMLImageElement).naturalWidth > 0), {
+			timeout: 10_000
+		})
+		.toBe(true);
+});
