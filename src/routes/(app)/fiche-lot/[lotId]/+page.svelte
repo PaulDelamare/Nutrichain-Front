@@ -16,25 +16,29 @@
 </script>
 
 <header class="page-top">
-	<a href={resolve('/recherche-lots')} class="back-link">
-		<svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
-			<path
-				d="M15 6l-6 6 6 6"
-				stroke="currentColor"
-				stroke-width="2"
-				stroke-linecap="round"
-				stroke-linejoin="round"
-			/>
-		</svg>
-		Retour
-	</a>
+	<div class="page-top-main">
+		<a href={resolve('/recherche-lots')} class="back-link">
+			<svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
+				<path
+					d="M15 6l-6 6 6 6"
+					stroke="currentColor"
+					stroke-width="2"
+					stroke-linecap="round"
+					stroke-linejoin="round"
+				/>
+			</svg>
+			Retour
+		</a>
 
-	<!-- L'UUID reste dans l'URL. Le titre reprend le numéro sur lequel l'utilisateur vient de
+		<!-- L'UUID reste dans l'URL. Le titre reprend le numéro sur lequel l'utilisateur vient de
 	     cliquer depuis la recherche (#81). -->
-	<PageHead
-		heading="Fiche lot {data.sheet.lotNumber}"
-		description="Produit, dates, statut, historique, température, localisation et carte."
-	/>
+		<PageHead
+			heading="Fiche lot {data.sheet.lotNumber}"
+			description="Produit, dates, statut, historique, température, localisation et carte."
+		/>
+	</div>
+
+	<PublicTraceQr lotId={data.sheet.id} statut={data.sheet.statut} />
 </header>
 
 <p class="source">Données en direct depuis la base NutriChain.</p>
@@ -60,13 +64,27 @@
 			role={data.user.role}
 		/>
 		<LocationPanel sheet={data.sheet} />
-		<PublicTraceQr lotId={data.sheet.id} statut={data.sheet.statut} />
 	</div>
 </div>
 
 <style>
 	.page-top {
+		display: flex;
+		align-items: flex-start;
+		justify-content: space-between;
+		gap: 1.5rem;
 		margin-bottom: 0.25rem;
+	}
+
+	.page-top-main {
+		min-width: 0;
+		flex: 1;
+	}
+
+	@media (max-width: 640px) {
+		.page-top {
+			flex-direction: column;
+		}
 	}
 
 	.back-link {
