@@ -6,6 +6,7 @@
 	import OriginPanel from '$lib/components/lot-sheet/OriginPanel.svelte';
 	import LotActionsPanel from '$lib/components/lot-sheet/LotActionsPanel.svelte';
 	import ShelfWithdrawalPanel from '$lib/components/lot-sheet/ShelfWithdrawalPanel.svelte';
+	import PublicTraceQr from '$lib/components/lot-sheet/PublicTraceQr.svelte';
 	import PageHead from '$lib/components/page/PageHead.svelte';
 	import type { ActionData, PageData } from './$types';
 
@@ -59,6 +60,7 @@
 			role={data.user.role}
 		/>
 		<LocationPanel sheet={data.sheet} />
+		<PublicTraceQr lotId={data.sheet.id} statut={data.sheet.statut} />
 	</div>
 </div>
 
