@@ -167,3 +167,25 @@ test('la fiche lot affiche un QR de traçabilité publique qui charge vraiment',
 		})
 		.toBe(true);
 });
+
+test('le bouton « Simuler un incident » crée une vraie alerte chaîne du froid', async ({
+	page
+}) => {
+	await login(page);
+	await page.goto('/chaine-du-froid');
+	await page.waitForLoadState('networkidle');
+
+	await page.getByRole('button', { name: /simuler un incident/i }).click();
+	await page.waitForLoadState('networkidle');
+
+	// Le message porte une donnée RÉELLE (nombre de lots mis en quarantaine par l'API) : le voir
+	// prouve que toute la chaîne a tourné — front -> API -> détection -> alerte + quarantaine.
+	await expect(page.getByText(/incident simulé/i)).toBeVisible();
+	// Et la page n'est plus vide : une alerte froid est désormais active.
+	await expect(page.getByText(/aucune alerte de chaîne du froid active/i)).toHaveCount(0);
+
+	await page.screenshot({
+		path: 'C:/Users/paulo/AppData/Local/Temp/claude/D--CodeCours-4e-Fil-Rouge-application-Nutrichain-Api/cd76d894-e521-4ed4-9fff-fc7a1a5a3270/scratchpad/chaine-froid-simulee.png',
+		fullPage: true
+	});
+});

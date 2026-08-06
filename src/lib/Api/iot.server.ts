@@ -24,3 +24,28 @@ export function getSensorHistory(
 		`/api/telemetry/${encodeURIComponent(sensorId)}/history?limit=${limit}`
 	);
 }
+
+export type ColdIncidentSimulation = {
+	equipmentId: string;
+	sensorId: string;
+	threshold: number;
+	peakTemp: number;
+	alertCreated: boolean;
+	quarantinedCount: number;
+};
+
+/**
+ * Déclenche une simulation d'incident chaîne du froid côté API : injecte une excursion puis rejoue
+ * le vrai pipeline (alerte + quarantaine). Route protégée par clé API (checkApiKey) + session —
+ * on garde donc l'`api()` par défaut, qui porte la clé.
+ */
+export function simulateColdChainIncident(
+	fetch: typeof globalThis.fetch,
+	cookies: Cookies,
+	equipmentId?: string
+) {
+	return api(fetch, cookies).post<ColdIncidentSimulation>(
+		'/api/telemetry/simulate-incident',
+		equipmentId ? { equipmentId } : {}
+	);
+}
