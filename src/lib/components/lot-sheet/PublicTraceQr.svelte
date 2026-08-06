@@ -18,59 +18,48 @@
 	const liveForConsumer = $derived(statut === 'expedie');
 </script>
 
-<section class="card">
-	<div class="head">
-		<h3>Traçabilité publique</h3>
-	</div>
-
-	<img class="qr" {src} alt="QR code de traçabilité publique du lot" width="176" height="176" />
-
-	<p class="hint">Scannez ce code pour ouvrir la fiche consommateur (origine, statut sanitaire).</p>
-
+<!-- Pose dans l'en-tete de la fiche, a l'oppose du titre : pas de carte, sur le fond de page. -->
+<div class="qr-block">
+	<img class="qr" {src} alt="QR code de traçabilité publique du lot" width="118" height="118" />
+	<p class="cap">Fiche publique — scannez</p>
 	{#if !liveForConsumer}
 		<p class="note">La fiche publique s'affiche une fois le lot expédié.</p>
 	{/if}
-</section>
+</div>
 
 <style>
-	.card {
-		padding: 1rem 1.25rem;
-		border: 1px solid #e2e8f0;
-		border-radius: 0.5rem;
-		background: #fff;
-	}
-
-	.head {
-		margin-bottom: 0.75rem;
-	}
-
-	.head h3 {
-		margin: 0;
-		font-size: 0.9375rem;
-		font-weight: 600;
-		color: var(--nc-text);
+	.qr-block {
+		display: flex;
+		flex-direction: column;
+		align-items: center;
+		gap: 0.35rem;
+		flex-shrink: 0;
+		width: 118px;
 	}
 
 	.qr {
 		display: block;
-		width: 176px;
-		height: 176px;
-		margin: 0 auto;
+		width: 118px;
+		height: 118px;
 		image-rendering: pixelated;
 	}
 
-	.hint {
-		margin: 0.75rem 0 0;
-		font-size: 0.8125rem;
-		color: var(--nc-text-muted);
+	.cap {
+		margin: 0;
+		font-size: 0.6875rem;
+		font-weight: 600;
+		letter-spacing: 0.03em;
+		text-transform: uppercase;
 		text-align: center;
+		color: var(--nc-text-muted);
 	}
 
 	.note {
-		margin: 0.5rem 0 0;
-		font-size: 0.75rem;
-		color: var(--nc-text-muted);
-		text-align: center;
+		margin: 0;
+		font-size: 0.6875rem;
 		font-style: italic;
+		line-height: 1.3;
+		text-align: center;
+		color: var(--nc-text-muted);
 	}
 </style>
