@@ -38,7 +38,7 @@
 		/>
 	</div>
 
-	<PublicTraceQr lotId={data.sheet.id} statut={data.sheet.statut} />
+	<PublicTraceQr lotId={data.sheet.id} />
 </header>
 
 <p class="source">Données en direct depuis la base NutriChain.</p>
