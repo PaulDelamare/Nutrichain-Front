@@ -19,7 +19,7 @@
 {#if canSimulate}
 	<form method="POST" action="?/simulate" class="sim">
 		<button type="submit" class="sim-btn">Simuler un incident</button>
-		<span class="sim-hint">Déclenche une vraie excursion pour la démonstration.</span>
+		<span class="sim-hint">Déclenche une vraie excursion thermique (alerte + quarantaine).</span>
 	</form>
 {/if}
 
